@@ -1,0 +1,320 @@
+import type { Env, CorsHeaders, Instance } from '../types'
+import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody } from '../utils/helpers'
+
+/**
+ * Mock instances for local development
+ */
+const MOCK_INSTANCES: Instance[] = [
+  {
+    id: 'inst-1',
+    namespace_id: 'ns-1',
+    name: 'room-general',
+    object_id: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
+    last_accessed: '2024-03-01T10:00:00Z',
+    storage_size_bytes: 1024,
+    has_alarm: 1,
+    created_at: '2024-01-15T10:00:00Z',
+    updated_at: '2024-03-01T10:00:00Z',
+    metadata: null,
+  },
+  {
+    id: 'inst-2',
+    namespace_id: 'ns-1',
+    name: 'room-support',
+    object_id: 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7',
+    last_accessed: '2024-03-02T14:30:00Z',
+    storage_size_bytes: 2048,
+    has_alarm: 0,
+    created_at: '2024-02-20T14:30:00Z',
+    updated_at: '2024-03-02T14:30:00Z',
+    metadata: null,
+  },
+  {
+    id: 'inst-3',
+    namespace_id: 'ns-2',
+    name: 'counter-main',
+    object_id: 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8',
+    last_accessed: '2024-03-03T09:15:00Z',
+    storage_size_bytes: 512,
+    has_alarm: 0,
+    created_at: '2024-02-25T09:00:00Z',
+    updated_at: '2024-03-03T09:15:00Z',
+    metadata: null,
+  },
+]
+
+/**
+ * Handle instance routes
+ */
+export async function handleInstanceRoutes(
+  request: Request,
+  env: Env,
+  url: URL,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean,
+  _userEmail: string | null
+): Promise<Response> {
+  const method = request.method
+  const path = url.pathname
+
+  // GET /api/namespaces/:nsId/instances - List instances for namespace
+  const listMatch = path.match(/^\/api\/namespaces\/([^/]+)\/instances$/)
+  if (method === 'GET' && listMatch) {
+    const namespaceId = listMatch[1]
+    if (!namespaceId) {
+      return errorResponse('Namespace ID required', corsHeaders, 400)
+    }
+    return listInstances(namespaceId, env, url, corsHeaders, isLocalDev)
+  }
+
+  // POST /api/namespaces/:nsId/instances - Create/ping instance
+  if (method === 'POST' && listMatch) {
+    const namespaceId = listMatch[1]
+    if (!namespaceId) {
+      return errorResponse('Namespace ID required', corsHeaders, 400)
+    }
+    return createInstance(request, namespaceId, env, corsHeaders, isLocalDev)
+  }
+
+  // GET /api/instances/:id - Get single instance
+  const singleMatch = path.match(/^\/api\/instances\/([^/]+)$/)
+  if (method === 'GET' && singleMatch) {
+    const instanceId = singleMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return getInstance(instanceId, env, corsHeaders, isLocalDev)
+  }
+
+  // DELETE /api/instances/:id - Delete instance tracking
+  if (method === 'DELETE' && singleMatch) {
+    const instanceId = singleMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return deleteInstance(instanceId, env, corsHeaders, isLocalDev)
+  }
+
+  // PUT /api/instances/:id/accessed - Update last accessed time
+  const accessedMatch = path.match(/^\/api\/instances\/([^/]+)\/accessed$/)
+  if (method === 'PUT' && accessedMatch) {
+    const instanceId = accessedMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return updateInstanceAccessed(instanceId, env, corsHeaders, isLocalDev)
+  }
+
+  return errorResponse('Not Found', corsHeaders, 404)
+}
+
+/**
+ * List instances for a namespace
+ */
+async function listInstances(
+  namespaceId: string,
+  env: Env,
+  url: URL,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean
+): Promise<Response> {
+  const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '100', 10), 500)
+  const offset = parseInt(url.searchParams.get('offset') ?? '0', 10)
+
+  if (isLocalDev) {
+    const filtered = MOCK_INSTANCES.filter((i) => i.namespace_id === namespaceId)
+    return jsonResponse({
+      instances: filtered.slice(offset, offset + limit),
+      total: filtered.length,
+    }, corsHeaders)
+  }
+
+  try {
+    const countResult = await env.METADATA.prepare(
+      'SELECT COUNT(*) as count FROM instances WHERE namespace_id = ?'
+    ).bind(namespaceId).first<{ count: number }>()
+
+    const result = await env.METADATA.prepare(`
+      SELECT * FROM instances 
+      WHERE namespace_id = ? 
+      ORDER BY last_accessed DESC NULLS LAST, created_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(namespaceId, limit, offset).all<Instance>()
+
+    return jsonResponse({
+      instances: result.results,
+      total: countResult?.count ?? 0,
+    }, corsHeaders)
+  } catch (error) {
+    console.error('[Instances] List error:', error)
+    return errorResponse('Failed to list instances', corsHeaders, 500)
+  }
+}
+
+/**
+ * Create or track an instance
+ */
+async function createInstance(
+  request: Request,
+  namespaceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean
+): Promise<Response> {
+  interface CreateInstanceBody {
+    name?: string
+    object_id: string
+  }
+
+  const body = await parseJsonBody<CreateInstanceBody>(request)
+  if (!body?.object_id) {
+    return errorResponse('object_id is required', corsHeaders, 400)
+  }
+
+  if (isLocalDev) {
+    const newInstance: Instance = {
+      id: generateId(),
+      namespace_id: namespaceId,
+      name: body.name ?? null,
+      object_id: body.object_id,
+      last_accessed: nowISO(),
+      storage_size_bytes: null,
+      has_alarm: 0,
+      created_at: nowISO(),
+      updated_at: nowISO(),
+      metadata: null,
+    }
+    return jsonResponse({ instance: newInstance }, corsHeaders, 201)
+  }
+
+  try {
+    // Check if instance already exists
+    const existing = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE namespace_id = ? AND object_id = ?'
+    ).bind(namespaceId, body.object_id).first<Instance>()
+
+    if (existing) {
+      // Update last accessed
+      await env.METADATA.prepare(`
+        UPDATE instances SET last_accessed = ?, updated_at = ? WHERE id = ?
+      `).bind(nowISO(), nowISO(), existing.id).run()
+
+      const updated = await env.METADATA.prepare(
+        'SELECT * FROM instances WHERE id = ?'
+      ).bind(existing.id).first<Instance>()
+
+      return jsonResponse({ instance: updated, created: false }, corsHeaders)
+    }
+
+    // Create new instance record
+    const id = generateId()
+    const now = nowISO()
+
+    await env.METADATA.prepare(`
+      INSERT INTO instances (id, namespace_id, name, object_id, last_accessed, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      id,
+      namespaceId,
+      body.name ?? null,
+      body.object_id,
+      now,
+      now,
+      now
+    ).run()
+
+    const result = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(id).first<Instance>()
+
+    return jsonResponse({ instance: result, created: true }, corsHeaders, 201)
+  } catch (error) {
+    console.error('[Instances] Create error:', error)
+    return errorResponse('Failed to create instance', corsHeaders, 500)
+  }
+}
+
+/**
+ * Get a single instance by ID
+ */
+async function getInstance(
+  instanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean
+): Promise<Response> {
+  if (isLocalDev) {
+    const instance = MOCK_INSTANCES.find((i) => i.id === instanceId)
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+    return jsonResponse({ instance }, corsHeaders)
+  }
+
+  try {
+    const result = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!result) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    return jsonResponse({ instance: result }, corsHeaders)
+  } catch (error) {
+    console.error('[Instances] Get error:', error)
+    return errorResponse('Failed to get instance', corsHeaders, 500)
+  }
+}
+
+/**
+ * Delete an instance tracking record
+ */
+async function deleteInstance(
+  instanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean
+): Promise<Response> {
+  if (isLocalDev) {
+    return jsonResponse({ success: true }, corsHeaders)
+  }
+
+  try {
+    await env.METADATA.prepare(
+      'DELETE FROM instances WHERE id = ?'
+    ).bind(instanceId).run()
+
+    return jsonResponse({ success: true }, corsHeaders)
+  } catch (error) {
+    console.error('[Instances] Delete error:', error)
+    return errorResponse('Failed to delete instance', corsHeaders, 500)
+  }
+}
+
+/**
+ * Update instance last accessed time
+ */
+async function updateInstanceAccessed(
+  instanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean
+): Promise<Response> {
+  if (isLocalDev) {
+    return jsonResponse({ success: true }, corsHeaders)
+  }
+
+  try {
+    const now = nowISO()
+    await env.METADATA.prepare(`
+      UPDATE instances SET last_accessed = ?, updated_at = ? WHERE id = ?
+    `).bind(now, now, instanceId).run()
+
+    return jsonResponse({ success: true, last_accessed: now }, corsHeaders)
+  } catch (error) {
+    console.error('[Instances] Update accessed error:', error)
+    return errorResponse('Failed to update instance', corsHeaders, 500)
+  }
+}
+

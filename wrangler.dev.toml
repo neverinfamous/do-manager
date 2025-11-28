@@ -1,0 +1,29 @@
+# DO Manager - Local Development Configuration
+# Use this file for local development: npx wrangler dev --config wrangler.dev.toml --local
+
+name = "do-manager-dev"
+main = "worker/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Development D1 database (local)
+[[d1_databases]]
+binding = "METADATA"
+database_name = "do-manager-metadata-dev"
+database_id = "local-dev-db"
+
+# Development R2 bucket (local)
+[[r2_buckets]]
+binding = "BACKUP_BUCKET"
+bucket_name = "do-manager-backups-dev"
+
+# Development variables - auth bypassed for localhost
+[vars]
+ENVIRONMENT = "development"
+
+# Note: In local development:
+# - Authentication is bypassed (checked via localhost detection)
+# - Mock data is used when ACCOUNT_ID and API_KEY are not set
+# - Frontend runs on http://localhost:5173
+# - Worker runs on http://localhost:8787
+

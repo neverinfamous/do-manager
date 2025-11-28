@@ -1,0 +1,66 @@
+const API_BASE = '/api'
+
+/**
+ * Generic fetch wrapper with error handling
+ */
+async function apiFetch<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({})) as { error?: string }
+    throw new Error(errorData.error ?? `Request failed: ${response.status}`)
+  }
+
+  return response.json() as Promise<T>
+}
+
+export interface AlarmResponse {
+  alarm: number | null
+  hasAlarm: boolean
+  alarmDate: string | null
+}
+
+export interface SetAlarmResponse {
+  success: boolean
+  alarm: number
+  alarmDate: string
+}
+
+/**
+ * Alarm API functions
+ */
+export const alarmApi = {
+  /**
+   * Get current alarm for an instance
+   */
+  async get(instanceId: string): Promise<AlarmResponse> {
+    return apiFetch<AlarmResponse>(`/instances/${instanceId}/alarm`)
+  },
+
+  /**
+   * Set alarm for an instance
+   */
+  async set(instanceId: string, timestamp: number): Promise<SetAlarmResponse> {
+    return apiFetch<SetAlarmResponse>(`/instances/${instanceId}/alarm`, {
+      method: 'PUT',
+      body: JSON.stringify({ timestamp }),
+    })
+  },
+
+  /**
+   * Delete alarm for an instance
+   */
+  async delete(instanceId: string): Promise<void> {
+    await apiFetch(`/instances/${instanceId}/alarm`, { method: 'DELETE' })
+  },
+}
+
