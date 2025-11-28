@@ -1,5 +1,5 @@
 import type { Env, CorsHeaders, Instance, Namespace } from '../types'
-import { jsonResponse, errorResponse, parseJsonBody, nowISO } from '../utils/helpers'
+import { jsonResponse, errorResponse, parseJsonBody, nowISO, createJob, completeJob, failJob } from '../utils/helpers'
 
 /**
  * Mock alarm data for local development
@@ -19,7 +19,7 @@ export async function handleAlarmRoutes(
   url: URL,
   corsHeaders: CorsHeaders,
   isLocalDev: boolean,
-  _userEmail: string | null
+  userEmail: string | null
 ): Promise<Response> {
   const method = request.method
   const path = url.pathname
@@ -40,7 +40,7 @@ export async function handleAlarmRoutes(
     if (!instanceId) {
       return errorResponse('Instance ID required', corsHeaders, 400)
     }
-    return setAlarm(request, instanceId, env, corsHeaders, isLocalDev)
+    return setAlarm(request, instanceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
   // DELETE /api/instances/:id/alarm - Delete alarm
@@ -163,7 +163,8 @@ async function setAlarm(
   instanceId: string,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<{ timestamp: number }>(request)
   if (!body?.timestamp || typeof body.timestamp !== 'number') {
@@ -207,6 +208,8 @@ async function setAlarm(
       )
     }
 
+    const jobId = await createJob(env.METADATA, 'set_alarm', userEmail, instance.namespace_id, instanceId)
+
     // Normalize endpoint URL and build admin URL
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     const instanceName = instance.name || instance.object_id
@@ -222,6 +225,7 @@ async function setAlarm(
     })
 
     if (!response.ok) {
+      await failJob(env.METADATA, jobId, `Failed to set alarm: ${response.status}`)
       return errorResponse('Failed to set alarm on DO', corsHeaders, response.status)
     }
 
@@ -230,6 +234,7 @@ async function setAlarm(
       'UPDATE instances SET has_alarm = 1, updated_at = ? WHERE id = ?'
     ).bind(nowISO(), instanceId).run()
 
+    await completeJob(env.METADATA, jobId, { timestamp: body.timestamp, alarmDate: new Date(body.timestamp).toISOString() })
     return jsonResponse({
       success: true,
       alarm: body.timestamp,

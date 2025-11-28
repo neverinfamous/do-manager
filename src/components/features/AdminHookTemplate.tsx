@@ -202,12 +202,20 @@ async adminStats(): Promise<{
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // Fallback for older browsers
+      // Fallback - create temporary element and use selection API
       const textArea = document.createElement('textarea')
       textArea.value = template
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-9999px'
       document.body.appendChild(textArea)
       textArea.select()
-      document.execCommand('copy')
+      const selection = document.getSelection()
+      if (selection) {
+        const range = document.createRange()
+        range.selectNodeContents(textArea)
+        selection.removeAllRanges()
+        selection.addRange(range)
+      }
       document.body.removeChild(textArea)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)

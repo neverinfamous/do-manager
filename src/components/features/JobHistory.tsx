@@ -65,9 +65,9 @@ export function JobHistory() {
       ? new Date(job.completed_at).getTime()
       : Date.now()
     const duration = Math.round((end - start) / 1000)
-    if (duration < 60) return `${duration}s`
-    if (duration < 3600) return `${Math.round(duration / 60)}m`
-    return `${Math.round(duration / 3600)}h`
+    if (duration < 60) return `${String(duration)}s`
+    if (duration < 3600) return `${String(Math.round(duration / 60))}m`
+    return `${String(Math.round(duration / 3600))}h`
   }
 
   return (

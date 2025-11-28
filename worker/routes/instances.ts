@@ -1,5 +1,5 @@
 import type { Env, CorsHeaders, Instance } from '../types'
-import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody } from '../utils/helpers'
+import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 
 /**
  * Mock instances for local development
@@ -52,7 +52,7 @@ export async function handleInstanceRoutes(
   url: URL,
   corsHeaders: CorsHeaders,
   isLocalDev: boolean,
-  _userEmail: string | null
+  userEmail: string | null
 ): Promise<Response> {
   const method = request.method
   const path = url.pathname
@@ -73,7 +73,7 @@ export async function handleInstanceRoutes(
     if (!namespaceId) {
       return errorResponse('Namespace ID required', corsHeaders, 400)
     }
-    return createInstance(request, namespaceId, env, corsHeaders, isLocalDev)
+    return createInstance(request, namespaceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
   // GET /api/instances/:id - Get single instance
@@ -92,7 +92,7 @@ export async function handleInstanceRoutes(
     if (!instanceId) {
       return errorResponse('Instance ID required', corsHeaders, 400)
     }
-    return deleteInstance(instanceId, env, corsHeaders, isLocalDev)
+    return deleteInstance(instanceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
   // PUT /api/instances/:id/accessed - Update last accessed time
@@ -159,7 +159,8 @@ async function createInstance(
   namespaceId: string,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
   interface CreateInstanceBody {
     name?: string
@@ -187,6 +188,9 @@ async function createInstance(
     return jsonResponse({ instance: newInstance }, corsHeaders, 201)
   }
 
+  // Create job record first
+  const jobId = await createJob(env.METADATA, 'create_instance', userEmail, namespaceId)
+
   try {
     // Check if instance already exists
     const existing = await env.METADATA.prepare(
@@ -203,6 +207,8 @@ async function createInstance(
         'SELECT * FROM instances WHERE id = ?'
       ).bind(existing.id).first<Instance>()
 
+      // Complete job even for existing instance (just updated access time)
+      await completeJob(env.METADATA, jobId, { instance_id: existing.id, name: existing.name ?? existing.object_id, already_existed: true })
       return jsonResponse({ instance: updated, created: false }, corsHeaders)
     }
 
@@ -227,9 +233,15 @@ async function createInstance(
       'SELECT * FROM instances WHERE id = ?'
     ).bind(id).first<Instance>()
 
+    // Update job with instance ID and complete
+    if (jobId) {
+      await env.METADATA.prepare('UPDATE jobs SET instance_id = ? WHERE id = ?').bind(id, jobId).run()
+    }
+    await completeJob(env.METADATA, jobId, { instance_id: id, name: body.name ?? body.object_id })
     return jsonResponse({ instance: result, created: true }, corsHeaders, 201)
   } catch (error) {
     console.error('[Instances] Create error:', error)
+    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Failed to create instance')
     return errorResponse('Failed to create instance', corsHeaders, 500)
   }
 }
@@ -274,17 +286,23 @@ async function deleteInstance(
   instanceId: string,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
   if (isLocalDev) {
     return jsonResponse({ success: true }, corsHeaders)
   }
 
   try {
+    // Get instance info before deletion
+    const inst = await env.METADATA.prepare('SELECT * FROM instances WHERE id = ?').bind(instanceId).first<Instance>()
+    const jobId = await createJob(env.METADATA, 'delete_instance', userEmail, inst?.namespace_id ?? null, instanceId)
+
     await env.METADATA.prepare(
       'DELETE FROM instances WHERE id = ?'
     ).bind(instanceId).run()
 
+    await completeJob(env.METADATA, jobId, { instance_id: instanceId, name: inst?.name ?? inst?.object_id })
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
     console.error('[Instances] Delete error:', error)

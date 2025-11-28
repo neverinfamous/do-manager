@@ -1,5 +1,5 @@
 import type { Env, CorsHeaders, Namespace, CloudflareApiResponse, DurableObjectNamespaceInfo } from '../types'
-import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody } from '../utils/helpers'
+import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 
 /**
  * System DO namespaces to filter from discovery
@@ -63,7 +63,7 @@ export async function handleNamespaceRoutes(
   url: URL,
   corsHeaders: CorsHeaders,
   isLocalDev: boolean,
-  _userEmail: string | null
+  userEmail: string | null
 ): Promise<Response> {
   const method = request.method
   const path = url.pathname
@@ -80,7 +80,7 @@ export async function handleNamespaceRoutes(
 
   // POST /api/namespaces - Add namespace manually
   if (method === 'POST' && path === '/api/namespaces') {
-    return addNamespace(request, env, corsHeaders, isLocalDev)
+    return addNamespace(request, env, corsHeaders, isLocalDev, userEmail)
   }
 
   // GET /api/namespaces/:id - Get single namespace
@@ -108,7 +108,7 @@ export async function handleNamespaceRoutes(
     if (!namespaceId) {
       return errorResponse('Namespace ID required', corsHeaders, 400)
     }
-    return deleteNamespace(namespaceId, env, corsHeaders, isLocalDev)
+    return deleteNamespace(namespaceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
   return errorResponse('Not Found', corsHeaders, 404)
@@ -213,7 +213,8 @@ async function addNamespace(
   request: Request,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
   interface AddNamespaceBody {
     name: string
@@ -244,6 +245,8 @@ async function addNamespace(
     return jsonResponse({ namespace: newNs }, corsHeaders, 201)
   }
 
+  const jobId = await createJob(env.METADATA, 'create_namespace', userEmail)
+
   try {
     const id = generateId()
     const now = nowISO()
@@ -266,9 +269,16 @@ async function addNamespace(
       'SELECT * FROM namespaces WHERE id = ?'
     ).bind(id).first<Namespace>()
 
+    // Update job with namespace ID and complete
+    if (jobId) {
+      await env.METADATA.prepare('UPDATE jobs SET namespace_id = ? WHERE id = ?').bind(id, jobId).run()
+    }
+    await completeJob(env.METADATA, jobId, { namespace_id: id, name: body.name })
+
     return jsonResponse({ namespace: result }, corsHeaders, 201)
   } catch (error) {
     console.error('[Namespaces] Add error:', error)
+    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Failed to add namespace')
     return errorResponse('Failed to add namespace', corsHeaders, 500)
   }
 }
@@ -400,20 +410,28 @@ async function deleteNamespace(
   namespaceId: string,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
   if (isLocalDev) {
     return jsonResponse({ success: true }, corsHeaders)
   }
 
+  const jobId = await createJob(env.METADATA, 'delete_namespace', userEmail, namespaceId)
+
   try {
+    // Get namespace name before deletion for job result
+    const ns = await env.METADATA.prepare('SELECT name FROM namespaces WHERE id = ?').bind(namespaceId).first<{ name: string }>()
+
     await env.METADATA.prepare(
       'DELETE FROM namespaces WHERE id = ?'
     ).bind(namespaceId).run()
 
+    await completeJob(env.METADATA, jobId, { namespace_id: namespaceId, name: ns?.name })
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
     console.error('[Namespaces] Delete error:', error)
+    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Failed to delete namespace')
     return errorResponse('Failed to delete namespace', corsHeaders, 500)
   }
 }

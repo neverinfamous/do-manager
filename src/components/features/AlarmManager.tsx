@@ -86,12 +86,12 @@ export function AlarmManager({
 
     if (hours > 24) {
       const days = Math.floor(hours / 24)
-      return `${days} day${days > 1 ? 's' : ''}`
+      return `${String(days)} day${days > 1 ? 's' : ''}`
     }
     if (hours > 0) {
-      return `${hours}h ${minutes}m`
+      return `${String(hours)}h ${String(minutes)}m`
     }
-    return `${minutes} min`
+    return `${String(minutes)} min`
   }
 
   return (

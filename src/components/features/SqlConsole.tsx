@@ -218,17 +218,32 @@ export function SqlConsole({ instanceId, tables }: SqlConsoleProps) {
                   <tbody>
                     {result.results.map((row, i) => (
                       <tr key={i} className="border-b last:border-0">
-                        {Object.values(row as Record<string, unknown>).map((val, j) => (
-                          <td key={j} className="px-3 py-2 font-mono text-xs">
-                            {val === null ? (
-                              <span className="text-muted-foreground italic">null</span>
-                            ) : typeof val === 'object' ? (
-                              JSON.stringify(val)
-                            ) : (
-                              String(val)
-                            )}
-                          </td>
-                        ))}
+                        {Object.values(row as Record<string, unknown>).map((val, j) => {
+                          let displayValue: string
+                          if (val === null) {
+                            displayValue = ''
+                          } else if (typeof val === 'object') {
+                            displayValue = JSON.stringify(val)
+                          } else if (typeof val === 'string') {
+                            displayValue = val
+                          } else if (typeof val === 'number' || typeof val === 'boolean') {
+                            displayValue = String(val)
+                          } else if (val === undefined) {
+                            displayValue = ''
+                          } else {
+                            displayValue = ''
+                          }
+
+                          return (
+                            <td key={j} className="px-3 py-2 font-mono text-xs">
+                              {val === null ? (
+                                <span className="text-muted-foreground italic">null</span>
+                              ) : (
+                                displayValue
+                              )}
+                            </td>
+                          )
+                        })}
                       </tr>
                     ))}
                   </tbody>

@@ -7,17 +7,22 @@ async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const headers = new Headers({ 'Content-Type': 'application/json' })
+  if (options.headers) {
+    const optHeaders = options.headers instanceof Headers
+      ? options.headers
+      : new Headers(options.headers as Record<string, string>)
+    optHeaders.forEach((value, key) => headers.set(key, value))
+  }
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   })
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({})) as { error?: string }
-    throw new Error(errorData.error ?? `Request failed: ${response.status}`)
+    throw new Error(errorData.error ?? `Request failed: ${String(response.status)}`)
   }
 
   return response.json() as Promise<T>

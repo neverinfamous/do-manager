@@ -1,5 +1,5 @@
 import type { Env, CorsHeaders, Namespace, Instance } from '../types'
-import { jsonResponse, errorResponse, parseJsonBody } from '../utils/helpers'
+import { jsonResponse, errorResponse, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 
 /**
  * Mock storage data for local development
@@ -52,7 +52,7 @@ export async function handleStorageRoutes(
   url: URL,
   corsHeaders: CorsHeaders,
   isLocalDev: boolean,
-  _userEmail: string | null
+  userEmail: string | null
 ): Promise<Response> {
   const method = request.method
   const path = url.pathname
@@ -85,7 +85,7 @@ export async function handleStorageRoutes(
     if (!instanceId || !key) {
       return errorResponse('Instance ID and key required', corsHeaders, 400)
     }
-    return setStorageValue(request, instanceId, decodeURIComponent(key), env, corsHeaders, isLocalDev)
+    return setStorageValue(request, instanceId, decodeURIComponent(key), env, corsHeaders, isLocalDev, userEmail)
   }
 
   // DELETE /api/instances/:id/storage/:key - Delete storage value
@@ -95,7 +95,7 @@ export async function handleStorageRoutes(
     if (!instanceId || !key) {
       return errorResponse('Instance ID and key required', corsHeaders, 400)
     }
-    return deleteStorageValue(instanceId, decodeURIComponent(key), env, corsHeaders, isLocalDev)
+    return deleteStorageValue(instanceId, decodeURIComponent(key), env, corsHeaders, isLocalDev, userEmail)
   }
 
   // POST /api/instances/:id/sql - Execute SQL query
@@ -282,7 +282,8 @@ async function setStorageValue(
   key: string,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<{ value: unknown }>(request)
   if (!body || body.value === undefined) {
@@ -316,6 +317,8 @@ async function setStorageValue(
       return errorResponse('Admin hook not configured or enabled', corsHeaders, 400)
     }
 
+    const jobId = await createJob(env.METADATA, 'create_key', userEmail, instance.namespace_id, instanceId)
+
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     const instanceName = instance.name || instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/put`
@@ -327,9 +330,11 @@ async function setStorageValue(
     })
 
     if (!response.ok) {
+      await failJob(env.METADATA, jobId, `Admin hook error: ${response.status}`)
       return errorResponse(`Admin hook error: ${response.status}`, corsHeaders, response.status)
     }
 
+    await completeJob(env.METADATA, jobId, { key })
     return jsonResponse({ success: true, key, value: body.value }, corsHeaders)
   } catch (error) {
     console.error('[Storage] Set error:', error)
@@ -345,7 +350,8 @@ async function deleteStorageValue(
   key: string,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
   if (isLocalDev) {
     const storage = MOCK_STORAGE[instanceId]
@@ -374,6 +380,8 @@ async function deleteStorageValue(
       return errorResponse('Admin hook not configured or enabled', corsHeaders, 400)
     }
 
+    const jobId = await createJob(env.METADATA, 'delete_key', userEmail, instance.namespace_id, instanceId)
+
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     const instanceName = instance.name || instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/delete`
@@ -385,9 +393,11 @@ async function deleteStorageValue(
     })
 
     if (!response.ok) {
+      await failJob(env.METADATA, jobId, `Admin hook error: ${response.status}`)
       return errorResponse(`Admin hook error: ${response.status}`, corsHeaders, response.status)
     }
 
+    await completeJob(env.METADATA, jobId, { key })
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
     console.error('[Storage] Delete error:', error)

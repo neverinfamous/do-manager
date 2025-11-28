@@ -51,7 +51,7 @@ export function MetricsDashboard({
     if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(2)} GB`
     if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(2)} MB`
     if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`
-    return `${bytes} B`
+    return `${String(bytes)} B`
   }
 
   const formatDuration = (ms: number): string => {
@@ -160,7 +160,7 @@ export function MetricsDashboard({
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-primary transition-all"
-                      style={{ width: `${Math.min(getStoragePercentage(), 100)}%` }}
+                      style={{ width: `${String(Math.min(getStoragePercentage(), 100))}%` }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -226,7 +226,7 @@ export function MetricsDashboard({
                     <div
                       className="w-full bg-primary/80 hover:bg-primary rounded-t transition-all"
                       style={{
-                        height: `${(day.requests / maxRequests) * 100}%`,
+                        height: `${String((day.requests / maxRequests) * 100)}%`,
                         minHeight: day.requests > 0 ? '4px' : '0',
                       }}
                       title={`${day.requests.toLocaleString()} requests`}
