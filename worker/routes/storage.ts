@@ -195,7 +195,7 @@ async function listStorage(
       return jsonResponse({
         keys: [],
         tables: [],
-        error: `Admin hook returned ${response.status}. Ensure your DO class has admin hook methods and the endpoint URL is correct.`,
+        error: `Admin hook returned ${String(response.status)}. Ensure your DO class has admin hook methods and the endpoint URL is correct.`,
         details: errorText.slice(0, 200),
       }, corsHeaders)
     }
@@ -262,11 +262,13 @@ async function getStorageValue(
     })
 
     if (!response.ok) {
-      return errorResponse(`Admin hook error: ${response.status}`, corsHeaders, response.status)
+      return errorResponse(`Admin hook error: ${String(response.status)}`, corsHeaders, response.status)
     }
 
-    const data = await response.json()
-    return jsonResponse({ key, value: data.value ?? data }, corsHeaders)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    const data = await response.json() as { value?: unknown }
+    const resultValue: unknown = data.value ?? data
+    return jsonResponse({ key, value: resultValue }, corsHeaders)
   } catch (error) {
     console.error('[Storage] Get error:', error)
     return errorResponse(`Failed to get value: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
@@ -330,8 +332,8 @@ async function setStorageValue(
     })
 
     if (!response.ok) {
-      await failJob(env.METADATA, jobId, `Admin hook error: ${response.status}`)
-      return errorResponse(`Admin hook error: ${response.status}`, corsHeaders, response.status)
+      await failJob(env.METADATA, jobId, `Admin hook error: ${String(response.status)}`)
+      return errorResponse(`Admin hook error: ${String(response.status)}`, corsHeaders, response.status)
     }
 
     await completeJob(env.METADATA, jobId, { key })
@@ -358,7 +360,14 @@ async function deleteStorageValue(
     if (!storage) {
       return errorResponse('Instance not found', corsHeaders, 404)
     }
-    delete storage.keys[key]
+    // Create a new object without the deleted key
+    const newKeys: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(storage.keys)) {
+      if (k !== key) {
+        newKeys[k] = v
+      }
+    }
+    storage.keys = newKeys
     return jsonResponse({ success: true }, corsHeaders)
   }
 
@@ -393,8 +402,8 @@ async function deleteStorageValue(
     })
 
     if (!response.ok) {
-      await failJob(env.METADATA, jobId, `Admin hook error: ${response.status}`)
-      return errorResponse(`Admin hook error: ${response.status}`, corsHeaders, response.status)
+      await failJob(env.METADATA, jobId, `Admin hook error: ${String(response.status)}`)
+      return errorResponse(`Admin hook error: ${String(response.status)}`, corsHeaders, response.status)
     }
 
     await completeJob(env.METADATA, jobId, { key })
@@ -473,10 +482,12 @@ async function executeSql(
       return errorResponse(`SQL execution failed: ${errorText}`, corsHeaders, response.status)
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const data = await response.json() as { result?: unknown[] }
+    const results: unknown[] = data.result ?? []
     return jsonResponse({
-      results: data.result ?? data,
-      rowCount: Array.isArray(data.result) ? data.result.length : 0,
+      results,
+      rowCount: results.length,
     }, corsHeaders)
   } catch (error) {
     console.error('[Storage] SQL error:', error)

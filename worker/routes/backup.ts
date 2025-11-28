@@ -1,5 +1,5 @@
 import type { Env, CorsHeaders, Instance, Namespace, Backup } from '../types'
-import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody } from '../utils/helpers'
+import { jsonResponse, errorResponse, generateId, nowISO } from '../utils/helpers'
 
 /**
  * Helper to update job status
@@ -262,7 +262,7 @@ async function createBackup(
 
     if (!storageResponse.ok) {
       const errorText = await storageResponse.text().catch(() => 'Unknown error')
-      await updateJobStatus(env, jobId, 'failed', `Export failed: ${storageResponse.status} - ${errorText.slice(0, 100)}`)
+      await updateJobStatus(env, jobId, 'failed', `Export failed: ${String(storageResponse.status)} - ${errorText.slice(0, 100)}`)
       return errorResponse('Failed to export storage from DO', corsHeaders, storageResponse.status)
     }
 
@@ -423,7 +423,7 @@ async function restoreBackup(
 
     if (!restoreResponse.ok) {
       const errorText = await restoreResponse.text().catch(() => 'Unknown error')
-      await updateJobStatus(env, jobId, 'failed', `Import failed: ${restoreResponse.status} - ${errorText.slice(0, 100)}`)
+      await updateJobStatus(env, jobId, 'failed', `Import failed: ${String(restoreResponse.status)} - ${errorText.slice(0, 100)}`)
       return errorResponse('Failed to restore storage to DO', corsHeaders, restoreResponse.status)
     }
 

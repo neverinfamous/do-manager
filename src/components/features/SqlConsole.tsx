@@ -15,7 +15,7 @@ interface SqlConsoleProps {
   tables: string[]
 }
 
-export function SqlConsole({ instanceId, tables }: SqlConsoleProps) {
+export function SqlConsole({ instanceId, tables }: SqlConsoleProps): React.ReactElement {
   const [query, setQuery] = useState('')
   const [result, setResult] = useState<SqlResponse | null>(null)
   const [loading, setLoading] = useState(false)

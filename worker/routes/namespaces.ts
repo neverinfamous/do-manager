@@ -1,4 +1,4 @@
-import type { Env, CorsHeaders, Namespace, CloudflareApiResponse, DurableObjectNamespaceInfo } from '../types'
+import type { Env, CorsHeaders, Namespace } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 
 /**
@@ -177,10 +177,25 @@ async function discoverNamespaces(
       return errorResponse('Failed to fetch from Cloudflare API', corsHeaders, response.status)
     }
 
-    const data = await response.json() as CloudflareApiResponse<DurableObjectNamespaceInfo[]>
+    interface DurableObjectNs {
+      id: string
+      name: string
+      script: string
+      class: string
+    }
+    interface CloudflareResponse {
+      success: boolean
+      errors: Array<{ message: string }>
+      result: DurableObjectNs[]
+    }
+    
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    const data = await response.json() as CloudflareResponse
     
     if (!data.success) {
-      return errorResponse(data.errors[0]?.message ?? 'API error', corsHeaders, 500)
+      const firstError = data.errors[0]
+      const errorMessage = firstError?.message ?? 'API error'
+      return errorResponse(errorMessage, corsHeaders, 500)
     }
 
     // Filter out system namespaces and transform to our format
@@ -225,7 +240,7 @@ async function addNamespace(
   }
 
   const body = await parseJsonBody<AddNamespaceBody>(request)
-  if (!body?.name || !body?.class_name) {
+  if (!body || !body.name || !body.class_name) {
     return errorResponse('name and class_name are required', corsHeaders, 400)
   }
 

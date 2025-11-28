@@ -19,7 +19,7 @@ export function NamespaceView({
   onBack,
   onSelectInstance,
   onNamespaceUpdate,
-}: NamespaceViewProps) {
+}: NamespaceViewProps): React.ReactElement {
   const [activeTab, setActiveTab] = useState('instances')
   const [showSettings, setShowSettings] = useState(false)
 

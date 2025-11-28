@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Download, Upload, Trash2, Loader2, Archive, Clock } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
@@ -26,7 +26,7 @@ interface BackupManagerProps {
 export function BackupManager({
   instanceId,
   onRestore,
-}: BackupManagerProps) {
+}: BackupManagerProps): React.ReactElement {
   const [backups, setBackups] = useState<Backup[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -34,7 +34,7 @@ export function BackupManager({
   const [restoreDialog, setRestoreDialog] = useState<Backup | null>(null)
   const [restoring, setRestoring] = useState(false)
 
-  const loadBackups = async (): Promise<void> => {
+  const loadBackups = useCallback(async (): Promise<void> => {
     try {
       setLoading(true)
       setError('')
@@ -45,7 +45,7 @@ export function BackupManager({
     } finally {
       setLoading(false)
     }
-  }
+  }, [instanceId])
 
   const handleCreateBackup = async (): Promise<void> => {
     try {
@@ -91,7 +91,7 @@ export function BackupManager({
 
   useEffect(() => {
     void loadBackups()
-  }, [instanceId])
+  }, [loadBackups])
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleString('en-US', {

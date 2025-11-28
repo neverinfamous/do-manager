@@ -17,7 +17,7 @@ interface AdminHookTemplateProps {
 export function AdminHookTemplate({
   className = 'MyDurableObject',
   storageBackend = 'sqlite',
-}: AdminHookTemplateProps) {
+}: AdminHookTemplateProps): React.ReactElement {
   const [copied, setCopied] = useState(false)
 
   const sqliteTemplate = `// Admin Hook Methods for DO Manager

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { RefreshCw, Loader2, Key, Table, Trash2, Edit, Plus, Bell, Archive, Search, X } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -44,7 +44,7 @@ export function StorageViewer({
   namespace,
   instance,
   onBack,
-}: StorageViewerProps) {
+}: StorageViewerProps): React.ReactElement {
   const [storage, setStorage] = useState<StorageListResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
@@ -61,7 +61,7 @@ export function StorageViewer({
     return storage.keys.filter((key) => key.toLowerCase().includes(searchLower))
   }, [storage?.keys, keySearch])
 
-  const loadStorage = async (): Promise<void> => {
+  const loadStorage = useCallback(async (): Promise<void> => {
     try {
       setLoading(true)
       setError('')
@@ -72,7 +72,7 @@ export function StorageViewer({
     } finally {
       setLoading(false)
     }
-  }
+  }, [instance.id])
 
   const handleDeleteKey = async (key: string): Promise<void> => {
     if (!confirm(`Delete key "${key}"?`)) {
@@ -88,7 +88,7 @@ export function StorageViewer({
 
   useEffect(() => {
     void loadStorage()
-  }, [instance.id])
+  }, [loadStorage])
 
   return (
     <div>

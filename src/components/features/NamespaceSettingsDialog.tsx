@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -26,7 +26,7 @@ export function NamespaceSettingsDialog({
   open,
   onOpenChange,
   onUpdate,
-}: NamespaceSettingsDialogProps) {
+}: NamespaceSettingsDialogProps): React.ReactNode {
   const [name, setName] = useState('')
   const [endpointUrl, setEndpointUrl] = useState('')
   const [adminHookEnabled, setAdminHookEnabled] = useState(false)

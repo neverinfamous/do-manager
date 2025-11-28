@@ -14,7 +14,7 @@ type View =
   | { type: 'namespace'; namespace: Namespace }
   | { type: 'instance'; namespace: Namespace; instance: Instance }
 
-export default function App() {
+export default function App(): React.ReactElement {
   const [currentView, setCurrentView] = useState<View>({ type: 'list' })
   const [activeTab, setActiveTab] = useState('namespaces')
 

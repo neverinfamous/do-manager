@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Bell, BellOff, Clock, Loader2, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
@@ -28,13 +28,13 @@ interface AlarmManagerProps {
 export function AlarmManager({
   instanceId,
   instanceName,
-}: AlarmManagerProps) {
+}: AlarmManagerProps): React.ReactElement {
   const [alarm, setAlarm] = useState<AlarmResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [showSetDialog, setShowSetDialog] = useState(false)
 
-  const loadAlarm = async (): Promise<void> => {
+  const loadAlarm = useCallback(async (): Promise<void> => {
     try {
       setLoading(true)
       setError('')
@@ -45,7 +45,7 @@ export function AlarmManager({
     } finally {
       setLoading(false)
     }
-  }
+  }, [instanceId])
 
   const handleDeleteAlarm = async (): Promise<void> => {
     if (!confirm('Delete the current alarm?')) {
@@ -61,7 +61,7 @@ export function AlarmManager({
 
   useEffect(() => {
     void loadAlarm()
-  }, [instanceId])
+  }, [loadAlarm])
 
   const formatAlarmTime = (timestamp: number): string => {
     const date = new Date(timestamp)
@@ -200,7 +200,7 @@ function SetAlarmDialog({
   instanceId,
   instanceName,
   onComplete,
-}: SetAlarmDialogProps) {
+}: SetAlarmDialogProps): React.ReactElement {
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [loading, setLoading] = useState(false)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
@@ -20,14 +20,14 @@ interface InstanceListProps {
 export function InstanceList({
   namespace,
   onSelectInstance,
-}: InstanceListProps) {
+}: InstanceListProps): React.ReactElement {
   const [instances, setInstances] = useState<Instance[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
 
-  const loadInstances = async (): Promise<void> => {
+  const loadInstances = useCallback(async (): Promise<void> => {
     try {
       setLoading(true)
       setError('')
@@ -39,7 +39,7 @@ export function InstanceList({
     } finally {
       setLoading(false)
     }
-  }
+  }, [namespace.id])
 
   const handleDelete = async (instance: Instance): Promise<void> => {
     if (!confirm(`Remove tracking for "${instance.name ?? instance.object_id}"?`)) {
@@ -62,7 +62,7 @@ export function InstanceList({
 
   useEffect(() => {
     void loadInstances()
-  }, [namespace.id])
+  }, [loadInstances])
 
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return 'Never'

@@ -133,16 +133,18 @@ async function getAlarm(
         alarm: null,
         hasAlarm: false,
         alarmDate: null,
-        error: `Admin hook returned ${response.status}. Ensure your DO class has alarm admin hook methods.`,
+        error: `Admin hook returned ${String(response.status)}. Ensure your DO class has alarm admin hook methods.`,
         details: errorText.slice(0, 200),
       }, corsHeaders)
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const data = await response.json() as { alarm: number | null }
+    const alarmTimestamp: number | null = data.alarm
     return jsonResponse({
-      alarm: data.alarm,
-      hasAlarm: data.alarm !== null,
-      alarmDate: data.alarm ? new Date(data.alarm).toISOString() : null,
+      alarm: alarmTimestamp,
+      hasAlarm: alarmTimestamp !== null,
+      alarmDate: alarmTimestamp !== null ? new Date(alarmTimestamp).toISOString() : null,
     }, corsHeaders)
   } catch (error) {
     console.error('[Alarms] Get error:', error)
@@ -225,7 +227,7 @@ async function setAlarm(
     })
 
     if (!response.ok) {
-      await failJob(env.METADATA, jobId, `Failed to set alarm: ${response.status}`)
+      await failJob(env.METADATA, jobId, `Failed to set alarm: ${String(response.status)}`)
       return errorResponse('Failed to set alarm on DO', corsHeaders, response.status)
     }
 

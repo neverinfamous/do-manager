@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Loader2, BarChart3, Database, Clock, TrendingUp } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
@@ -16,13 +16,13 @@ interface MetricsDashboardProps {
 
 export function MetricsDashboard({
   namespaceId,
-}: MetricsDashboardProps) {
+}: MetricsDashboardProps): React.ReactElement {
   const [metrics, setMetrics] = useState<MetricsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [days, setDays] = useState(7)
 
-  const loadMetrics = async (): Promise<void> => {
+  const loadMetrics = useCallback(async (): Promise<void> => {
     try {
       setLoading(true)
       setError('')
@@ -35,11 +35,11 @@ export function MetricsDashboard({
     } finally {
       setLoading(false)
     }
-  }
+  }, [namespaceId, days])
 
   useEffect(() => {
     void loadMetrics()
-  }, [namespaceId, days])
+  }, [loadMetrics])
 
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`

@@ -21,7 +21,7 @@ interface AdminHookDialogProps {
 export function AdminHookDialog({
   defaultClassName = 'MyDurableObject',
   defaultStorageBackend = 'sqlite',
-}: AdminHookDialogProps) {
+}: AdminHookDialogProps): React.ReactElement {
   const [className, setClassName] = useState(defaultClassName)
   const [storageBackend, setStorageBackend] = useState<'sqlite' | 'kv'>(
     defaultStorageBackend

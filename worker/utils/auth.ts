@@ -48,6 +48,7 @@ export async function validateAccessJWT(
       return null
     }
     
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const certs = await certsResponse.json() as { keys: jose.JWK[] }
     const jwks = jose.createLocalJWKSet({ keys: certs.keys })
     

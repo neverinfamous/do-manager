@@ -167,7 +167,7 @@ async function getAccountMetrics(
           p95: 0,
           p99: 0,
         },
-        warning: `Failed to fetch metrics from GraphQL API (${response.status}). This may be due to API permissions or no Durable Object data available.`,
+        warning: `Failed to fetch metrics from GraphQL API (${String(response.status)}). This may be due to API permissions or no Durable Object data available.`,
       }, corsHeaders)
     }
 
@@ -191,11 +191,14 @@ async function getAccountMetrics(
       errors?: Array<{ message: string }>
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const data = await response.json() as GraphQLResponse
 
-    if (data.errors?.length) {
+    if (data.errors && data.errors.length > 0) {
       console.error('[Metrics] GraphQL errors:', data.errors)
       // Return empty metrics with warning instead of error
+      const firstError = data.errors[0]
+      const errorMessage = firstError?.message ?? 'Unknown error'
       return jsonResponse({
         invocations: {
           total: 0,
@@ -212,7 +215,7 @@ async function getAccountMetrics(
           p95: 0,
           p99: 0,
         },
-        warning: `GraphQL API error: ${data.errors[0]?.message ?? 'Unknown error'}. The Analytics API may not have data for your account yet.`,
+        warning: `GraphQL API error: ${errorMessage}. The Analytics API may not have data for your account yet.`,
       }, corsHeaders)
     }
 

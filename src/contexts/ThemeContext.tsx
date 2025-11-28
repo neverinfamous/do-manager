@@ -14,7 +14,7 @@ interface ThemeProviderProps {
   children: ReactNode
 }
 
-export function ThemeProvider({ children }: ThemeProviderProps) {
+export function ThemeProvider({ children }: ThemeProviderProps): React.ReactElement {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('do-manager-theme') as Theme | null
@@ -52,7 +52,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
 
     mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
+    return (): void => mediaQuery.removeEventListener('change', handleChange)
   }, [theme])
 
   const setTheme = (newTheme: Theme): void => {

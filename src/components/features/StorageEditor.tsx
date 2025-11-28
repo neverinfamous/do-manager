@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
@@ -25,7 +25,7 @@ export function StorageEditor({
   keyName,
   onClose,
   onSave,
-}: StorageEditorProps) {
+}: StorageEditorProps): React.ReactElement {
   const [key, setKey] = useState(keyName ?? '')
   const [value, setValue] = useState('')
   const [valueType, setValueType] = useState<'json' | 'string'>('json')
@@ -33,13 +33,7 @@ export function StorageEditor({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (keyName !== null) {
-      void loadValue()
-    }
-  }, [keyName])
-
-  const loadValue = async (): Promise<void> => {
+  const loadValue = useCallback(async (): Promise<void> => {
     if (!keyName) return
     
     try {
@@ -60,7 +54,13 @@ export function StorageEditor({
     } finally {
       setLoading(false)
     }
-  }
+  }, [instanceId, keyName])
+
+  useEffect(() => {
+    if (keyName !== null) {
+      void loadValue()
+    }
+  }, [keyName, loadValue])
 
   const handleSave = async (): Promise<void> => {
     if (!key.trim()) {
