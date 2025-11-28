@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, Loader2, Table, Download } from 'lucide-react'
+import { Play, Loader2, Table, Download, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
   Card,
@@ -134,6 +134,17 @@ export function SqlConsole({ instanceId, tables }: SqlConsoleProps) {
                 )}
                 Execute
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setQuery('')
+                  setError('')
+                }}
+                disabled={loading || !query}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear
+              </Button>
               {result && result.results.length > 0 && (
                 <Button variant="outline" onClick={exportResults}>
                   <Download className="h-4 w-4 mr-2" />
@@ -161,9 +172,21 @@ export function SqlConsole({ instanceId, tables }: SqlConsoleProps) {
 
       {/* Error */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg">
-          {error}
-        </div>
+        <Card className="border-destructive">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-destructive">SQL Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-destructive font-mono whitespace-pre-wrap">
+              {error.includes('SQLITE_ERROR') || error.includes('syntax error')
+                ? `Syntax Error: ${error.replace(/^.*?:/, '').replace(/SQL execution failed:?\s*/i, '').trim()}`
+                : error}
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Check your SQL syntax and try again.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Results */}

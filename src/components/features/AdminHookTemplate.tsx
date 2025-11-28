@@ -27,17 +27,20 @@ export function AdminHookTemplate({
  * List all storage keys/tables
  */
 async adminList(): Promise<{ keys?: string[]; tables?: string[] }> {
+  // Always list KV keys
+  const entries = await this.ctx.storage.list();
+  const keys = [...entries.keys()];
+
   if (this.ctx.storage.sql) {
-    // SQLite backend - list tables
+    // SQLite backend - also list tables (exclude internal _cf_* tables)
     const tables = this.ctx.storage.sql
-      .exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+      .exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'")
       .toArray()
       .map((row: { name: string }) => row.name);
-    return { tables };
+    return { keys, tables };
   }
-  // KV backend fallback
-  const entries = await this.ctx.storage.list();
-  return { keys: [...entries.keys()] };
+  // KV backend - just return keys
+  return { keys };
 }
 
 /**
