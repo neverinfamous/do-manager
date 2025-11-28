@@ -16,7 +16,7 @@ export function NamespaceView({
   namespace,
   onBack,
   onSelectInstance,
-}: NamespaceViewProps): JSX.Element {
+}: NamespaceViewProps) {
   const [activeTab, setActiveTab] = useState('instances')
 
   return (

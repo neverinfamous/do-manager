@@ -3,7 +3,7 @@ import { Button } from '../ui/button'
 import { useTheme } from '../../hooks/useTheme'
 import { authApi } from '../../services/api'
 
-export function Header(): JSX.Element {
+export function Header() {
   const { theme, setTheme } = useTheme()
 
   const cycleTheme = (): void => {
@@ -16,7 +16,7 @@ export function Header(): JSX.Element {
     }
   }
 
-  const getThemeIcon = (): JSX.Element => {
+  const getThemeIcon = () => {
     if (theme === 'system') return <Monitor className="h-5 w-5" />
     if (theme === 'light') return <Sun className="h-5 w-5" />
     return <Moon className="h-5 w-5" />

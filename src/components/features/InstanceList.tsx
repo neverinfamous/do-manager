@@ -20,7 +20,7 @@ interface InstanceListProps {
 export function InstanceList({
   namespace,
   onSelectInstance,
-}: InstanceListProps): JSX.Element {
+}: InstanceListProps) {
   const [instances, setInstances] = useState<Instance[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -154,7 +154,9 @@ export function InstanceList({
                   </div>
                   <div className="flex items-center gap-1">
                     {instance.has_alarm === 1 && (
-                      <Bell className="h-4 w-4 text-yellow-500" title="Has alarm" />
+                      <span title="Has alarm">
+                        <Bell className="h-4 w-4 text-yellow-500" />
+                      </span>
                     )}
                   </div>
                 </div>

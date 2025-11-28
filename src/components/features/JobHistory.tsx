@@ -11,7 +11,7 @@ import {
 import { jobApi } from '../../services/api'
 import type { Job } from '../../types'
 
-export function JobHistory(): JSX.Element {
+export function JobHistory() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
@@ -33,7 +33,7 @@ export function JobHistory(): JSX.Element {
     void loadJobs()
   }, [])
 
-  const getStatusIcon = (status: Job['status']): JSX.Element => {
+  const getStatusIcon = (status: Job['status']) => {
     switch (status) {
       case 'completed':
         return <CheckCircle2 className="h-5 w-5 text-green-500" />

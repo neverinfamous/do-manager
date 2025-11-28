@@ -26,7 +26,7 @@ export function StorageViewer({
   namespace,
   instance,
   onBack,
-}: StorageViewerProps): JSX.Element {
+}: StorageViewerProps) {
   const [storage, setStorage] = useState<StorageListResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
@@ -203,7 +203,6 @@ export function StorageViewer({
             <div className="max-w-xl">
               <BackupManager
                 instanceId={instance.id}
-                instanceName={instance.name}
               />
             </div>
           </TabsContent>

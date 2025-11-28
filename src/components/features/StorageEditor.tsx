@@ -25,7 +25,7 @@ export function StorageEditor({
   keyName,
   onClose,
   onSave,
-}: StorageEditorProps): JSX.Element {
+}: StorageEditorProps) {
   const [key, setKey] = useState(keyName ?? '')
   const [value, setValue] = useState('')
   const [valueType, setValueType] = useState<'json' | 'string'>('json')

@@ -26,7 +26,7 @@ export function CreateInstanceDialog({
   onOpenChange,
   namespaceId,
   onComplete,
-}: CreateInstanceDialogProps): JSX.Element {
+}: CreateInstanceDialogProps) {
   const [name, setName] = useState('')
   const [objectId, setObjectId] = useState('')
   const [idType, setIdType] = useState<'name' | 'hex'>('name')

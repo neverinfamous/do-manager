@@ -28,7 +28,7 @@ interface AlarmManagerProps {
 export function AlarmManager({
   instanceId,
   instanceName,
-}: AlarmManagerProps): JSX.Element {
+}: AlarmManagerProps) {
   const [alarm, setAlarm] = useState<AlarmResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
@@ -185,7 +185,7 @@ function SetAlarmDialog({
   instanceId,
   instanceName,
   onComplete,
-}: SetAlarmDialogProps): JSX.Element {
+}: SetAlarmDialogProps) {
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [loading, setLoading] = useState(false)

@@ -16,7 +16,7 @@ interface MetricsDashboardProps {
 
 export function MetricsDashboard({
   namespaceId,
-}: MetricsDashboardProps): JSX.Element {
+}: MetricsDashboardProps) {
   const [metrics, setMetrics] = useState<MetricsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')

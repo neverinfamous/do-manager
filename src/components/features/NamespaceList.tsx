@@ -10,7 +10,7 @@ interface NamespaceListProps {
   onSelectNamespace: (namespace: Namespace) => void
 }
 
-export function NamespaceList({ onSelectNamespace }: NamespaceListProps): JSX.Element {
+export function NamespaceList({ onSelectNamespace }: NamespaceListProps) {
   const [namespaces, setNamespaces] = useState<Namespace[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')

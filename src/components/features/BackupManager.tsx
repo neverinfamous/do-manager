@@ -20,13 +20,11 @@ import { backupApi, type Backup } from '../../services/backupApi'
 
 interface BackupManagerProps {
   instanceId: string
-  instanceName: string | null
 }
 
 export function BackupManager({
   instanceId,
-  instanceName,
-}: BackupManagerProps): JSX.Element {
+}: BackupManagerProps) {
   const [backups, setBackups] = useState<Backup[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)

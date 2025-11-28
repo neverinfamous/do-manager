@@ -24,7 +24,7 @@ export function AddNamespaceDialog({
   open,
   onOpenChange,
   onComplete,
-}: AddNamespaceDialogProps): JSX.Element {
+}: AddNamespaceDialogProps) {
   const [name, setName] = useState('')
   const [className, setClassName] = useState('')
   const [scriptName, setScriptName] = useState('')
