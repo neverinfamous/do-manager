@@ -189,8 +189,10 @@ export function StorageViewer({
             {/* Search/Filter */}
             {storage.keys && storage.keys.length > 0 && (
               <div className="relative mb-4">
+                <label htmlFor="storage-key-filter" className="sr-only">Filter storage keys</label>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
+                  id="storage-key-filter"
                   placeholder="Filter keys... (e.g., user: or config)"
                   value={keySearch}
                   onChange={(e) => setKeySearch(e.target.value)}
@@ -202,6 +204,7 @@ export function StorageViewer({
                     size="sm"
                     className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
                     onClick={() => setKeySearch('')}
+                    aria-label="Clear key filter"
                   >
                     <X className="h-4 w-4" />
                   </Button>

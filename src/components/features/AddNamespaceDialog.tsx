@@ -90,9 +90,9 @@ export function AddNamespaceDialog({
             </div>
           )}
           <div className="grid gap-2">
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="add-namespace-name">Name *</Label>
             <Input
-              id="name"
+              id="add-namespace-name"
               placeholder="My Durable Object"
               value={name}
               onChange={(e) => setName(e.target.value)}

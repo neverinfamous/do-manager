@@ -186,13 +186,14 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
         <>
           {/* Search */}
           <div className="relative mb-4">
+            <label htmlFor="namespace-filter" className="sr-only">Filter namespaces</label>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              id="namespace-filter"
               placeholder="Filter namespaces by name, class, or script..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-10"
-              aria-label="Filter namespaces"
             />
             {searchTerm && (
               <Button

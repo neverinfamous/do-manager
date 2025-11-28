@@ -86,9 +86,9 @@ export function NamespaceSettingsDialog({
         
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Display Name</Label>
+            <Label htmlFor="settings-name">Display Name</Label>
             <Input
-              id="name"
+              id="settings-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Namespace name"

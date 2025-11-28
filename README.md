@@ -25,6 +25,7 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - **Auto-discover** DO namespaces from Cloudflare API
 - **Manual configuration** for custom setups
 - **System namespace filtering** - Internal DOs (kv-manager, d1-manager, do-manager) are hidden to prevent accidental deletion
+- **Search & filter** - Real-time filtering by name, class name, or script name
 - Support for SQLite and KV storage backends
 
 ### Instance Management
@@ -32,6 +33,12 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - Create new instances with custom names
 - View storage contents (keys/values)
 - SQL console for SQLite-backed DOs
+
+### Storage Management
+- **Key search & filter** - Real-time filtering to find keys quickly
+- View/edit storage values with JSON support
+- Delete keys with confirmation
+- Clickable key rows for easy editing
 
 ### Admin Hook System
 - Copy-paste TypeScript template for your DO classes
@@ -46,22 +53,24 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 ### R2 Backup & Restore
 - Snapshot DO storage to R2
 - Browse backup history
-- Restore from any backup
+- Restore from any backup with auto-refresh
 
 ### Metrics Dashboard
 - Request volume over time
 - Storage usage
-- CPU time percentiles (P50, P95, P99)
+- CPU time metrics (average and total)
 
 ### Job History
-- Track all operations
-- View status and progress
-- Error details
+- **Comprehensive tracking** - Records namespace creation/deletion, instance creation/deletion, key creation/deletion, alarm operations, backup/restore
+- View status, progress, and timing
+- Error details for failed operations
+- Filter by status or namespace
 
 ### User Experience
 - Dark/Light/System themes
 - Responsive design
 - Enterprise auth via Cloudflare Access
+- **Accessible UI** - Proper form labels and ARIA attributes
 
 ---
 
