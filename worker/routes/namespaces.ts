@@ -93,6 +93,15 @@ export async function handleNamespaceRoutes(
     return getNamespace(namespaceId, env, corsHeaders, isLocalDev)
   }
 
+  // PUT /api/namespaces/:id - Update namespace
+  if (method === 'PUT' && singleMatch) {
+    const namespaceId = singleMatch[1]
+    if (!namespaceId) {
+      return errorResponse('Namespace ID required', corsHeaders, 400)
+    }
+    return updateNamespace(request, namespaceId, env, corsHeaders, isLocalDev)
+  }
+
   // DELETE /api/namespaces/:id - Delete namespace
   if (method === 'DELETE' && singleMatch) {
     const namespaceId = singleMatch[1]
@@ -294,6 +303,93 @@ async function getNamespace(
   } catch (error) {
     console.error('[Namespaces] Get error:', error)
     return errorResponse('Failed to get namespace', corsHeaders, 500)
+  }
+}
+
+/**
+ * Update a namespace
+ */
+async function updateNamespace(
+  request: Request,
+  namespaceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean
+): Promise<Response> {
+  interface UpdateNamespaceBody {
+    name?: string
+    endpoint_url?: string | null
+    admin_hook_enabled?: number
+    storage_backend?: 'sqlite' | 'kv'
+  }
+
+  const body = await parseJsonBody<UpdateNamespaceBody>(request)
+  if (!body) {
+    return errorResponse('Invalid request body', corsHeaders, 400)
+  }
+
+  if (isLocalDev) {
+    const ns = MOCK_NAMESPACES.find((n) => n.id === namespaceId)
+    if (!ns) {
+      return errorResponse('Namespace not found', corsHeaders, 404)
+    }
+    const updated: Namespace = {
+      ...ns,
+      name: body.name ?? ns.name,
+      endpoint_url: body.endpoint_url !== undefined ? body.endpoint_url : ns.endpoint_url,
+      admin_hook_enabled: body.admin_hook_enabled ?? ns.admin_hook_enabled,
+      storage_backend: body.storage_backend ?? ns.storage_backend,
+      updated_at: nowISO(),
+    }
+    return jsonResponse({ namespace: updated }, corsHeaders)
+  }
+
+  try {
+    // Build dynamic update query
+    const updates: string[] = []
+    const values: (string | number | null)[] = []
+
+    if (body.name !== undefined) {
+      updates.push('name = ?')
+      values.push(body.name)
+    }
+    if (body.endpoint_url !== undefined) {
+      updates.push('endpoint_url = ?')
+      values.push(body.endpoint_url)
+    }
+    if (body.admin_hook_enabled !== undefined) {
+      updates.push('admin_hook_enabled = ?')
+      values.push(body.admin_hook_enabled)
+    }
+    if (body.storage_backend !== undefined) {
+      updates.push('storage_backend = ?')
+      values.push(body.storage_backend)
+    }
+
+    if (updates.length === 0) {
+      return errorResponse('No fields to update', corsHeaders, 400)
+    }
+
+    updates.push('updated_at = ?')
+    values.push(nowISO())
+    values.push(namespaceId)
+
+    await env.METADATA.prepare(
+      `UPDATE namespaces SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run()
+
+    const result = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(namespaceId).first<Namespace>()
+
+    if (!result) {
+      return errorResponse('Namespace not found', corsHeaders, 404)
+    }
+
+    return jsonResponse({ namespace: result }, corsHeaders)
+  } catch (error) {
+    console.error('[Namespaces] Update error:', error)
+    return errorResponse('Failed to update namespace', corsHeaders, 500)
   }
 }
 

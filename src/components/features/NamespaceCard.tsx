@@ -12,12 +12,14 @@ import type { Namespace } from '../../types'
 interface NamespaceCardProps {
   namespace: Namespace
   onSelect: (namespace: Namespace) => void
+  onSettings: (namespace: Namespace) => void
   onDelete: (namespace: Namespace) => void
 }
 
 export function NamespaceCard({
   namespace,
   onSelect,
+  onSettings,
   onDelete,
 }: NamespaceCardProps) {
   const formatDate = (dateString: string): string => {
@@ -78,7 +80,11 @@ export function NamespaceCard({
             <Database className="h-3.5 w-3.5 mr-1.5" />
             Browse
           </Button>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onSettings(namespace)}
+          >
             <Settings className="h-3.5 w-3.5" />
           </Button>
           <Button

@@ -78,6 +78,22 @@ export const namespaceApi = {
   },
 
   /**
+   * Update a namespace
+   */
+  async update(id: string, updates: {
+    name?: string
+    endpoint_url?: string | null
+    admin_hook_enabled?: number
+    storage_backend?: 'sqlite' | 'kv'
+  }): Promise<Namespace> {
+    const data = await apiFetch<NamespaceResponse>(`/namespaces/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    })
+    return data.namespace
+  },
+
+  /**
    * Delete a namespace
    */
   async delete(id: string): Promise<void> {

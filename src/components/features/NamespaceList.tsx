@@ -3,6 +3,7 @@ import { Plus, RefreshCw, Loader2, Box, Search } from 'lucide-react'
 import { Button } from '../ui/button'
 import { NamespaceCard } from './NamespaceCard'
 import { AddNamespaceDialog } from './AddNamespaceDialog'
+import { NamespaceSettingsDialog } from './NamespaceSettingsDialog'
 import { namespaceApi } from '../../services/api'
 import type { Namespace } from '../../types'
 
@@ -16,6 +17,8 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps) {
   const [error, setError] = useState<string>('')
   const [discovering, setDiscovering] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false)
+  const [selectedNamespace, setSelectedNamespace] = useState<Namespace | null>(null)
 
   const loadNamespaces = async (): Promise<void> => {
     try {
@@ -74,6 +77,17 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps) {
   const handleAddComplete = (namespace: Namespace): void => {
     setNamespaces((prev) => [namespace, ...prev])
     setShowAddDialog(false)
+  }
+
+  const handleSettings = (namespace: Namespace): void => {
+    setSelectedNamespace(namespace)
+    setShowSettingsDialog(true)
+  }
+
+  const handleSettingsUpdate = (updatedNamespace: Namespace): void => {
+    setNamespaces((prev) =>
+      prev.map((n) => (n.id === updatedNamespace.id ? updatedNamespace : n))
+    )
   }
 
   useEffect(() => {
@@ -161,6 +175,7 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps) {
               key={namespace.id}
               namespace={namespace}
               onSelect={onSelectNamespace}
+              onSettings={handleSettings}
               onDelete={() => void handleDelete(namespace)}
             />
           ))}
@@ -172,6 +187,14 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps) {
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onComplete={handleAddComplete}
+      />
+
+      {/* Settings Dialog */}
+      <NamespaceSettingsDialog
+        namespace={selectedNamespace}
+        open={showSettingsDialog}
+        onOpenChange={setShowSettingsDialog}
+        onUpdate={handleSettingsUpdate}
       />
     </div>
   )
