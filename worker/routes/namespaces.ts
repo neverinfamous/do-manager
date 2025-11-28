@@ -2,6 +2,29 @@ import type { Env, CorsHeaders, Namespace, CloudflareApiResponse, DurableObjectN
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody } from '../utils/helpers'
 
 /**
+ * System DO namespaces to filter from discovery
+ * These are internal DOs used by management apps that shouldn't be modified
+ */
+const SYSTEM_DO_PATTERNS = [
+  // KV Manager internal DOs
+  'kv-manager_ImportExportDO',
+  'kv-manager_BulkOperationDO',
+  // D1 Manager internal DOs (if any)
+  'd1-manager_',
+  // DO Manager internal DOs (if any)
+  'do-manager_',
+]
+
+/**
+ * Check if a namespace name matches a system pattern
+ */
+function isSystemNamespace(name: string): boolean {
+  return SYSTEM_DO_PATTERNS.some((pattern) => 
+    name === pattern || name.startsWith(pattern)
+  )
+}
+
+/**
  * Mock namespaces for local development
  */
 const MOCK_NAMESPACES: Namespace[] = [
@@ -122,12 +145,22 @@ async function discoverNamespaces(
     // Fetch DO namespaces from Cloudflare API
     const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/durable_objects/namespaces`
     
-    const response = await fetch(apiUrl, {
-      headers: {
-        'Authorization': `Bearer ${env.API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    })
+    // Build auth headers - support both API Token (Bearer) and Global API Key
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    
+    // Check if API_KEY looks like a Global API Key (shorter, no prefix) or API Token
+    if (env.API_KEY && env.API_KEY.length < 50) {
+      // Global API Key style - requires email
+      headers['X-Auth-Email'] = 'writenotenow@gmail.com'
+      headers['X-Auth-Key'] = env.API_KEY
+    } else {
+      // API Token style
+      headers['Authorization'] = `Bearer ${env.API_KEY}`
+    }
+    
+    const response = await fetch(apiUrl, { headers })
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -141,19 +174,21 @@ async function discoverNamespaces(
       return errorResponse(data.errors[0]?.message ?? 'API error', corsHeaders, 500)
     }
 
-    // Transform to our namespace format
-    const discovered = data.result.map((ns) => ({
-      id: ns.id,
-      name: ns.name,
-      script_name: ns.script,
-      class_name: ns.class,
-      storage_backend: 'sqlite' as const,
-      endpoint_url: null,
-      admin_hook_enabled: 0,
-      created_at: nowISO(),
-      updated_at: nowISO(),
-      metadata: null,
-    }))
+    // Filter out system namespaces and transform to our format
+    const discovered = data.result
+      .filter((ns) => !isSystemNamespace(ns.name))
+      .map((ns) => ({
+        id: ns.id,
+        name: ns.name,
+        script_name: ns.script,
+        class_name: ns.class,
+        storage_backend: 'sqlite' as const,
+        endpoint_url: null,
+        admin_hook_enabled: 0,
+        created_at: nowISO(),
+        updated_at: nowISO(),
+        metadata: null,
+      }))
 
     return jsonResponse({ discovered }, corsHeaders)
   } catch (error) {
