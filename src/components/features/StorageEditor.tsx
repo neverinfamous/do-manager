@@ -133,11 +133,13 @@ export function StorageEditor({
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="value">Value</Label>
-                <div className="flex gap-2">
+                <fieldset className="flex gap-2">
+                  <legend className="sr-only">Value Type</legend>
                   <label className="flex items-center gap-1 text-xs cursor-pointer">
                     <input
                       type="radio"
                       name="value_type"
+                      id="value-type-json"
                       checked={valueType === 'json'}
                       onChange={() => setValueType('json')}
                       className="accent-primary"
@@ -148,13 +150,14 @@ export function StorageEditor({
                     <input
                       type="radio"
                       name="value_type"
+                      id="value-type-string"
                       checked={valueType === 'string'}
                       onChange={() => setValueType('string')}
                       className="accent-primary"
                     />
                     String
                   </label>
-                </div>
+                </fieldset>
               </div>
               <textarea
                 id="value"

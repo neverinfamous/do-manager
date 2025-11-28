@@ -131,13 +131,14 @@ export function AddNamespaceDialog({
               Worker URL for admin hook requests
             </p>
           </div>
-          <div className="grid gap-2">
-            <Label>Storage Backend</Label>
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-medium">Storage Backend</legend>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   name="storage_backend"
+                  id="add-storage-sqlite"
                   value="sqlite"
                   checked={storageBackend === 'sqlite'}
                   onChange={() => setStorageBackend('sqlite')}
@@ -149,6 +150,7 @@ export function AddNamespaceDialog({
                 <input
                   type="radio"
                   name="storage_backend"
+                  id="add-storage-kv"
                   value="kv"
                   checked={storageBackend === 'kv'}
                   onChange={() => setStorageBackend('kv')}
@@ -157,7 +159,7 @@ export function AddNamespaceDialog({
                 <span className="text-sm">KV (Legacy)</span>
               </label>
             </div>
-          </div>
+          </fieldset>
         </div>
         <DialogFooter>
           <Button

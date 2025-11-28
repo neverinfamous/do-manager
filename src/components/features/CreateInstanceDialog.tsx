@@ -97,13 +97,14 @@ export function CreateInstanceDialog({
             </div>
           )}
 
-          <div className="grid gap-2">
-            <Label>ID Type</Label>
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-medium">ID Type</legend>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   name="id_type"
+                  id="id_type_name"
                   value="name"
                   checked={idType === 'name'}
                   onChange={() => setIdType('name')}
@@ -115,6 +116,7 @@ export function CreateInstanceDialog({
                 <input
                   type="radio"
                   name="id_type"
+                  id="id_type_hex"
                   value="hex"
                   checked={idType === 'hex'}
                   onChange={() => setIdType('hex')}
@@ -123,7 +125,7 @@ export function CreateInstanceDialog({
                 <span className="text-sm">Hex ID (newUniqueId)</span>
               </label>
             </div>
-          </div>
+          </fieldset>
 
           <div className="grid gap-2">
             <Label htmlFor="object_id">

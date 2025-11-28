@@ -108,13 +108,14 @@ export function NamespaceSettingsDialog({
             </p>
           </div>
           
-          <div className="space-y-2">
-            <Label>Storage Backend</Label>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">Storage Backend</legend>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   name="storage"
+                  id="storage-sqlite"
                   checked={storageBackend === 'sqlite'}
                   onChange={() => setStorageBackend('sqlite')}
                   className="w-4 h-4"
@@ -125,6 +126,7 @@ export function NamespaceSettingsDialog({
                 <input
                   type="radio"
                   name="storage"
+                  id="storage-kv"
                   checked={storageBackend === 'kv'}
                   onChange={() => setStorageBackend('kv')}
                   className="w-4 h-4"
@@ -132,7 +134,7 @@ export function NamespaceSettingsDialog({
                 <span>Key-Value</span>
               </label>
             </div>
-          </div>
+          </fieldset>
           
           <div className="flex items-center gap-2">
             <input

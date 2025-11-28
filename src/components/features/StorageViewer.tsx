@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { RefreshCw, Loader2, Key, Table, Trash2, Edit, Plus, Bell, Archive } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { RefreshCw, Loader2, Key, Table, Trash2, Edit, Plus, Bell, Archive, Search, X } from 'lucide-react'
 import { Button } from '../ui/button'
+import { Input } from '../ui/input'
 import {
   Card,
   CardContent,
@@ -22,6 +23,23 @@ interface StorageViewerProps {
   onBack: () => void
 }
 
+/**
+ * Highlight matching text in a string
+ */
+function highlightMatch(text: string, search: string): React.ReactNode {
+  if (!search) return text
+  const parts = text.split(new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
+  return parts.map((part, i) =>
+    part.toLowerCase() === search.toLowerCase() ? (
+      <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 rounded px-0.5">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  )
+}
+
 export function StorageViewer({
   namespace,
   instance,
@@ -33,6 +51,15 @@ export function StorageViewer({
   const [activeTab, setActiveTab] = useState('keys')
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [showAddKey, setShowAddKey] = useState(false)
+  const [keySearch, setKeySearch] = useState('')
+
+  // Filter keys based on search term
+  const filteredKeys = useMemo(() => {
+    if (!storage?.keys) return []
+    if (!keySearch.trim()) return storage.keys
+    const searchLower = keySearch.toLowerCase()
+    return storage.keys.filter((key) => key.toLowerCase().includes(searchLower))
+  }, [storage?.keys, keySearch])
 
   const loadStorage = async (): Promise<void> => {
     try {
@@ -159,6 +186,39 @@ export function StorageViewer({
               </Button>
             </div>
 
+            {/* Search/Filter */}
+            {storage.keys && storage.keys.length > 0 && (
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Filter keys... (e.g., user: or config)"
+                  value={keySearch}
+                  onChange={(e) => setKeySearch(e.target.value)}
+                  className="pl-10 pr-10"
+                />
+                {keySearch && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={() => setKeySearch('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Search results info */}
+            {keySearch && storage.keys && storage.keys.length > 0 && (
+              <p className="text-sm text-muted-foreground mb-3">
+                Showing {filteredKeys.length} of {storage.keys.length} keys
+                {filteredKeys.length === 0 && (
+                  <span className="ml-1">— no matches for "{keySearch}"</span>
+                )}
+              </p>
+            )}
+
             {!storage.keys || storage.keys.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center">
@@ -166,9 +226,24 @@ export function StorageViewer({
                   <p className="text-muted-foreground">No storage keys found</p>
                 </CardContent>
               </Card>
+            ) : filteredKeys.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <Search className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">No keys match "{keySearch}"</p>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setKeySearch('')}
+                    className="mt-2"
+                  >
+                    Clear filter
+                  </Button>
+                </CardContent>
+              </Card>
             ) : (
               <div className="space-y-2">
-                {(storage.keys ?? []).map((key) => (
+                {filteredKeys.map((key) => (
                   <Card 
                     key={key} 
                     className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -177,7 +252,14 @@ export function StorageViewer({
                     <CardHeader className="py-3">
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
-                          <CardTitle className="text-sm font-mono truncate">{key}</CardTitle>
+                          <CardTitle className="text-sm font-mono truncate">
+                            {keySearch ? (
+                              // Highlight matching text
+                              highlightMatch(key, keySearch)
+                            ) : (
+                              key
+                            )}
+                          </CardTitle>
                           <CardDescription className="text-xs">
                             Click to view/edit value
                           </CardDescription>

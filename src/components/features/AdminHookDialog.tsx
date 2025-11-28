@@ -53,13 +53,14 @@ export function AdminHookDialog({
                 placeholder="MyDurableObject"
               />
             </div>
-            <div className="grid gap-2">
-              <Label>Storage Backend</Label>
+            <fieldset className="grid gap-2">
+              <legend className="text-sm font-medium">Storage Backend</legend>
               <div className="flex gap-4 h-10 items-center">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
                     name="storage"
+                    id="hook-storage-sqlite"
                     value="sqlite"
                     checked={storageBackend === 'sqlite'}
                     onChange={() => setStorageBackend('sqlite')}
@@ -71,6 +72,7 @@ export function AdminHookDialog({
                   <input
                     type="radio"
                     name="storage"
+                    id="hook-storage-kv"
                     value="kv"
                     checked={storageBackend === 'kv'}
                     onChange={() => setStorageBackend('kv')}
@@ -79,7 +81,7 @@ export function AdminHookDialog({
                   <span className="text-sm">KV (Legacy)</span>
                 </label>
               </div>
-            </div>
+            </fieldset>
           </div>
           <AdminHookTemplate
             className={className}

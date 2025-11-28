@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Search } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Plus, RefreshCw, Loader2, Box, Search, X } from 'lucide-react'
 import { Button } from '../ui/button'
+import { Input } from '../ui/input'
 import { NamespaceCard } from './NamespaceCard'
 import { AddNamespaceDialog } from './AddNamespaceDialog'
 import { NamespaceSettingsDialog } from './NamespaceSettingsDialog'
@@ -19,6 +20,19 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps) {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [selectedNamespace, setSelectedNamespace] = useState<Namespace | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // Filter namespaces based on search
+  const filteredNamespaces = useMemo(() => {
+    if (!searchTerm.trim()) return namespaces
+    const searchLower = searchTerm.toLowerCase()
+    return namespaces.filter(
+      (ns) =>
+        ns.name.toLowerCase().includes(searchLower) ||
+        ns.class_name.toLowerCase().includes(searchLower) ||
+        (ns.script_name?.toLowerCase().includes(searchLower) ?? false)
+    )
+  }, [namespaces, searchTerm])
 
   const loadNamespaces = async (): Promise<void> => {
     try {
@@ -169,17 +183,69 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps) {
 
       {/* Namespace Grid */}
       {!loading && namespaces.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {namespaces.map((namespace) => (
-            <NamespaceCard
-              key={namespace.id}
-              namespace={namespace}
-              onSelect={onSelectNamespace}
-              onSettings={handleSettings}
-              onDelete={() => void handleDelete(namespace)}
+        <>
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Filter namespaces by name, class, or script..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-10"
+              aria-label="Filter namespaces"
             />
-          ))}
-        </div>
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                onClick={() => setSearchTerm('')}
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* Search info */}
+          {searchTerm && (
+            <p className="text-sm text-muted-foreground mb-4">
+              Showing {filteredNamespaces.length} of {namespaces.length} namespaces
+              {filteredNamespaces.length === 0 && (
+                <span className="ml-1">— no matches for "{searchTerm}"</span>
+              )}
+            </p>
+          )}
+
+          {/* No results */}
+          {filteredNamespaces.length === 0 && searchTerm && (
+            <div className="text-center py-12">
+              <Search className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold mb-2">No matches</h3>
+              <p className="text-muted-foreground mb-4">
+                No namespaces match "{searchTerm}"
+              </p>
+              <Button variant="outline" onClick={() => setSearchTerm('')}>
+                Clear filter
+              </Button>
+            </div>
+          )}
+
+          {/* Grid */}
+          {filteredNamespaces.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredNamespaces.map((namespace) => (
+                <NamespaceCard
+                  key={namespace.id}
+                  namespace={namespace}
+                  onSelect={onSelectNamespace}
+                  onSettings={handleSettings}
+                  onDelete={() => void handleDelete(namespace)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Add Namespace Dialog */}
