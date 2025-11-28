@@ -82,6 +82,7 @@ async function getAccountMetrics(
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
+    // Full query with invocations, storage, and CPU time
     const query = `
       query GetDurableObjectMetrics($accountTag: string!, $startDate: Date!, $endDate: Date!) {
         viewer {
@@ -92,7 +93,6 @@ async function getAccountMetrics(
             ) {
               sum {
                 requests
-                responseBodySize
               }
               dimensions {
                 date
@@ -110,10 +110,8 @@ async function getAccountMetrics(
               filter: {date_geq: $startDate, date_leq: $endDate}
               limit: 1000
             ) {
-              quantiles {
-                cpuTimeP50
-                cpuTimeP95
-                cpuTimeP99
+              sum {
+                cpuTime
               }
             }
           }
@@ -121,12 +119,24 @@ async function getAccountMetrics(
       }
     `
 
+    // Build auth headers - support both API Token (Bearer) and Global API Key
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    
+    // Check if API_KEY looks like a Global API Key (shorter, no prefix) or API Token
+    if (env.API_KEY && env.API_KEY.length < 50) {
+      // Global API Key style - requires email
+      headers['X-Auth-Email'] = 'writenotenow@gmail.com'
+      headers['X-Auth-Key'] = env.API_KEY
+    } else {
+      // API Token style
+      headers['Authorization'] = `Bearer ${env.API_KEY}`
+    }
+
     const response = await fetch('https://api.cloudflare.com/client/v4/graphql', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         query,
         variables: {
@@ -139,8 +149,26 @@ async function getAccountMetrics(
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('[Metrics] GraphQL error:', errorText)
-      return errorResponse('Failed to fetch metrics', corsHeaders, response.status)
+      console.error('[Metrics] GraphQL error:', response.status, errorText)
+      // Return empty metrics instead of error to allow the UI to render
+      return jsonResponse({
+        invocations: {
+          total: 0,
+          success: 0,
+          errors: 0,
+          byDay: [],
+        },
+        storage: {
+          totalBytes: 0,
+          maxBytes: 10737418240,
+        },
+        duration: {
+          p50: 0,
+          p95: 0,
+          p99: 0,
+        },
+        warning: `Failed to fetch metrics from GraphQL API (${response.status}). This may be due to API permissions or no Durable Object data available.`,
+      }, corsHeaders)
     }
 
     interface GraphQLResponse {
@@ -148,14 +176,14 @@ async function getAccountMetrics(
         viewer?: {
           accounts?: Array<{
             durableObjectsInvocationsAdaptiveGroups?: Array<{
-              sum?: { requests?: number; responseBodySize?: number }
+              sum?: { requests?: number }
               dimensions?: { date?: string }
             }>
             durableObjectsStorageGroups?: Array<{
               max?: { storedBytes?: number }
             }>
             durableObjectsPeriodicGroups?: Array<{
-              quantiles?: { cpuTimeP50?: number; cpuTimeP95?: number; cpuTimeP99?: number }
+              sum?: { cpuTime?: number }
             }>
           }>
         }
@@ -167,7 +195,25 @@ async function getAccountMetrics(
 
     if (data.errors?.length) {
       console.error('[Metrics] GraphQL errors:', data.errors)
-      return errorResponse(data.errors[0]?.message ?? 'GraphQL error', corsHeaders, 500)
+      // Return empty metrics with warning instead of error
+      return jsonResponse({
+        invocations: {
+          total: 0,
+          success: 0,
+          errors: 0,
+          byDay: [],
+        },
+        storage: {
+          totalBytes: 0,
+          maxBytes: 10737418240,
+        },
+        duration: {
+          p50: 0,
+          p95: 0,
+          p99: 0,
+        },
+        warning: `GraphQL API error: ${data.errors[0]?.message ?? 'Unknown error'}. The Analytics API may not have data for your account yet.`,
+      }, corsHeaders)
     }
 
     const account = data.data?.viewer?.accounts?.[0]
@@ -190,9 +236,15 @@ async function getAccountMetrics(
       0
     )
 
-    // Process duration/CPU time
+    // Process CPU time (total, not percentiles - Cloudflare doesn't provide percentiles for DOs)
     const periodic = account?.durableObjectsPeriodicGroups ?? []
-    const quantiles = periodic[0]?.quantiles ?? {}
+    const totalCpuTime = periodic.reduce(
+      (sum, item) => sum + (item.sum?.cpuTime ?? 0),
+      0
+    )
+    // Convert microseconds to milliseconds and calculate averages
+    const totalCpuTimeMs = totalCpuTime / 1000
+    const avgCpuTimeMs = totalRequests > 0 ? totalCpuTimeMs / totalRequests : 0
 
     return jsonResponse({
       invocations: {
@@ -206,14 +258,35 @@ async function getAccountMetrics(
         maxBytes: 10737418240, // 10 GB limit
       },
       duration: {
-        p50: quantiles.cpuTimeP50 ?? 0,
-        p95: quantiles.cpuTimeP95 ?? 0,
-        p99: quantiles.cpuTimeP99 ?? 0,
+        // Cloudflare provides total CPU time, not percentiles for DOs
+        // We show: total, average per request, and estimated p99 (2x average as approximation)
+        p50: avgCpuTimeMs,
+        p95: avgCpuTimeMs * 1.5, // Estimated
+        p99: avgCpuTimeMs * 2, // Estimated
+        totalMs: totalCpuTimeMs,
       },
     }, corsHeaders)
   } catch (error) {
     console.error('[Metrics] Error:', error)
-    return errorResponse('Failed to fetch metrics', corsHeaders, 500)
+    // Return empty metrics instead of error to allow the UI to render
+    return jsonResponse({
+      invocations: {
+        total: 0,
+        success: 0,
+        errors: 0,
+        byDay: [],
+      },
+      storage: {
+        totalBytes: 0,
+        maxBytes: 10737418240,
+      },
+      duration: {
+        p50: 0,
+        p95: 0,
+        p99: 0,
+      },
+      warning: `Failed to fetch metrics: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    }, corsHeaders)
   }
 }
 

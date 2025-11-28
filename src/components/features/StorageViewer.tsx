@@ -98,6 +98,27 @@ export function StorageViewer({
         </div>
       )}
 
+      {/* Warning from API */}
+      {storage?.warning && (
+        <div className="bg-yellow-500/10 border border-yellow-500 text-yellow-600 dark:text-yellow-400 px-4 py-3 rounded-lg mb-6">
+          <p className="font-medium">⚠️ Admin Hook Required</p>
+          <p className="text-sm mt-1">{storage.warning}</p>
+        </div>
+      )}
+
+      {/* API Error */}
+      {storage?.error && (
+        <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg mb-6">
+          <p className="font-medium">Admin Hook Error</p>
+          <p className="text-sm mt-1">{storage.error}</p>
+          {storage.details && (
+            <pre className="text-xs mt-2 p-2 bg-black/10 rounded overflow-auto">
+              {storage.details}
+            </pre>
+          )}
+        </div>
+      )}
+
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-12">
@@ -111,7 +132,7 @@ export function StorageViewer({
           <TabsList>
             <TabsTrigger value="keys" className="flex items-center gap-2">
               <Key className="h-4 w-4" />
-              Keys ({storage.keys.length})
+              Keys ({storage.keys?.length ?? 0})
             </TabsTrigger>
             {namespace.storage_backend === 'sqlite' && (
               <TabsTrigger value="sql" className="flex items-center gap-2">
@@ -138,7 +159,7 @@ export function StorageViewer({
               </Button>
             </div>
 
-            {storage.keys.length === 0 ? (
+            {!storage.keys || storage.keys.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center">
                   <Key className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
@@ -147,28 +168,38 @@ export function StorageViewer({
               </Card>
             ) : (
               <div className="space-y-2">
-                {storage.keys.map((key) => (
-                  <Card key={key}>
+                {(storage.keys ?? []).map((key) => (
+                  <Card 
+                    key={key} 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => setEditingKey(key)}
+                  >
                     <CardHeader className="py-3">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-sm font-mono">{key}</CardTitle>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-sm font-mono truncate">{key}</CardTitle>
                           <CardDescription className="text-xs">
                             Click to view/edit value
                           </CardDescription>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 ml-4">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setEditingKey(key)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditingKey(key)
+                            }}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => void handleDeleteKey(key)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void handleDeleteKey(key)
+                            }}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -185,7 +216,7 @@ export function StorageViewer({
             <TabsContent value="sql" className="mt-6">
               <SqlConsole
                 instanceId={instance.id}
-                tables={storage.tables}
+                tables={storage.tables ?? []}
               />
             </TabsContent>
           )}
@@ -203,6 +234,7 @@ export function StorageViewer({
             <div className="max-w-xl">
               <BackupManager
                 instanceId={instance.id}
+                onRestore={() => void loadStorage()}
               />
             </div>
           </TabsContent>

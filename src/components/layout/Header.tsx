@@ -22,18 +22,25 @@ export function Header() {
     return <Moon className="h-5 w-5" />
   }
 
+  const handleHomeClick = (): void => {
+    window.location.href = '/'
+  }
+
   return (
     <header className="border-b">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <button
+          onClick={handleHomeClick}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer text-left"
+        >
           <Box className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">DO Manager</h1>
+            <h1 className="text-2xl font-bold">Durable Object Manager</h1>
             <p className="text-sm text-muted-foreground">
               Manage your Cloudflare Durable Objects
             </p>
           </div>
-        </div>
+        </button>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

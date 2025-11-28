@@ -2,6 +2,26 @@ import type { Env, CorsHeaders, Instance, Namespace, Backup } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody } from '../utils/helpers'
 
 /**
+ * Helper to update job status
+ */
+async function updateJobStatus(
+  env: Env,
+  jobId: string,
+  status: 'completed' | 'failed' | 'cancelled',
+  error?: string | null,
+  result?: string | null
+): Promise<void> {
+  try {
+    await env.METADATA.prepare(`
+      UPDATE jobs SET status = ?, progress = ?, error = ?, result = ?, completed_at = ?
+      WHERE id = ?
+    `).bind(status, status === 'completed' ? 100 : 0, error ?? null, result ?? null, nowISO(), jobId).run()
+  } catch (updateError) {
+    console.error('[Jobs] Failed to update status:', updateError)
+  }
+}
+
+/**
  * Mock backups for local development
  */
 const MOCK_BACKUPS: Backup[] = [
@@ -75,7 +95,7 @@ export async function handleBackupRoutes(
     if (!instanceId || !backupId) {
       return errorResponse('Instance ID and Backup ID required', corsHeaders, 400)
     }
-    return restoreBackup(instanceId, backupId, env, corsHeaders, isLocalDev)
+    return restoreBackup(instanceId, backupId, env, corsHeaders, isLocalDev, userEmail)
   }
 
   // DELETE /api/backups/:id - Delete backup
@@ -184,6 +204,19 @@ async function createBackup(
     return jsonResponse({ backup: newBackup }, corsHeaders, 201)
   }
 
+  // Create job record
+  const jobId = generateId()
+  const now = nowISO()
+
+  try {
+    await env.METADATA.prepare(`
+      INSERT INTO jobs (id, type, status, namespace_id, instance_id, user_email, progress, created_at, started_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(jobId, 'backup', 'running', null, instanceId, userEmail, 0, now, now).run()
+  } catch (jobError) {
+    console.error('[Backups] Failed to create job:', jobError)
+  }
+
   try {
     // Get instance info
     const instance = await env.METADATA.prepare(
@@ -191,6 +224,7 @@ async function createBackup(
     ).bind(instanceId).first<Instance>()
 
     if (!instance) {
+      await updateJobStatus(env, jobId, 'failed', 'Instance not found')
       return errorResponse('Instance not found', corsHeaders, 404)
     }
 
@@ -200,6 +234,7 @@ async function createBackup(
     ).bind(instance.namespace_id).first<Namespace>()
 
     if (!namespace?.endpoint_url) {
+      await updateJobStatus(env, jobId, 'failed', 'Namespace endpoint not configured')
       return errorResponse(
         'Namespace endpoint not configured. Set up admin hook first.',
         corsHeaders,
@@ -207,21 +242,34 @@ async function createBackup(
       )
     }
 
-    // Fetch storage data from DO
+    // Update job with namespace info
+    await env.METADATA.prepare(
+      'UPDATE jobs SET namespace_id = ?, progress = ? WHERE id = ?'
+    ).bind(instance.namespace_id, 25, jobId).run()
+
+    // Fetch storage data from DO (use name if available, otherwise object_id)
+    const instanceName = instance.name || instance.object_id
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     const storageResponse = await fetch(
-      `${namespace.endpoint_url}/admin/${instance.object_id}/export`,
+      `${baseUrl}/admin/${encodeURIComponent(instanceName)}/export`,
       {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${env.API_KEY}`,
           'Content-Type': 'application/json',
         },
       }
     )
 
     if (!storageResponse.ok) {
+      const errorText = await storageResponse.text().catch(() => 'Unknown error')
+      await updateJobStatus(env, jobId, 'failed', `Export failed: ${storageResponse.status} - ${errorText.slice(0, 100)}`)
       return errorResponse('Failed to export storage from DO', corsHeaders, storageResponse.status)
     }
+
+    // Update progress
+    await env.METADATA.prepare(
+      'UPDATE jobs SET progress = ? WHERE id = ?'
+    ).bind(50, jobId).run()
 
     const storageData = await storageResponse.text()
     const timestamp = new Date().toISOString().replace(/:/g, '-')
@@ -237,9 +285,13 @@ async function createBackup(
       },
     })
 
+    // Update progress
+    await env.METADATA.prepare(
+      'UPDATE jobs SET progress = ? WHERE id = ?'
+    ).bind(75, jobId).run()
+
     // Record backup in D1
     const backupId = generateId()
-    const now = nowISO()
 
     await env.METADATA.prepare(`
       INSERT INTO backups (id, instance_id, namespace_id, r2_key, size_bytes, storage_type, created_by, created_at)
@@ -252,16 +304,20 @@ async function createBackup(
       storageData.length,
       namespace.storage_backend,
       userEmail,
-      now
+      nowISO()
     ).run()
 
     const backup = await env.METADATA.prepare(
       'SELECT * FROM backups WHERE id = ?'
     ).bind(backupId).first<Backup>()
 
+    // Mark job complete
+    await updateJobStatus(env, jobId, 'completed', null, JSON.stringify({ backup_id: backupId, size: storageData.length }))
+
     return jsonResponse({ backup }, corsHeaders, 201)
   } catch (error) {
     console.error('[Backups] Create error:', error)
+    await updateJobStatus(env, jobId, 'failed', error instanceof Error ? error.message : 'Unknown error')
     return errorResponse('Failed to create backup', corsHeaders, 500)
   }
 }
@@ -274,13 +330,27 @@ async function restoreBackup(
   backupId: string,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
   if (isLocalDev) {
     return jsonResponse({
       success: true,
       message: 'Restore completed (mock mode)',
     }, corsHeaders)
+  }
+
+  // Create job record
+  const jobId = generateId()
+  const now = nowISO()
+
+  try {
+    await env.METADATA.prepare(`
+      INSERT INTO jobs (id, type, status, namespace_id, instance_id, user_email, progress, created_at, started_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(jobId, 'restore', 'running', null, instanceId, userEmail, 0, now, now).run()
+  } catch (jobError) {
+    console.error('[Backups] Failed to create job:', jobError)
   }
 
   try {
@@ -290,6 +360,7 @@ async function restoreBackup(
     ).bind(backupId).first<Backup>()
 
     if (!backup) {
+      await updateJobStatus(env, jobId, 'failed', 'Backup not found')
       return errorResponse('Backup not found', corsHeaders, 404)
     }
 
@@ -299,6 +370,7 @@ async function restoreBackup(
     ).bind(instanceId).first<Instance>()
 
     if (!instance) {
+      await updateJobStatus(env, jobId, 'failed', 'Instance not found')
       return errorResponse('Instance not found', corsHeaders, 404)
     }
 
@@ -308,6 +380,7 @@ async function restoreBackup(
     ).bind(instance.namespace_id).first<Namespace>()
 
     if (!namespace?.endpoint_url) {
+      await updateJobStatus(env, jobId, 'failed', 'Namespace endpoint not configured')
       return errorResponse(
         'Namespace endpoint not configured. Set up admin hook first.',
         corsHeaders,
@@ -315,21 +388,33 @@ async function restoreBackup(
       )
     }
 
+    // Update job with namespace info
+    await env.METADATA.prepare(
+      'UPDATE jobs SET namespace_id = ?, progress = ? WHERE id = ?'
+    ).bind(instance.namespace_id, 25, jobId).run()
+
     // Fetch backup data from R2
     const r2Object = await env.BACKUP_BUCKET.get(backup.r2_key)
     if (!r2Object) {
+      await updateJobStatus(env, jobId, 'failed', 'Backup file not found in R2')
       return errorResponse('Backup file not found in R2', corsHeaders, 404)
     }
 
+    // Update progress
+    await env.METADATA.prepare(
+      'UPDATE jobs SET progress = ? WHERE id = ?'
+    ).bind(50, jobId).run()
+
     const backupData = await r2Object.text()
 
-    // Send restore request to DO
+    // Send restore request to DO (use name if available, otherwise object_id)
+    const instanceName = instance.name || instance.object_id
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     const restoreResponse = await fetch(
-      `${namespace.endpoint_url}/admin/${instance.object_id}/import`,
+      `${baseUrl}/admin/${encodeURIComponent(instanceName)}/import`,
       {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${env.API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: backupData,
@@ -337,8 +422,13 @@ async function restoreBackup(
     )
 
     if (!restoreResponse.ok) {
+      const errorText = await restoreResponse.text().catch(() => 'Unknown error')
+      await updateJobStatus(env, jobId, 'failed', `Import failed: ${restoreResponse.status} - ${errorText.slice(0, 100)}`)
       return errorResponse('Failed to restore storage to DO', corsHeaders, restoreResponse.status)
     }
+
+    // Mark job complete
+    await updateJobStatus(env, jobId, 'completed', null, JSON.stringify({ backup_id: backupId }))
 
     return jsonResponse({
       success: true,
@@ -346,6 +436,7 @@ async function restoreBackup(
     }, corsHeaders)
   } catch (error) {
     console.error('[Backups] Restore error:', error)
+    await updateJobStatus(env, jobId, 'failed', error instanceof Error ? error.message : 'Unknown error')
     return errorResponse('Failed to restore backup', corsHeaders, 500)
   }
 }

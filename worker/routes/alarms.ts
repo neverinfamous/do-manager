@@ -87,25 +87,55 @@ async function getAlarm(
       'SELECT * FROM namespaces WHERE id = ?'
     ).bind(instance.namespace_id).first<Namespace>()
 
-    if (!namespace?.endpoint_url) {
-      return errorResponse(
-        'Namespace endpoint not configured. Set up admin hook first.',
-        corsHeaders,
-        400
-      )
+    if (!namespace) {
+      return errorResponse('Namespace not found', corsHeaders, 404)
     }
 
+    if (!namespace.endpoint_url) {
+      return jsonResponse({
+        alarm: null,
+        hasAlarm: false,
+        alarmDate: null,
+        warning: 'Admin hook endpoint not configured. Go to namespace settings to configure the endpoint URL pointing to your Worker with admin hooks enabled.',
+        admin_hook_required: true,
+      }, corsHeaders)
+    }
+
+    if (namespace.admin_hook_enabled !== 1) {
+      return jsonResponse({
+        alarm: null,
+        hasAlarm: false,
+        alarmDate: null,
+        warning: 'Admin hook is not enabled for this namespace. Enable it in namespace settings after adding admin hook methods to your DO class.',
+        admin_hook_required: true,
+      }, corsHeaders)
+    }
+
+    // Normalize endpoint URL (remove trailing slash)
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.name || instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/alarm`
+
+    console.log('[Alarms] Calling admin hook:', adminUrl)
+
     // Call the DO's admin hook
-    const response = await fetch(`${namespace.endpoint_url}/admin/${instance.object_id}/alarm`, {
+    const response = await fetch(adminUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${env.API_KEY}`,
         'Content-Type': 'application/json',
       },
     })
 
     if (!response.ok) {
-      return errorResponse('Failed to fetch alarm from DO', corsHeaders, response.status)
+      const errorText = await response.text().catch(() => 'Unknown error')
+      console.error('[Alarms] Admin hook error:', response.status, errorText)
+      return jsonResponse({
+        alarm: null,
+        hasAlarm: false,
+        alarmDate: null,
+        error: `Admin hook returned ${response.status}. Ensure your DO class has alarm admin hook methods.`,
+        details: errorText.slice(0, 200),
+      }, corsHeaders)
     }
 
     const data = await response.json() as { alarm: number | null }
@@ -116,7 +146,12 @@ async function getAlarm(
     }, corsHeaders)
   } catch (error) {
     console.error('[Alarms] Get error:', error)
-    return errorResponse('Failed to get alarm', corsHeaders, 500)
+    return jsonResponse({
+      alarm: null,
+      hasAlarm: false,
+      alarmDate: null,
+      error: `Failed to connect to admin hook: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    }, corsHeaders)
   }
 }
 
@@ -164,19 +199,23 @@ async function setAlarm(
       'SELECT * FROM namespaces WHERE id = ?'
     ).bind(instance.namespace_id).first<Namespace>()
 
-    if (!namespace?.endpoint_url) {
+    if (!namespace?.endpoint_url || namespace.admin_hook_enabled !== 1) {
       return errorResponse(
-        'Namespace endpoint not configured. Set up admin hook first.',
+        'Admin hook not configured or enabled. Set up admin hook first.',
         corsHeaders,
         400
       )
     }
 
+    // Normalize endpoint URL and build admin URL
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.name || instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/alarm`
+
     // Call the DO's admin hook
-    const response = await fetch(`${namespace.endpoint_url}/admin/${instance.object_id}/alarm`, {
+    const response = await fetch(adminUrl, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${env.API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ timestamp: body.timestamp }),
@@ -230,19 +269,23 @@ async function deleteAlarm(
       'SELECT * FROM namespaces WHERE id = ?'
     ).bind(instance.namespace_id).first<Namespace>()
 
-    if (!namespace?.endpoint_url) {
+    if (!namespace?.endpoint_url || namespace.admin_hook_enabled !== 1) {
       return errorResponse(
-        'Namespace endpoint not configured. Set up admin hook first.',
+        'Admin hook not configured or enabled. Set up admin hook first.',
         corsHeaders,
         400
       )
     }
 
+    // Normalize endpoint URL and build admin URL
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.name || instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/alarm`
+
     // Call the DO's admin hook
-    const response = await fetch(`${namespace.endpoint_url}/admin/${instance.object_id}/alarm`, {
+    const response = await fetch(adminUrl, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${env.API_KEY}`,
         'Content-Type': 'application/json',
       },
     })

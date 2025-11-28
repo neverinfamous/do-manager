@@ -20,10 +20,12 @@ import { backupApi, type Backup } from '../../services/backupApi'
 
 interface BackupManagerProps {
   instanceId: string
+  onRestore?: () => void
 }
 
 export function BackupManager({
   instanceId,
+  onRestore,
 }: BackupManagerProps) {
   const [backups, setBackups] = useState<Backup[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,7 +66,10 @@ export function BackupManager({
       setError('')
       await backupApi.restore(instanceId, backup.id)
       setRestoreDialog(null)
-      // Could trigger a refresh of storage data here
+      // Trigger refresh of storage data
+      if (onRestore) {
+        onRestore()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to restore backup')
     } finally {

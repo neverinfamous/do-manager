@@ -24,9 +24,12 @@ async function apiFetch<T>(
 }
 
 export interface StorageListResponse {
-  keys: string[]
-  tables: string[]
+  keys?: string[]
+  tables?: string[]
   error?: string
+  warning?: string
+  details?: string
+  admin_hook_required?: boolean
 }
 
 export interface StorageValueResponse {

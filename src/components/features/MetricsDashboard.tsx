@@ -107,6 +107,14 @@ export function MetricsDashboard({
         </div>
       )}
 
+      {/* Warning */}
+      {metrics?.warning && (
+        <div className="bg-yellow-500/10 border border-yellow-500 text-yellow-600 dark:text-yellow-400 px-4 py-3 rounded-lg">
+          <p className="font-medium">⚠️ Metrics Unavailable</p>
+          <p className="text-sm mt-1">{metrics.warning}</p>
+        </div>
+      )}
+
       {/* Loading */}
       {loading && !metrics && (
         <div className="flex items-center justify-center py-12">
@@ -162,12 +170,12 @@ export function MetricsDashboard({
               </CardContent>
             </Card>
 
-            {/* P50 Latency */}
+            {/* Avg CPU Time */}
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm">P50 CPU Time</CardTitle>
+                  <CardTitle className="text-sm">Avg CPU Time</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
@@ -175,25 +183,25 @@ export function MetricsDashboard({
                   {formatDuration(metrics.duration.p50)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Median execution time
+                  Per request average
                 </p>
               </CardContent>
             </Card>
 
-            {/* P99 Latency */}
+            {/* Total CPU Time */}
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-yellow-500" />
-                  <CardTitle className="text-sm">P99 CPU Time</CardTitle>
+                  <CardTitle className="text-sm">Total CPU Time</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {formatDuration(metrics.duration.p99)}
+                  {formatDuration(metrics.duration.totalMs ?? 0)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  99th percentile
+                  Last {days} days
                 </p>
               </CardContent>
             </Card>
@@ -235,31 +243,31 @@ export function MetricsDashboard({
             </CardContent>
           </Card>
 
-          {/* Latency Distribution */}
+          {/* CPU Time Summary */}
           <Card>
             <CardHeader>
-              <CardTitle>CPU Time Distribution</CardTitle>
-              <CardDescription>Execution time percentiles</CardDescription>
+              <CardTitle>CPU Time Summary</CardTitle>
+              <CardDescription>Compute usage over the period</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
+                    {formatDuration(metrics.duration.totalMs ?? 0)}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Total CPU Time</p>
+                </div>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
                     {formatDuration(metrics.duration.p50)}
                   </div>
-                  <p className="text-sm text-muted-foreground">P50 (Median)</p>
+                  <p className="text-sm text-muted-foreground">Avg per Request</p>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {formatDuration(metrics.duration.p95)}
+                  <div className="text-2xl font-bold text-primary">
+                    {metrics.invocations.total.toLocaleString()}
                   </div>
-                  <p className="text-sm text-muted-foreground">P95</p>
-                </div>
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">
-                    {formatDuration(metrics.duration.p99)}
-                  </div>
-                  <p className="text-sm text-muted-foreground">P99</p>
+                  <p className="text-sm text-muted-foreground">Total Requests</p>
                 </div>
               </div>
             </CardContent>

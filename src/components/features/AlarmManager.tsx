@@ -110,7 +110,7 @@ export function AlarmManager({
             variant="outline"
             size="sm"
             onClick={() => setShowSetDialog(true)}
-            disabled={loading}
+            disabled={loading || alarm?.admin_hook_required}
           >
             <Clock className="h-4 w-4 mr-2" />
             {alarm?.hasAlarm ? 'Change' : 'Set'}
@@ -127,6 +127,21 @@ export function AlarmManager({
           </div>
         ) : error ? (
           <div className="text-sm text-destructive">{error}</div>
+        ) : alarm?.warning ? (
+          <div className="text-sm text-yellow-600 dark:text-yellow-400">
+            <p className="font-medium">⚠️ Admin Hook Required</p>
+            <p className="mt-1">{alarm.warning}</p>
+          </div>
+        ) : alarm?.error ? (
+          <div className="text-sm text-destructive">
+            <p className="font-medium">Admin Hook Error</p>
+            <p className="mt-1">{alarm.error}</p>
+            {alarm.details && (
+              <pre className="text-xs mt-2 p-2 bg-black/10 rounded overflow-auto">
+                {alarm.details}
+              </pre>
+            )}
+          </div>
         ) : alarm?.hasAlarm && alarm.alarm ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between">

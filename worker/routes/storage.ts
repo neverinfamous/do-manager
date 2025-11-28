@@ -135,8 +135,7 @@ async function listStorage(
     }, corsHeaders)
   }
 
-  // In production, this would call the DO's admin hook via the configured endpoint
-  // For now, return a placeholder response
+  // In production, call the DO's admin hook via the configured endpoint
   try {
     // Get instance and namespace info
     const instance = await env.METADATA.prepare(
@@ -151,32 +150,65 @@ async function listStorage(
       'SELECT * FROM namespaces WHERE id = ?'
     ).bind(instance.namespace_id).first<Namespace>()
 
-    if (!namespace?.endpoint_url) {
-      return errorResponse(
-        'Namespace endpoint not configured. Set up admin hook first.',
-        corsHeaders,
-        400
-      )
+    if (!namespace) {
+      return errorResponse('Namespace not found', corsHeaders, 404)
     }
 
+    if (!namespace.endpoint_url) {
+      return jsonResponse({
+        keys: [],
+        tables: [],
+        warning: 'Admin hook endpoint not configured. Go to namespace settings to configure the endpoint URL pointing to your Worker with admin hooks enabled.',
+        admin_hook_required: true,
+      }, corsHeaders)
+    }
+
+    // Check if admin hook is enabled
+    if (namespace.admin_hook_enabled !== 1) {
+      return jsonResponse({
+        keys: [],
+        tables: [],
+        warning: 'Admin hook is not enabled for this namespace. Enable it in namespace settings after adding admin hook methods to your DO class.',
+        admin_hook_required: true,
+      }, corsHeaders)
+    }
+
+    // Normalize endpoint URL (remove trailing slash)
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    // Use the instance name or object_id to route to the correct DO
+    const instanceName = instance.name || instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/list`
+
+    console.log('[Storage] Calling admin hook:', adminUrl)
+
     // Call the DO's admin hook
-    const response = await fetch(`${namespace.endpoint_url}/admin/${instance.object_id}/list`, {
+    const response = await fetch(adminUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${env.API_KEY}`,
         'Content-Type': 'application/json',
       },
     })
 
     if (!response.ok) {
-      return errorResponse('Failed to fetch storage from DO', corsHeaders, response.status)
+      const errorText = await response.text().catch(() => 'Unknown error')
+      console.error('[Storage] Admin hook error:', response.status, errorText)
+      return jsonResponse({
+        keys: [],
+        tables: [],
+        error: `Admin hook returned ${response.status}. Ensure your DO class has admin hook methods and the endpoint URL is correct.`,
+        details: errorText.slice(0, 200),
+      }, corsHeaders)
     }
 
     const data = await response.json()
     return jsonResponse(data, corsHeaders)
   } catch (error) {
     console.error('[Storage] List error:', error)
-    return errorResponse('Failed to list storage', corsHeaders, 500)
+    return jsonResponse({
+      keys: [],
+      tables: [],
+      error: `Failed to connect to admin hook: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    }, corsHeaders)
   }
 }
 
@@ -203,7 +235,42 @@ async function getStorageValue(
   }
 
   // Production: call admin hook
-  return errorResponse('Production storage access not yet implemented', corsHeaders, 501)
+  try {
+    const instance = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    const namespace = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(instance.namespace_id).first<Namespace>()
+
+    if (!namespace?.endpoint_url || namespace.admin_hook_enabled !== 1) {
+      return errorResponse('Admin hook not configured or enabled', corsHeaders, 400)
+    }
+
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.name || instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/get?key=${encodeURIComponent(key)}`
+
+    const response = await fetch(adminUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    if (!response.ok) {
+      return errorResponse(`Admin hook error: ${response.status}`, corsHeaders, response.status)
+    }
+
+    const data = await response.json()
+    return jsonResponse({ key, value: data.value ?? data }, corsHeaders)
+  } catch (error) {
+    console.error('[Storage] Get error:', error)
+    return errorResponse(`Failed to get value: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
+  }
 }
 
 /**
@@ -232,7 +299,42 @@ async function setStorageValue(
   }
 
   // Production: call admin hook
-  return errorResponse('Production storage access not yet implemented', corsHeaders, 501)
+  try {
+    const instance = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    const namespace = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(instance.namespace_id).first<Namespace>()
+
+    if (!namespace?.endpoint_url || namespace.admin_hook_enabled !== 1) {
+      return errorResponse('Admin hook not configured or enabled', corsHeaders, 400)
+    }
+
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.name || instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/put`
+
+    const response = await fetch(adminUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value: body.value }),
+    })
+
+    if (!response.ok) {
+      return errorResponse(`Admin hook error: ${response.status}`, corsHeaders, response.status)
+    }
+
+    return jsonResponse({ success: true, key, value: body.value }, corsHeaders)
+  } catch (error) {
+    console.error('[Storage] Set error:', error)
+    return errorResponse(`Failed to set value: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
+  }
 }
 
 /**
@@ -255,7 +357,42 @@ async function deleteStorageValue(
   }
 
   // Production: call admin hook
-  return errorResponse('Production storage access not yet implemented', corsHeaders, 501)
+  try {
+    const instance = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    const namespace = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(instance.namespace_id).first<Namespace>()
+
+    if (!namespace?.endpoint_url || namespace.admin_hook_enabled !== 1) {
+      return errorResponse('Admin hook not configured or enabled', corsHeaders, 400)
+    }
+
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.name || instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/delete`
+
+    const response = await fetch(adminUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
+    })
+
+    if (!response.ok) {
+      return errorResponse(`Admin hook error: ${response.status}`, corsHeaders, response.status)
+    }
+
+    return jsonResponse({ success: true }, corsHeaders)
+  } catch (error) {
+    console.error('[Storage] Delete error:', error)
+    return errorResponse(`Failed to delete value: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
+  }
 }
 
 /**
@@ -294,6 +431,46 @@ async function executeSql(
   }
 
   // Production: call admin hook
-  return errorResponse('Production SQL access not yet implemented', corsHeaders, 501)
+  try {
+    const instance = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    const namespace = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(instance.namespace_id).first<Namespace>()
+
+    if (!namespace?.endpoint_url || namespace.admin_hook_enabled !== 1) {
+      return errorResponse('Admin hook not configured or enabled', corsHeaders, 400)
+    }
+
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.name || instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/sql`
+
+    const response = await fetch(adminUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: body.query }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error')
+      return errorResponse(`SQL execution failed: ${errorText}`, corsHeaders, response.status)
+    }
+
+    const data = await response.json() as { result?: unknown[] }
+    return jsonResponse({
+      results: data.result ?? data,
+      rowCount: Array.isArray(data.result) ? data.result.length : 0,
+    }, corsHeaders)
+  } catch (error) {
+    console.error('[Storage] SQL error:', error)
+    return errorResponse(`Failed to execute SQL: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
+  }
 }
 

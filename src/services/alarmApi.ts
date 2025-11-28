@@ -27,6 +27,10 @@ export interface AlarmResponse {
   alarm: number | null
   hasAlarm: boolean
   alarmDate: string | null
+  warning?: string
+  error?: string
+  details?: string
+  admin_hook_required?: boolean
 }
 
 export interface SetAlarmResponse {

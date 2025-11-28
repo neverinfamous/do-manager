@@ -4,20 +4,24 @@ import { Button } from '../ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { InstanceList } from './InstanceList'
 import { AdminHookDialog } from './AdminHookDialog'
+import { NamespaceSettingsDialog } from './NamespaceSettingsDialog'
 import type { Namespace, Instance } from '../../types'
 
 interface NamespaceViewProps {
   namespace: Namespace
   onBack: () => void
   onSelectInstance: (instance: Instance) => void
+  onNamespaceUpdate: (namespace: Namespace) => void
 }
 
 export function NamespaceView({
   namespace,
   onBack,
   onSelectInstance,
+  onNamespaceUpdate,
 }: NamespaceViewProps) {
   const [activeTab, setActiveTab] = useState('instances')
+  const [showSettings, setShowSettings] = useState(false)
 
   return (
     <div>
@@ -44,12 +48,20 @@ export function NamespaceView({
             defaultClassName={namespace.class_name}
             defaultStorageBackend={namespace.storage_backend}
           />
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setShowSettings(true)}>
             <Settings className="h-4 w-4 mr-2" />
             Settings
           </Button>
         </div>
       </div>
+
+      {/* Settings Dialog */}
+      <NamespaceSettingsDialog
+        namespace={namespace}
+        open={showSettings}
+        onOpenChange={setShowSettings}
+        onUpdate={onNamespaceUpdate}
+      />
 
       {/* Status badges */}
       <div className="flex items-center gap-2 mb-6">

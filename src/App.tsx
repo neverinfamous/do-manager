@@ -38,6 +38,14 @@ export default function App() {
     }
   }
 
+  const handleNamespaceUpdate = (updatedNamespace: Namespace): void => {
+    if (currentView.type === 'namespace') {
+      setCurrentView({ type: 'namespace', namespace: updatedNamespace })
+    } else if (currentView.type === 'instance') {
+      setCurrentView({ ...currentView, namespace: updatedNamespace })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -79,6 +87,7 @@ export default function App() {
             namespace={currentView.namespace}
             onBack={handleBackToList}
             onSelectInstance={handleSelectInstance}
+            onNamespaceUpdate={handleNamespaceUpdate}
           />
         )}
 
