@@ -11,13 +11,13 @@ Last Updated November 30, 2025 - Production/Stable v1.0.0
 [![CodeQL](https://img.shields.io/badge/CodeQL-Passing-brightgreen.svg)](https://github.com/neverinfamous/do-manager/security/code-scanning)
 [![Type Safety](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://github.com/neverinfamous/do-manager)
 
-This Docker image provides a full-featured web application for managing Cloudflare Durable Objects with enterprise-grade authentication via Cloudflare Access (Zero Trust). Auto-discover namespaces, manage instances, view/edit storage, set alarms, and backup state to R2.
+Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage Durable Object namespaces, instances, and storage. Supports automatic namespace discovery, instance inspection, key/value editing, SQL for SQLite-backed DOs, batch operations, alarms, R2 backups, analytics, global search, and job history, with optional GitHub SSO.
 
 **[Live Demo](https://do.adamic.tech/)** • **[GitHub](https://github.com/neverinfamous/do-manager)** • **[Wiki](https://github.com/neverinfamous/do-manager/wiki)** • **[Changelog](https://github.com/neverinfamous/do-manager/wiki/Changelog)**
 
 ## Tech Stack
 
-**Frontend**: React 19.2.0 | Vite 7.2.4 | TypeScript 5.9.3 | Tailwind CSS | shadcn/ui
+**Frontend**: React 19.2.0 | Vite 7.2.4 | TypeScript 5.9.3 | Tailwind CSS 4.1.17 | shadcn/ui
 
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
