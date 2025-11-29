@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders, Instance, Namespace, Backup } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO } from '../utils/helpers'
+import { triggerWebhooks, createBackupWebhookData } from '../utils/webhooks'
 
 /**
  * Helper to update job status
@@ -314,6 +315,22 @@ async function createBackup(
     // Mark job complete
     await updateJobStatus(env, jobId, 'completed', null, JSON.stringify({ backup_id: backupId, size: storageData.length }))
 
+    // Trigger webhook
+    void triggerWebhooks(
+      env,
+      'backup_complete',
+      createBackupWebhookData(
+        backupId,
+        instanceId,
+        instanceName,
+        instance.namespace_id,
+        namespace.name,
+        storageData.length,
+        userEmail
+      ),
+      isLocalDev
+    )
+
     return jsonResponse({ backup }, corsHeaders, 201)
   } catch (error) {
     console.error('[Backups] Create error:', error)
@@ -429,6 +446,22 @@ async function restoreBackup(
 
     // Mark job complete
     await updateJobStatus(env, jobId, 'completed', null, JSON.stringify({ backup_id: backupId }))
+
+    // Trigger webhook
+    void triggerWebhooks(
+      env,
+      'restore_complete',
+      createBackupWebhookData(
+        backupId,
+        instanceId,
+        instanceName,
+        instance.namespace_id,
+        namespace.name,
+        backup.size_bytes ?? 0,
+        userEmail
+      ),
+      isLocalDev
+    )
 
     return jsonResponse({
       success: true,

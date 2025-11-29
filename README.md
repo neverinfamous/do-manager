@@ -100,11 +100,133 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - Error details for failed operations
 - Filter by status or namespace
 
+### Webhook Notifications
+- **Event-driven webhooks** - Send HTTP notifications on key events
+- **Configurable events** - backup_complete, restore_complete, alarm_set, alarm_deleted, job_failed, batch_complete
+- **HMAC signatures** - Optional secret-based request signing for security
+- **Test webhooks** - Verify endpoint connectivity before going live
+
+### Health Dashboard
+- **System overview** - Total namespaces, instances, and alarms at a glance
+- **Stale instance detection** - Identify instances not accessed in 7+ days
+- **Active alarms list** - See all pending alarms with countdown timers
+- **Storage summary** - Aggregate storage usage across all instances
+- **Recent activity** - Timeline of operations in last 24h/7d
+
 ### User Experience
 - Dark/Light/System themes
 - Responsive design
 - Enterprise auth via Cloudflare Access
 - **Accessible UI** - Proper form labels and ARIA attributes
+
+---
+
+## 📊 External Logging Integration
+
+DO Manager supports integration with external observability platforms via Cloudflare's native OpenTelemetry export. This allows you to send traces and logs to services like Grafana Cloud, Datadog, Honeycomb, Sentry, and Axiom.
+
+### Option 1: OpenTelemetry Export (Recommended)
+
+Cloudflare Workers natively supports exporting OpenTelemetry-compliant traces and logs to any OTLP endpoint.
+
+**Step 1: Create a destination in Cloudflare Dashboard**
+
+1. Go to [Workers Observability](https://dash.cloudflare.com/?to=/:account/workers-and-pages/observability/pipelines)
+2. Click **Add destination**
+3. Configure your provider's OTLP endpoint and authentication headers
+
+**Common OTLP Endpoints:**
+
+| Provider | Traces Endpoint | Logs Endpoint |
+|----------|-----------------|---------------|
+| Grafana Cloud | `https://otlp-gateway-{region}.grafana.net/otlp/v1/traces` | `https://otlp-gateway-{region}.grafana.net/otlp/v1/logs` |
+| Honeycomb | `https://api.honeycomb.io/v1/traces` | `https://api.honeycomb.io/v1/logs` |
+| Axiom | `https://api.axiom.co/v1/traces` | `https://api.axiom.co/v1/logs` |
+| Sentry | `https://{HOST}/api/{PROJECT_ID}/integration/otlp/v1/traces` | `https://{HOST}/api/{PROJECT_ID}/integration/otlp/v1/logs` |
+| Datadog | Coming soon | `https://otlp.{SITE}.datadoghq.com/v1/logs` |
+
+**Step 2: Update wrangler.toml**
+
+```toml
+[observability]
+enabled = true
+
+[observability.traces]
+enabled = true
+destinations = ["your-traces-destination"]
+
+[observability.logs]
+enabled = true
+destinations = ["your-logs-destination"]
+```
+
+### Option 2: Workers Analytics Engine
+
+For custom metrics and usage-based analytics, use Workers Analytics Engine:
+
+**Step 1: Add binding to wrangler.toml**
+
+```toml
+[[analytics_engine_datasets]]
+binding = "DO_METRICS"
+dataset = "do_manager_metrics"
+```
+
+**Step 2: Write data points from your Worker**
+
+```typescript
+// Example: Track backup operations
+env.DO_METRICS.writeDataPoint({
+  blobs: [namespaceId, instanceId, 'backup'],
+  doubles: [backupSizeBytes, durationMs],
+  indexes: [userId]
+});
+```
+
+**Step 3: Query via SQL API or Grafana**
+
+```sql
+SELECT
+  blob1 AS namespace_id,
+  SUM(double1) AS total_backup_bytes,
+  COUNT(*) AS backup_count
+FROM do_manager_metrics
+WHERE timestamp > NOW() - INTERVAL '7' DAY
+GROUP BY blob1
+```
+
+### Option 3: Tail Workers
+
+For real-time log processing, create a Tail Worker:
+
+```typescript
+export default {
+  async tail(events: TraceItem[]) {
+    for (const event of events) {
+      // Forward to your logging service
+      await fetch('https://your-logging-service.com/ingest', {
+        method: 'POST',
+        body: JSON.stringify(event),
+      });
+    }
+  }
+};
+```
+
+Configure in wrangler.toml:
+
+```toml
+[[tail_consumers]]
+service = "my-tail-worker"
+```
+
+### Option 4: Logpush
+
+For structured log export to storage destinations (R2, S3, etc.):
+
+1. Go to [Cloudflare Dashboard > Analytics > Logs](https://dash.cloudflare.com/?to=/:account/logs)
+2. Create a Logpush job for Workers Trace Events
+3. Select your destination (R2, S3, Azure, GCS, etc.)
 
 ---
 
@@ -330,6 +452,12 @@ Click "Get Admin Hook Code" in the namespace view to generate copy-paste TypeScr
 | `POST /api/batch/keys/export` | Log batch export keys job |
 | `POST /api/search/keys` | Search for keys across all instances |
 | `POST /api/search/values` | Search within storage values |
+| `GET /api/health` | Get system health summary |
+| `GET /api/webhooks` | List configured webhooks |
+| `POST /api/webhooks` | Create a new webhook |
+| `PUT /api/webhooks/:id` | Update a webhook |
+| `DELETE /api/webhooks/:id` | Delete a webhook |
+| `POST /api/webhooks/:id/test` | Send a test webhook |
 
 ---
 
@@ -358,9 +486,11 @@ do-manager/
 │   │   ├── batch.ts      # Batch operations
 │   │   ├── search.ts     # Cross-namespace search
 │   │   ├── metrics.ts    # GraphQL analytics
-│   │   └── jobs.ts       # Job history
+│   │   ├── jobs.ts       # Job history
+│   │   ├── webhooks.ts   # Webhook management
+│   │   └── health.ts     # Health dashboard API
 │   ├── types/            # Worker types
-│   ├── utils/            # Utilities (CORS, auth, helpers)
+│   ├── utils/            # Utilities (CORS, auth, helpers, webhooks)
 │   ├── schema.sql        # D1 schema
 │   └── index.ts          # Worker entry
 └── ...config files

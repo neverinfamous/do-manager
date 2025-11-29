@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Box, History, BarChart3, Search } from 'lucide-react'
+import { Box, History, BarChart3, Search, Activity, Bell } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { Header } from './components/layout/Header'
 import { NamespaceList } from './components/features/NamespaceList'
@@ -8,6 +8,8 @@ import { StorageViewer } from './components/features/StorageViewer'
 import { MetricsDashboard } from './components/features/MetricsDashboard'
 import { JobHistory } from './components/features/JobHistory'
 import { GlobalSearch } from './components/features/GlobalSearch'
+import { HealthDashboard } from './components/features/HealthDashboard'
+import { WebhookManager } from './components/features/WebhookManager'
 import { namespaceApi } from './services/api'
 import { instanceApi } from './services/instanceApi'
 import type { Namespace, Instance } from './types'
@@ -19,7 +21,7 @@ type View =
 
 export default function App(): React.ReactElement {
   const [currentView, setCurrentView] = useState<View>({ type: 'list' })
-  const [activeTab, setActiveTab] = useState('namespaces')
+  const [activeTab, setActiveTab] = useState('health')
 
   const handleSelectNamespace = (namespace: Namespace): void => {
     setCurrentView({ type: 'namespace', namespace })
@@ -74,6 +76,18 @@ export default function App(): React.ReactElement {
         {currentView.type === 'list' && (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
+              <TabsTrigger value="health" className="flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Health
+              </TabsTrigger>
+              <TabsTrigger value="jobs" className="flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Job History
+              </TabsTrigger>
+              <TabsTrigger value="metrics" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Metrics
+              </TabsTrigger>
               <TabsTrigger value="namespaces" className="flex items-center gap-2">
                 <Box className="h-4 w-4" />
                 Namespaces
@@ -82,15 +96,23 @@ export default function App(): React.ReactElement {
                 <Search className="h-4 w-4" />
                 Search
               </TabsTrigger>
-              <TabsTrigger value="metrics" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Metrics
-              </TabsTrigger>
-              <TabsTrigger value="jobs" className="flex items-center gap-2">
-                <History className="h-4 w-4" />
-                Job History
+              <TabsTrigger value="webhooks" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Webhooks
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="health">
+              <HealthDashboard />
+            </TabsContent>
+
+            <TabsContent value="jobs">
+              <JobHistory />
+            </TabsContent>
+
+            <TabsContent value="metrics">
+              <MetricsDashboard />
+            </TabsContent>
 
             <TabsContent value="namespaces">
               <NamespaceList onSelectNamespace={handleSelectNamespace} />
@@ -100,12 +122,8 @@ export default function App(): React.ReactElement {
               <GlobalSearch onNavigateToInstance={(nsId, instId, key) => void handleNavigateToInstance(nsId, instId, key)} />
             </TabsContent>
 
-            <TabsContent value="metrics">
-              <MetricsDashboard />
-            </TabsContent>
-
-            <TabsContent value="jobs">
-              <JobHistory />
+            <TabsContent value="webhooks">
+              <WebhookManager />
             </TabsContent>
           </Tabs>
         )}

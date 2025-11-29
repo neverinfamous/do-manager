@@ -101,6 +101,40 @@ export interface Backup {
 }
 
 /**
+ * Webhook event types
+ */
+export type WebhookEventType =
+  | 'backup_complete'
+  | 'restore_complete'
+  | 'alarm_set'
+  | 'alarm_deleted'
+  | 'job_failed'
+  | 'batch_complete'
+
+/**
+ * Webhook record from D1
+ */
+export interface Webhook {
+  id: string
+  name: string
+  url: string
+  secret: string | null
+  events: string // JSON array of WebhookEventType
+  enabled: number
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Webhook payload sent to endpoints
+ */
+export interface WebhookPayload {
+  event: WebhookEventType
+  timestamp: string
+  data: Record<string, unknown>
+}
+
+/**
  * Cloudflare API response wrapper
  */
 export interface CloudflareApiResponse<T> {

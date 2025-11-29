@@ -11,6 +11,8 @@ import { handleMetricsRoutes } from './routes/metrics'
 import { handleJobRoutes } from './routes/jobs'
 import { handleBatchRoutes } from './routes/batch'
 import { handleSearchRoutes } from './routes/search'
+import { handleWebhookRoutes } from './routes/webhooks'
+import { handleHealthRoutes } from './routes/health'
 
 /**
  * Main request handler
@@ -106,6 +108,14 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
 
   if (url.pathname.startsWith('/api/search')) {
     return handleSearchRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
+  }
+
+  if (url.pathname.startsWith('/api/webhooks')) {
+    return handleWebhookRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
+  }
+
+  if (url.pathname.startsWith('/api/health')) {
+    return handleHealthRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
   }
 
   // 404 for unknown API routes

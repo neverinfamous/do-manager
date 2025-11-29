@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders, Instance, Namespace } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
+import { triggerWebhooks, createBatchCompleteWebhookData } from '../utils/webhooks'
 
 /**
  * Batch operation request types
@@ -187,6 +188,20 @@ async function batchDeleteInstances(
       instances: results.filter((r) => r.success).map((r) => r.name),
     })
 
+    // Trigger webhook
+    void triggerWebhooks(
+      env,
+      'batch_complete',
+      createBatchCompleteWebhookData(
+        'batch_delete_instances',
+        body.instanceIds.length,
+        successCount,
+        failureCount,
+        userEmail
+      ),
+      isLocalDev
+    )
+
     return jsonResponse({
       results,
       summary: {
@@ -279,6 +294,20 @@ async function batchDeleteNamespaces(
       failed: failureCount,
       namespaces: results.filter((r) => r.success).map((r) => r.name),
     })
+
+    // Trigger webhook
+    void triggerWebhooks(
+      env,
+      'batch_complete',
+      createBatchCompleteWebhookData(
+        'batch_delete_namespaces',
+        body.namespaceIds.length,
+        successCount,
+        failureCount,
+        userEmail
+      ),
+      isLocalDev
+    )
 
     return jsonResponse({
       results,
@@ -438,6 +467,20 @@ async function batchBackupInstances(
       failed: failureCount,
       instances: results.filter((r) => r.success).map((r) => r.name),
     })
+
+    // Trigger webhook
+    void triggerWebhooks(
+      env,
+      'batch_complete',
+      createBatchCompleteWebhookData(
+        'batch_backup',
+        body.instanceIds.length,
+        successCount,
+        failureCount,
+        userEmail
+      ),
+      isLocalDev
+    )
 
     return jsonResponse({
       results,

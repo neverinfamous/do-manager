@@ -77,6 +77,32 @@ CREATE TABLE IF NOT EXISTS backups (
   FOREIGN KEY (instance_id) REFERENCES instances(id) ON DELETE CASCADE
 );
 
+-- Webhook configurations for event notifications
+CREATE TABLE IF NOT EXISTS webhooks (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  secret TEXT,
+  events TEXT NOT NULL, -- JSON array of event types
+  enabled INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Alarm history for tracking alarm lifecycle
+CREATE TABLE IF NOT EXISTS alarm_history (
+  id TEXT PRIMARY KEY,
+  instance_id TEXT NOT NULL,
+  namespace_id TEXT NOT NULL,
+  scheduled_time TEXT NOT NULL, -- ISO timestamp when alarm should fire
+  status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled')),
+  created_at TEXT DEFAULT (datetime('now')), -- When alarm was set
+  completed_at TEXT, -- When alarm fired or was cancelled
+  created_by TEXT,
+  FOREIGN KEY (namespace_id) REFERENCES namespaces(id) ON DELETE CASCADE,
+  FOREIGN KEY (instance_id) REFERENCES instances(id) ON DELETE CASCADE
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_instances_namespace ON instances(namespace_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
@@ -84,4 +110,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_namespace ON jobs(namespace_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_backups_instance ON backups(instance_id);
+CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON webhooks(enabled);
+CREATE INDEX IF NOT EXISTS idx_alarm_history_instance ON alarm_history(instance_id);
+CREATE INDEX IF NOT EXISTS idx_alarm_history_status ON alarm_history(status);
 

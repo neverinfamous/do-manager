@@ -89,6 +89,7 @@ export type JobType =
   | 'import_keys'
   | 'set_alarm'
   | 'delete_alarm'
+  | 'alarm_completed'
   | 'export_instance'
   | 'export_namespace'
   | 'batch_export_instances'

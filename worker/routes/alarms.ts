@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders, Instance, Namespace } from '../types'
-import { jsonResponse, errorResponse, parseJsonBody, nowISO, createJob, completeJob, failJob } from '../utils/helpers'
+import { jsonResponse, errorResponse, parseJsonBody, nowISO, createJob, completeJob, failJob, generateId } from '../utils/helpers'
+import { triggerWebhooks, createAlarmWebhookData } from '../utils/webhooks'
 
 /**
  * Mock alarm data for local development
@@ -49,7 +50,7 @@ export async function handleAlarmRoutes(
     if (!instanceId) {
       return errorResponse('Instance ID required', corsHeaders, 400)
     }
-    return deleteAlarm(instanceId, env, corsHeaders, isLocalDev)
+    return deleteAlarm(instanceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
   return errorResponse('Not Found', corsHeaders, 404)
@@ -231,16 +232,47 @@ async function setAlarm(
       return errorResponse('Failed to set alarm on DO', corsHeaders, response.status)
     }
 
+    const now = nowISO()
+    const scheduledTime = new Date(body.timestamp).toISOString()
+
     // Update has_alarm in metadata
     await env.METADATA.prepare(
       'UPDATE instances SET has_alarm = 1, updated_at = ? WHERE id = ?'
-    ).bind(nowISO(), instanceId).run()
+    ).bind(now, instanceId).run()
 
-    await completeJob(env.METADATA, jobId, { timestamp: body.timestamp, alarmDate: new Date(body.timestamp).toISOString() })
+    // Cancel any existing scheduled alarms for this instance
+    await env.METADATA.prepare(
+      'UPDATE alarm_history SET status = ?, completed_at = ? WHERE instance_id = ? AND status = ?'
+    ).bind('cancelled', now, instanceId, 'scheduled').run()
+
+    // Record new alarm in history
+    const alarmHistoryId = generateId()
+    await env.METADATA.prepare(`
+      INSERT INTO alarm_history (id, instance_id, namespace_id, scheduled_time, status, created_at, created_by)
+      VALUES (?, ?, ?, ?, 'scheduled', ?, ?)
+    `).bind(alarmHistoryId, instanceId, instance.namespace_id, scheduledTime, now, userEmail).run()
+
+    await completeJob(env.METADATA, jobId, { timestamp: body.timestamp, alarmDate: scheduledTime })
+
+    // Trigger webhook
+    void triggerWebhooks(
+      env,
+      'alarm_set',
+      createAlarmWebhookData(
+        instanceId,
+        instance.name ?? instance.object_id,
+        namespace.id,
+        namespace.name,
+        scheduledTime,
+        userEmail
+      ),
+      isLocalDev
+    )
+
     return jsonResponse({
       success: true,
       alarm: body.timestamp,
-      alarmDate: new Date(body.timestamp).toISOString(),
+      alarmDate: scheduledTime,
     }, corsHeaders)
   } catch (error) {
     console.error('[Alarms] Set error:', error)
@@ -255,7 +287,8 @@ async function deleteAlarm(
   instanceId: string,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
   if (isLocalDev) {
     MOCK_ALARMS[instanceId] = null
@@ -301,10 +334,32 @@ async function deleteAlarm(
       return errorResponse('Failed to delete alarm on DO', corsHeaders, response.status)
     }
 
+    const now = nowISO()
+
     // Update has_alarm in metadata
     await env.METADATA.prepare(
       'UPDATE instances SET has_alarm = 0, updated_at = ? WHERE id = ?'
-    ).bind(nowISO(), instanceId).run()
+    ).bind(now, instanceId).run()
+
+    // Mark any scheduled alarms as cancelled
+    await env.METADATA.prepare(
+      'UPDATE alarm_history SET status = ?, completed_at = ? WHERE instance_id = ? AND status = ?'
+    ).bind('cancelled', now, instanceId, 'scheduled').run()
+
+    // Trigger webhook
+    void triggerWebhooks(
+      env,
+      'alarm_deleted',
+      createAlarmWebhookData(
+        instanceId,
+        instance.name ?? instance.object_id,
+        namespace.id,
+        namespace.name,
+        null,
+        userEmail
+      ),
+      isLocalDev
+    )
 
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
