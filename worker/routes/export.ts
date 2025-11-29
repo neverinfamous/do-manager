@@ -1,5 +1,5 @@
 import type { Env, CorsHeaders, Instance, Namespace } from '../types'
-import { jsonResponse, errorResponse } from '../utils/helpers'
+import { jsonResponse, errorResponse, createJob, completeJob, failJob } from '../utils/helpers'
 
 /**
  * Handle export routes
@@ -9,19 +9,30 @@ export async function handleExportRoutes(
   env: Env,
   url: URL,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
   const method = request.method
   const path = url.pathname
 
   // GET /api/instances/:id/export - Export instance storage
-  const exportMatch = path.match(/^\/api\/instances\/([^/]+)\/export$/)
-  if (method === 'GET' && exportMatch) {
-    const instanceId = exportMatch[1]
+  const instanceExportMatch = path.match(/^\/api\/instances\/([^/]+)\/export$/)
+  if (method === 'GET' && instanceExportMatch) {
+    const instanceId = instanceExportMatch[1]
     if (!instanceId) {
       return errorResponse('Instance ID required', corsHeaders, 400)
     }
-    return exportInstance(instanceId, env, corsHeaders, isLocalDev)
+    return exportInstance(instanceId, env, corsHeaders, isLocalDev, userEmail)
+  }
+
+  // GET /api/namespaces/:id/export - Export namespace config
+  const namespaceExportMatch = path.match(/^\/api\/namespaces\/([^/]+)\/export$/)
+  if (method === 'GET' && namespaceExportMatch) {
+    const namespaceId = namespaceExportMatch[1]
+    if (!namespaceId) {
+      return errorResponse('Namespace ID required', corsHeaders, 400)
+    }
+    return exportNamespace(namespaceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
   return errorResponse('Not Found', corsHeaders, 404)
@@ -53,10 +64,15 @@ async function exportInstance(
   instanceId: string,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
+  userEmail: string | null
 ): Promise<Response> {
+  // Create job record
+  const jobId = await createJob(env.METADATA, 'export_instance', userEmail, null, instanceId)
+
   if (isLocalDev) {
     const mockData = MOCK_EXPORT_DATA[instanceId] ?? {}
+    await completeJob(env.METADATA, jobId, { keyCount: Object.keys(mockData).length })
     return jsonResponse({
       data: mockData,
       exportedAt: new Date().toISOString(),
@@ -71,7 +87,15 @@ async function exportInstance(
     ).bind(instanceId).first<Instance>()
 
     if (!instance) {
+      await failJob(env.METADATA, jobId, 'Instance not found')
       return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    // Update job with namespace info
+    if (jobId) {
+      await env.METADATA.prepare(
+        'UPDATE jobs SET namespace_id = ? WHERE id = ?'
+      ).bind(instance.namespace_id, jobId).run()
     }
 
     // Get namespace info
@@ -80,6 +104,7 @@ async function exportInstance(
     ).bind(instance.namespace_id).first<Namespace>()
 
     if (!namespace?.endpoint_url) {
+      await failJob(env.METADATA, jobId, 'Namespace endpoint not configured')
       return errorResponse(
         'Namespace endpoint not configured. Set up admin hook first.',
         corsHeaders,
@@ -102,6 +127,7 @@ async function exportInstance(
 
     if (!exportResponse.ok) {
       const errorText = await exportResponse.text().catch(() => 'Unknown error')
+      await failJob(env.METADATA, jobId, `Export failed: ${String(exportResponse.status)}`)
       return errorResponse(
         `Export failed: ${String(exportResponse.status)} - ${errorText.slice(0, 100)}`,
         corsHeaders,
@@ -116,6 +142,12 @@ async function exportInstance(
     }
     const exportData: ExportData = await exportResponse.json()
 
+    await completeJob(env.METADATA, jobId, {
+      instance_name: instanceName,
+      namespace_name: namespace.name,
+      key_count: exportData.keyCount,
+    })
+
     // Add instance metadata to export
     return jsonResponse({
       ...exportData,
@@ -127,6 +159,7 @@ async function exportInstance(
     }, corsHeaders)
   } catch (error) {
     console.error('[Export] Error:', error)
+    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Unknown error')
     return errorResponse(
       `Failed to export: ${error instanceof Error ? error.message : 'Unknown error'}`,
       corsHeaders,
@@ -135,3 +168,67 @@ async function exportInstance(
   }
 }
 
+/**
+ * Export namespace configuration
+ */
+async function exportNamespace(
+  namespaceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean,
+  userEmail: string | null
+): Promise<Response> {
+  // Create job record
+  const jobId = await createJob(env.METADATA, 'export_namespace', userEmail, namespaceId)
+
+  if (isLocalDev) {
+    // Return mock namespace config
+    const mockConfig = {
+      id: namespaceId,
+      name: 'Mock Namespace',
+      class_name: 'MockDO',
+      script_name: 'mock-worker',
+      storage_backend: 'sqlite',
+      endpoint_url: 'https://mock-worker.example.workers.dev',
+      admin_hook_enabled: true,
+      exported_at: new Date().toISOString(),
+    }
+    await completeJob(env.METADATA, jobId, { namespace_name: mockConfig.name })
+    return jsonResponse(mockConfig, corsHeaders)
+  }
+
+  try {
+    // Get namespace info
+    const namespace = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(namespaceId).first<Namespace>()
+
+    if (!namespace) {
+      await failJob(env.METADATA, jobId, 'Namespace not found')
+      return errorResponse('Namespace not found', corsHeaders, 404)
+    }
+
+    const config = {
+      id: namespace.id,
+      name: namespace.name,
+      class_name: namespace.class_name,
+      script_name: namespace.script_name,
+      storage_backend: namespace.storage_backend,
+      endpoint_url: namespace.endpoint_url,
+      admin_hook_enabled: namespace.admin_hook_enabled === 1,
+      exported_at: new Date().toISOString(),
+    }
+
+    await completeJob(env.METADATA, jobId, { namespace_name: namespace.name })
+
+    return jsonResponse(config, corsHeaders)
+  } catch (error) {
+    console.error('[Export] Namespace error:', error)
+    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Unknown error')
+    return errorResponse(
+      `Failed to export namespace: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      corsHeaders,
+      500
+    )
+  }
+}

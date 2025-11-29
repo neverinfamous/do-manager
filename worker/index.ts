@@ -9,6 +9,7 @@ import { handleBackupRoutes } from './routes/backup'
 import { handleExportRoutes } from './routes/export'
 import { handleMetricsRoutes } from './routes/metrics'
 import { handleJobRoutes } from './routes/jobs'
+import { handleBatchRoutes } from './routes/batch'
 
 /**
  * Main request handler
@@ -58,6 +59,10 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
     if (url.pathname.includes('/instances')) {
       return handleInstanceRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
     }
+    // Check for namespace export sub-route
+    if (url.pathname.includes('/export')) {
+      return handleExportRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
+    }
     return handleNamespaceRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
   }
 
@@ -76,7 +81,7 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
     }
     // Check for export sub-routes
     if (url.pathname.includes('/export')) {
-      return handleExportRoutes(request, env, url, corsHeaders, isLocalDev)
+      return handleExportRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
     }
     // Clone and other instance routes handled by instanceRoutes
     return handleInstanceRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
@@ -92,6 +97,10 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
 
   if (url.pathname.startsWith('/api/jobs')) {
     return handleJobRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
+  }
+
+  if (url.pathname.startsWith('/api/batch')) {
+    return handleBatchRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
   }
 
   // 404 for unknown API routes

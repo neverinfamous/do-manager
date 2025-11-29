@@ -11,7 +11,7 @@
 
 ---
 
-### Phase 2: Individual Export/Clone
+### Phase 2: Individual Export/Clone [COMPLETED!]
 *Build on existing backup infrastructure*
 
 | # | Feature | Description | Effort |

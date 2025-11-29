@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2 } from 'lucide-react'
+import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2, CheckSquare, Archive } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
   Card,
@@ -8,10 +8,16 @@ import {
   CardHeader,
   CardTitle,
 } from '../ui/card'
+import { Checkbox } from '../ui/checkbox'
 import { CreateInstanceDialog } from './CreateInstanceDialog'
 import { CloneInstanceDialog } from './CloneInstanceDialog'
+import { SelectionToolbar } from './SelectionToolbar'
+import { BatchDeleteDialog } from './BatchDeleteDialog'
+import { BatchBackupDialog } from './BatchBackupDialog'
+import { BatchDownloadDialog } from './BatchDownloadDialog'
 import { instanceApi } from '../../services/instanceApi'
 import { exportApi } from '../../services/exportApi'
+import { useSelection } from '../../hooks/useSelection'
 import type { Namespace, Instance } from '../../types'
 
 interface InstanceListProps {
@@ -30,6 +36,12 @@ export function InstanceList({
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [exportingId, setExportingId] = useState<string | null>(null)
   const [cloneInstance, setCloneInstance] = useState<Instance | null>(null)
+  const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false)
+  const [showBatchBackupDialog, setShowBatchBackupDialog] = useState(false)
+  const [showBatchDownloadDialog, setShowBatchDownloadDialog] = useState(false)
+
+  // Selection state
+  const selection = useSelection<Instance>()
 
   const loadInstances = useCallback(async (): Promise<void> => {
     try {
@@ -82,6 +94,33 @@ export function InstanceList({
     setCloneInstance(null)
   }
 
+  const handleSelectionChange = (instance: Instance): void => {
+    selection.toggle(instance.id)
+  }
+
+  const handleSelectAll = (): void => {
+    selection.selectAll(instances)
+  }
+
+  const handleBatchDeleteComplete = (): void => {
+    // Remove deleted instances from state
+    const deletedIds = selection.selectedIds
+    setInstances((prev) => prev.filter((i) => !deletedIds.has(i.id)))
+    setTotal((prev) => prev - deletedIds.size)
+    selection.clear()
+    setShowBatchDeleteDialog(false)
+  }
+
+  const handleBatchBackupComplete = (): void => {
+    selection.clear()
+    setShowBatchBackupDialog(false)
+  }
+
+  const handleBatchDownloadComplete = (): void => {
+    selection.clear()
+    setShowBatchDownloadDialog(false)
+  }
+
   useEffect(() => {
     void loadInstances()
   }, [loadInstances])
@@ -103,6 +142,8 @@ export function InstanceList({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
+  const selectedInstances = selection.getSelectedItems(instances)
+
   return (
     <div>
       {/* Header */}
@@ -114,6 +155,15 @@ export function InstanceList({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSelectAll}
+            disabled={instances.length === 0}
+          >
+            <CheckSquare className="h-4 w-4 mr-2" />
+            Select All
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -129,6 +179,70 @@ export function InstanceList({
           </Button>
         </div>
       </div>
+
+      {/* Selection toolbar */}
+      {selection.count > 0 && (
+        <SelectionToolbar
+          selectedCount={selection.count}
+          totalCount={instances.length}
+          isAllSelected={selection.isAllSelected(instances)}
+          onSelectAll={() => selection.selectAll(instances)}
+          onClear={selection.clear}
+          itemLabel="instance"
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowBatchDownloadDialog(true)}
+            disabled={selection.count === 0}
+          >
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            Download ({selection.count})
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowBatchBackupDialog(true)}
+            disabled={selection.count === 0}
+          >
+            <Archive className="h-3.5 w-3.5 mr-1.5" />
+            Backup ({selection.count})
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowBatchDeleteDialog(true)}
+            disabled={selection.count === 0}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+            Delete ({selection.count})
+          </Button>
+        </SelectionToolbar>
+      )}
+
+      {/* Select all checkbox */}
+      {instances.length > 0 && (
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <Checkbox
+            id="select-all-instances"
+            checked={selection.isAllSelected(instances)}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                selection.selectAll(instances)
+              } else {
+                selection.deselectAll()
+              }
+            }}
+            aria-label="Select all instances"
+          />
+          <label
+            htmlFor="select-all-instances"
+            className="text-sm text-muted-foreground cursor-pointer"
+          >
+            Select all {instances.length} instances
+          </label>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -163,16 +277,28 @@ export function InstanceList({
       {!loading && instances.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {instances.map((instance) => (
-            <Card key={instance.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={instance.id}
+              className={`hover:shadow-md transition-shadow ${
+                selection.isSelected(instance.id) ? 'ring-2 ring-primary bg-primary/5' : ''
+              }`}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-base">
-                      {instance.name ?? 'Unnamed Instance'}
-                    </CardTitle>
-                    <CardDescription className="font-mono text-xs truncate max-w-[200px]">
-                      {instance.object_id}
-                    </CardDescription>
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={selection.isSelected(instance.id)}
+                      onCheckedChange={() => handleSelectionChange(instance)}
+                      aria-label={`Select ${instance.name ?? instance.object_id}`}
+                    />
+                    <div>
+                      <CardTitle className="text-base">
+                        {instance.name ?? 'Unnamed Instance'}
+                      </CardTitle>
+                      <CardDescription className="font-mono text-xs truncate max-w-[200px]">
+                        {instance.object_id}
+                      </CardDescription>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     {instance.has_alarm === 1 && (
@@ -254,7 +380,33 @@ export function InstanceList({
         sourceInstance={cloneInstance}
         onComplete={handleCloneComplete}
       />
+
+      {/* Batch Delete Dialog */}
+      <BatchDeleteDialog
+        open={showBatchDeleteDialog}
+        onOpenChange={setShowBatchDeleteDialog}
+        items={selectedInstances}
+        itemType="instance"
+        onComplete={handleBatchDeleteComplete}
+      />
+
+      {/* Batch Backup Dialog */}
+      <BatchBackupDialog
+        open={showBatchBackupDialog}
+        onOpenChange={setShowBatchBackupDialog}
+        instances={selectedInstances}
+        namespace={namespace}
+        onComplete={handleBatchBackupComplete}
+      />
+
+      {/* Batch Download Dialog */}
+      <BatchDownloadDialog
+        open={showBatchDownloadDialog}
+        onOpenChange={setShowBatchDownloadDialog}
+        instances={selectedInstances}
+        namespace={namespace}
+        onComplete={handleBatchDownloadComplete}
+      />
     </div>
   )
 }
-

@@ -1,12 +1,17 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Search, X } from 'lucide-react'
+import { Plus, RefreshCw, Loader2, Box, Search, X, CheckSquare, Trash2, Download } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import { Checkbox } from '../ui/checkbox'
 import { NamespaceCard } from './NamespaceCard'
 import { AddNamespaceDialog } from './AddNamespaceDialog'
 import { CloneNamespaceDialog } from './CloneNamespaceDialog'
 import { NamespaceSettingsDialog } from './NamespaceSettingsDialog'
+import { SelectionToolbar } from './SelectionToolbar'
+import { BatchDeleteDialog } from './BatchDeleteDialog'
 import { namespaceApi } from '../../services/api'
+import { useSelection } from '../../hooks/useSelection'
+import { batchExportNamespaces } from '../../services/batchApi'
 import type { Namespace } from '../../types'
 
 interface NamespaceListProps {
@@ -23,6 +28,10 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
   const [selectedNamespace, setSelectedNamespace] = useState<Namespace | null>(null)
   const [cloneNamespace, setCloneNamespace] = useState<Namespace | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false)
+
+  // Selection state
+  const selection = useSelection<Namespace>()
 
   // Filter namespaces based on search
   const filteredNamespaces = useMemo(() => {
@@ -111,9 +120,39 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
     setCloneNamespace(null)
   }
 
+  const handleSelectionChange = (namespace: Namespace): void => {
+    selection.toggle(namespace.id)
+  }
+
+  const handleSelectAll = (): void => {
+    selection.selectAll(filteredNamespaces)
+  }
+
+  const handleBatchDeleteComplete = (): void => {
+    // Remove deleted namespaces from state
+    const deletedIds = selection.selectedIds
+    setNamespaces((prev) => prev.filter((n) => !deletedIds.has(n.id)))
+    selection.clear()
+    setShowBatchDeleteDialog(false)
+  }
+
+  const handleBatchDownload = async (): Promise<void> => {
+    const selectedItems = selection.getSelectedItems(filteredNamespaces)
+    if (selectedItems.length === 0) return
+
+    try {
+      await batchExportNamespaces(selectedItems)
+      selection.clear()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download namespaces')
+    }
+  }
+
   useEffect(() => {
     void loadNamespaces()
   }, [])
+
+  const selectedNamespaces = selection.getSelectedItems(filteredNamespaces)
 
   return (
     <div>
@@ -126,6 +165,14 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleSelectAll}
+            disabled={filteredNamespaces.length === 0}
+          >
+            <CheckSquare className="h-4 w-4 mr-2" />
+            Select All
+          </Button>
           <Button
             variant="outline"
             onClick={() => void handleDiscover()}
@@ -215,6 +262,61 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
             )}
           </div>
 
+          {/* Selection toolbar */}
+          {selection.count > 0 && (
+            <SelectionToolbar
+              selectedCount={selection.count}
+              totalCount={filteredNamespaces.length}
+              isAllSelected={selection.isAllSelected(filteredNamespaces)}
+              onSelectAll={() => selection.selectAll(filteredNamespaces)}
+              onClear={selection.clear}
+              itemLabel="namespace"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleBatchDownload()}
+                disabled={selection.count === 0}
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Download ({selection.count})
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowBatchDeleteDialog(true)}
+                disabled={selection.count === 0}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                Delete ({selection.count})
+              </Button>
+            </SelectionToolbar>
+          )}
+
+          {/* Select all checkbox */}
+          {filteredNamespaces.length > 0 && (
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <Checkbox
+                id="select-all-namespaces"
+                checked={selection.isAllSelected(filteredNamespaces)}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    selection.selectAll(filteredNamespaces)
+                  } else {
+                    selection.deselectAll()
+                  }
+                }}
+                aria-label="Select all namespaces"
+              />
+              <label
+                htmlFor="select-all-namespaces"
+                className="text-sm text-muted-foreground cursor-pointer"
+              >
+                Select all {filteredNamespaces.length} namespaces
+              </label>
+            </div>
+          )}
+
           {/* Search info */}
           {searchTerm && (
             <p className="text-sm text-muted-foreground mb-4">
@@ -250,6 +352,8 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
                   onClone={setCloneNamespace}
                   onSettings={handleSettings}
                   onDelete={() => void handleDelete(namespace)}
+                  isSelected={selection.isSelected(namespace.id)}
+                  onSelectionChange={handleSelectionChange}
                 />
               ))}
             </div>
@@ -279,7 +383,15 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
         sourceNamespace={cloneNamespace}
         onComplete={handleCloneComplete}
       />
+
+      {/* Batch Delete Dialog */}
+      <BatchDeleteDialog
+        open={showBatchDeleteDialog}
+        onOpenChange={setShowBatchDeleteDialog}
+        items={selectedNamespaces}
+        itemType="namespace"
+        onComplete={handleBatchDeleteComplete}
+      />
     </div>
   )
 }
-

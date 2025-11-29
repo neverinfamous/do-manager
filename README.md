@@ -38,6 +38,15 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - View storage contents (keys/values)
 - SQL console for SQLite-backed DOs
 
+### Multi-Select & Batch Operations
+- **Always-visible checkboxes** - Select namespaces and instances directly from the list
+- **Batch download (namespaces)** - Export multiple namespace configs as a ZIP file with manifest
+- **Batch download (instances)** - Export multiple instance storage as a ZIP file with manifest
+- **Batch delete** - Delete multiple instances or namespaces with confirmation dialog
+- **Batch backup** - Backup multiple instances to R2 with progress tracking
+- **Selection toolbar** - Floating toolbar with count, Select All, and Clear actions
+- **Job history integration** - All batch operations are tracked in job history
+
 ### Storage Management
 - **Key search & filter** - Real-time filtering to find keys quickly
 - View/edit storage values with JSON support
@@ -65,7 +74,13 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - CPU time metrics (average and total)
 
 ### Job History
-- **Comprehensive tracking** - Records namespace creation/deletion, instance creation/deletion, key creation/deletion, alarm operations, backup/restore
+- **Comprehensive tracking** - Records all operations including:
+  - Namespace: create, delete, clone, download (single & batch)
+  - Instance: create, delete, clone, download (single & batch)
+  - Storage: key create/update/delete
+  - Alarms: set, delete
+  - Backup/restore operations
+  - Batch operations: delete, backup, download
 - View status, progress, and timing
 - Error details for failed operations
 - Filter by status or namespace
@@ -291,6 +306,10 @@ Click "Get Admin Hook Code" in the namespace view to generate copy-paste TypeScr
 | `POST /api/instances/:id/restore` | Restore from backup |
 | `GET /api/metrics` | Get account metrics |
 | `GET /api/jobs` | List job history |
+| `GET /api/namespaces/:id/export` | Export namespace config as JSON |
+| `POST /api/batch/namespaces/delete` | Batch delete namespaces |
+| `POST /api/batch/instances/delete` | Batch delete instances |
+| `POST /api/batch/instances/backup` | Batch backup instances to R2 |
 
 ---
 
@@ -316,6 +335,7 @@ do-manager/
 │   │   ├── export.ts     # Instance export/download
 │   │   ├── alarms.ts     # Alarm management
 │   │   ├── backup.ts     # R2 backup/restore
+│   │   ├── batch.ts      # Batch operations
 │   │   ├── metrics.ts    # GraphQL analytics
 │   │   └── jobs.ts       # Job history
 │   ├── types/            # Worker types
@@ -342,6 +362,12 @@ do-manager/
 **"No namespaces discovered"**
 - You may not have any Durable Objects deployed
 - System namespaces are filtered by default (see Hidden System Namespaces section)
+
+**"Clone instance creates empty instance"**
+- Ensure your admin hooks use the correct export/import format
+- Export should return: `{ data: {...}, exportedAt: "...", keyCount: N }`
+- Import should accept: `{ data: {...} }`
+- The `do-manager-admin-hooks` NPM package handles this automatically
 
 **Authentication loop**
 - Check `TEAM_DOMAIN` includes `https://`

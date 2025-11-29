@@ -88,6 +88,14 @@ export type JobType =
   | 'delete_key'
   | 'set_alarm'
   | 'delete_alarm'
+  | 'export_instance'
+  | 'export_namespace'
+  | 'batch_export_instances'
+  | 'batch_export_namespaces'
+  | 'batch_delete_instances'
+  | 'batch_delete_namespaces'
+  | 'batch_backup'
+  | 'clone_instance'
 
 /**
  * Create a job record in the database

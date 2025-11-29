@@ -1,4 +1,5 @@
-import { Box, Copy, Database, Download, Settings, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Box, Copy, Database, Download, Settings, Trash2, Loader2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
   Card,
@@ -7,7 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from '../ui/card'
-import { downloadJson, generateTimestampedFilename } from '../../lib/downloadUtils'
+import { Checkbox } from '../ui/checkbox'
+import { exportApi } from '../../services/exportApi'
 import type { Namespace } from '../../types'
 
 interface NamespaceCardProps {
@@ -16,6 +18,10 @@ interface NamespaceCardProps {
   onClone: (namespace: Namespace) => void
   onSettings: (namespace: Namespace) => void
   onDelete: (namespace: Namespace) => void
+  /** Whether this namespace is selected */
+  isSelected?: boolean
+  /** Callback when selection changes */
+  onSelectionChange?: (namespace: Namespace) => void
 }
 
 export function NamespaceCard({
@@ -24,7 +30,11 @@ export function NamespaceCard({
   onClone,
   onSettings,
   onDelete,
+  isSelected = false,
+  onSelectionChange,
 }: NamespaceCardProps): React.ReactElement {
+  const [downloading, setDownloading] = useState(false)
+
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -33,24 +43,39 @@ export function NamespaceCard({
     })
   }
 
-  const handleDownloadConfig = (): void => {
-    const config = {
-      name: namespace.name,
-      class_name: namespace.class_name,
-      script_name: namespace.script_name,
-      storage_backend: namespace.storage_backend,
-      endpoint_url: namespace.endpoint_url,
-      exported_at: new Date().toISOString(),
+  const handleDownloadConfig = async (): Promise<void> => {
+    try {
+      setDownloading(true)
+      await exportApi.downloadNamespace(namespace.id, namespace.name)
+    } catch (err) {
+      console.error('Failed to download namespace config:', err)
+    } finally {
+      setDownloading(false)
     }
-    const filename = generateTimestampedFilename(`namespace-${namespace.name}`, 'json')
-    downloadJson(config, filename)
+  }
+
+  const handleCheckboxChange = (checked: boolean | 'indeterminate'): void => {
+    if (checked !== 'indeterminate' && onSelectionChange) {
+      onSelectionChange(namespace)
+    }
   }
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card
+      className={`hover:shadow-lg transition-shadow ${
+        isSelected ? 'ring-2 ring-primary bg-primary/5' : ''
+      }`}
+    >
       <CardHeader>
         <div className="flex items-start justify-between">
-          <Box className="h-8 w-8 text-primary" />
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={handleCheckboxChange}
+              aria-label={`Select ${namespace.name}`}
+            />
+            <Box className="h-8 w-8 text-primary" />
+          </div>
           <div className="flex items-center gap-2">
             <span
               className={`text-xs px-2 py-1 rounded-full ${
@@ -99,10 +124,15 @@ export function NamespaceCard({
           <Button
             variant="outline"
             size="sm"
-            onClick={handleDownloadConfig}
+            onClick={() => void handleDownloadConfig()}
+            disabled={downloading}
             title="Download namespace config"
           >
-            <Download className="h-3.5 w-3.5" />
+            {downloading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
           </Button>
           <Button
             variant="outline"
@@ -131,4 +161,3 @@ export function NamespaceCard({
     </Card>
   )
 }
-
