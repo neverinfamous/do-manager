@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Loader2, ChevronDown, ChevronUp, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Loader2, ChevronDown, ChevronUp, AlertCircle, CheckCircle2, Wand2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
   Dialog,
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import { storageApi } from '../../services/storageApi'
+import { handleJsonKeydown, formatJson } from '../../lib/jsonAutocomplete'
 
 type ValueType = 'string' | 'json' | 'number' | 'boolean'
 
@@ -121,9 +122,48 @@ export function StorageEditor({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showPreview, setShowPreview] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Real-time validation
   const validation = useMemo(() => validateValue(value, valueType), [value, valueType])
+
+  // Handle JSON autocomplete keydown
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    // Only apply autocomplete for JSON type
+    if (valueType !== 'json') return
+
+    const textarea = e.currentTarget
+    const result = handleJsonKeydown(
+      e.key,
+      textarea.value,
+      textarea.selectionStart,
+      textarea.selectionEnd,
+      e.shiftKey
+    )
+
+    if (result.handled) {
+      e.preventDefault()
+      if (result.newValue !== undefined) {
+        setValue(result.newValue)
+        // Set cursor position after React updates the value
+        if (result.newCursorPos !== undefined) {
+          const cursorPos = result.newCursorPos
+          requestAnimationFrame(() => {
+            textarea.selectionStart = cursorPos
+            textarea.selectionEnd = cursorPos
+          })
+        }
+      }
+    }
+  }, [valueType])
+
+  // Format JSON button handler
+  const handleFormatJson = useCallback((): void => {
+    const formatted = formatJson(value)
+    if (formatted) {
+      setValue(formatted)
+    }
+  }, [value])
 
   const loadValue = useCallback(async (): Promise<void> => {
     if (!keyName) return
@@ -272,29 +312,47 @@ export function StorageEditor({
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="storage-value-input">Value</Label>
-                {value && (
-                  <span className={`text-xs flex items-center gap-1 ${
-                    validation.isValid ? 'text-green-600 dark:text-green-400' : 'text-destructive'
-                  }`}>
-                    {validation.isValid ? (
-                      <>
-                        <CheckCircle2 className="h-3 w-3" />
-                        Valid {valueType}
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="h-3 w-3" />
-                        {validation.error}
-                      </>
-                    )}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {valueType === 'json' && value && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={handleFormatJson}
+                      disabled={!validation.isValid}
+                      title="Format JSON"
+                    >
+                      <Wand2 className="h-3 w-3 mr-1" />
+                      Format
+                    </Button>
+                  )}
+                  {value && (
+                    <span className={`text-xs flex items-center gap-1 ${
+                      validation.isValid ? 'text-green-600 dark:text-green-400' : 'text-destructive'
+                    }`}>
+                      {validation.isValid ? (
+                        <>
+                          <CheckCircle2 className="h-3 w-3" />
+                          Valid {valueType}
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-3 w-3" />
+                          {validation.error}
+                        </>
+                      )}
+                    </span>
+                  )}
+                </div>
               </div>
               <textarea
+                ref={textareaRef}
                 id="storage-value-input"
                 name="storage-value"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder={
                   valueType === 'json' ? '{ "key": "value" }' :
                   valueType === 'number' ? '42' :
@@ -307,6 +365,11 @@ export function StorageEditor({
                     : 'border-input bg-background'
                 }`}
               />
+              {valueType === 'json' && (
+                <p className="text-xs text-muted-foreground">
+                  Auto-pairs brackets and quotes • Tab for indent • Enter for smart newlines
+                </p>
+              )}
             </div>
 
             {/* Value Preview */}
