@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2, CheckSquare, Archive } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2, CheckSquare, Archive, Search, X } from 'lucide-react'
 import { Button } from '../ui/button'
+import { Input } from '../ui/input'
 import {
   Card,
   CardContent,
@@ -39,9 +40,21 @@ export function InstanceList({
   const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false)
   const [showBatchBackupDialog, setShowBatchBackupDialog] = useState(false)
   const [showBatchDownloadDialog, setShowBatchDownloadDialog] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Selection state
   const selection = useSelection<Instance>()
+
+  // Filter instances based on search
+  const filteredInstances = useMemo(() => {
+    if (!searchTerm.trim()) return instances
+    const searchLower = searchTerm.toLowerCase()
+    return instances.filter(
+      (inst) =>
+        (inst.name?.toLowerCase().includes(searchLower) ?? false) ||
+        inst.object_id.toLowerCase().includes(searchLower)
+    )
+  }, [instances, searchTerm])
 
   const loadInstances = useCallback(async (): Promise<void> => {
     try {
@@ -99,7 +112,7 @@ export function InstanceList({
   }
 
   const handleSelectAll = (): void => {
-    selection.selectAll(instances)
+    selection.selectAll(filteredInstances)
   }
 
   const handleBatchDeleteComplete = (): void => {
@@ -142,7 +155,7 @@ export function InstanceList({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
-  const selectedInstances = selection.getSelectedItems(instances)
+  const selectedInstances = selection.getSelectedItems(filteredInstances)
 
   return (
     <div>
@@ -159,7 +172,7 @@ export function InstanceList({
             variant="outline"
             size="sm"
             onClick={handleSelectAll}
-            disabled={instances.length === 0}
+            disabled={filteredInstances.length === 0}
           >
             <CheckSquare className="h-4 w-4 mr-2" />
             Select All
@@ -184,9 +197,9 @@ export function InstanceList({
       {selection.count > 0 && (
         <SelectionToolbar
           selectedCount={selection.count}
-          totalCount={instances.length}
-          isAllSelected={selection.isAllSelected(instances)}
-          onSelectAll={() => selection.selectAll(instances)}
+          totalCount={filteredInstances.length}
+          isAllSelected={selection.isAllSelected(filteredInstances)}
+          onSelectAll={() => selection.selectAll(filteredInstances)}
           onClear={selection.clear}
           itemLabel="instance"
         >
@@ -220,15 +233,41 @@ export function InstanceList({
         </SelectionToolbar>
       )}
 
-      {/* Select all checkbox */}
+      {/* Search filter */}
       {instances.length > 0 && (
+        <div className="relative mb-4">
+          <label htmlFor="instance-filter" className="sr-only">Filter instances</label>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="instance-filter"
+            placeholder="Filter instances by name or ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+              onClick={() => setSearchTerm('')}
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Select all checkbox */}
+      {filteredInstances.length > 0 && (
         <div className="flex items-center gap-2 mb-4 px-1">
           <Checkbox
             id="select-all-instances"
-            checked={selection.isAllSelected(instances)}
+            checked={selection.isAllSelected(filteredInstances)}
             onCheckedChange={(checked) => {
               if (checked) {
-                selection.selectAll(instances)
+                selection.selectAll(filteredInstances)
               } else {
                 selection.deselectAll()
               }
@@ -239,9 +278,19 @@ export function InstanceList({
             htmlFor="select-all-instances"
             className="text-sm text-muted-foreground cursor-pointer"
           >
-            Select all {instances.length} instances
+            Select all {filteredInstances.length} instances
           </label>
         </div>
+      )}
+
+      {/* Search results info */}
+      {searchTerm && (
+        <p className="text-sm text-muted-foreground mb-4">
+          Showing {filteredInstances.length} of {instances.length} instances
+          {filteredInstances.length === 0 && (
+            <span className="ml-1">— no matches for "{searchTerm}"</span>
+          )}
+        </p>
       )}
 
       {/* Error */}
@@ -273,10 +322,24 @@ export function InstanceList({
         </div>
       )}
 
+      {/* No matches state */}
+      {!loading && instances.length > 0 && filteredInstances.length === 0 && searchTerm && (
+        <div className="text-center py-8 border rounded-lg">
+          <Search className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+          <h4 className="font-semibold mb-1">No matches</h4>
+          <p className="text-sm text-muted-foreground mb-4">
+            No instances match "{searchTerm}"
+          </p>
+          <Button variant="outline" size="sm" onClick={() => setSearchTerm('')}>
+            Clear filter
+          </Button>
+        </div>
+      )}
+
       {/* Instance Grid */}
-      {!loading && instances.length > 0 && (
+      {!loading && filteredInstances.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {instances.map((instance) => (
+          {filteredInstances.map((instance) => (
             <Card
               key={instance.id}
               className={`hover:shadow-md transition-shadow ${

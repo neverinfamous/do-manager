@@ -35,6 +35,7 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - Create new instances with custom names
 - **Clone instance** - Copy all storage data to a new instance
 - **Download instance** - Export instance storage as JSON
+- **Search & filter** - Real-time filtering by instance name or object ID
 - View storage contents (keys/values)
 - SQL console for SQLite-backed DOs
 

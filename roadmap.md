@@ -49,7 +49,8 @@
 
 | # | Feature | Description | Effort |
 |---|---------|-------------|--------|
-| 13 | **JSON Import** | Import keys from JSON file into instance storage | Medium |
+| 13 | **JSON Import** | Import keys from JSON file into instance storage
+| 13 | **Add Instance Search Filter** | Search filer for instances like we have already for namespaces and keys
 
 ---
 
