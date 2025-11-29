@@ -21,7 +21,7 @@ type View =
 
 export default function App(): React.ReactElement {
   const [currentView, setCurrentView] = useState<View>({ type: 'list' })
-  const [activeTab, setActiveTab] = useState('health')
+  const [activeTab, setActiveTab] = useState('namespaces')
 
   const handleSelectNamespace = (namespace: Namespace): void => {
     setCurrentView({ type: 'namespace', namespace })
@@ -76,6 +76,10 @@ export default function App(): React.ReactElement {
         {currentView.type === 'list' && (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
+              <TabsTrigger value="namespaces" className="flex items-center gap-2">
+                <Box className="h-4 w-4" />
+                Namespaces
+              </TabsTrigger>
               <TabsTrigger value="health" className="flex items-center gap-2">
                 <Activity className="h-4 w-4" />
                 Health
@@ -87,10 +91,6 @@ export default function App(): React.ReactElement {
               <TabsTrigger value="metrics" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 Metrics
-              </TabsTrigger>
-              <TabsTrigger value="namespaces" className="flex items-center gap-2">
-                <Box className="h-4 w-4" />
-                Namespaces
               </TabsTrigger>
               <TabsTrigger value="search" className="flex items-center gap-2">
                 <Search className="h-4 w-4" />

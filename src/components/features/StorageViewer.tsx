@@ -560,6 +560,7 @@ export function StorageViewer({
             <TabsContent value="sql" className="mt-6">
               <SqlConsole
                 instanceId={instance.id}
+                namespaceId={namespace.id}
                 tables={storage.tables ?? []}
               />
             </TabsContent>

@@ -2,6 +2,15 @@ import type { Env, CorsHeaders } from '../types'
 import { jsonResponse, errorResponse, nowISO, generateId } from '../utils/helpers'
 
 /**
+ * Storage quota constants (10GB DO limit)
+ */
+const STORAGE_QUOTA = {
+  MAX_BYTES: 10 * 1024 * 1024 * 1024, // 10GB
+  WARNING_THRESHOLD: 0.8, // 80%
+  CRITICAL_THRESHOLD: 0.9, // 90%
+}
+
+/**
  * Health summary response
  */
 interface HealthSummary {
@@ -13,6 +22,7 @@ interface HealthSummary {
     total: number
     withAlarms: number
     stale: number // Not accessed in 7+ days
+    highStorage: number // Above 80% of 10GB limit
   }
   storage: {
     totalBytes: number
@@ -21,6 +31,7 @@ interface HealthSummary {
   activeAlarms: ActiveAlarmInfo[]
   completedAlarms: CompletedAlarmInfo[]
   staleInstances: StaleInstance[]
+  highStorageInstances: HighStorageInstance[]
   recentJobs: {
     last24h: number
     last7d: number
@@ -56,6 +67,16 @@ interface StaleInstance {
   daysSinceAccess: number
 }
 
+interface HighStorageInstance {
+  id: string
+  name: string
+  namespaceId: string
+  namespaceName: string
+  storageSizeBytes: number
+  percentUsed: number
+  level: 'warning' | 'critical'
+}
+
 /**
  * Mock health data for local development
  */
@@ -68,6 +89,7 @@ const MOCK_HEALTH: HealthSummary = {
     total: 15,
     withAlarms: 2,
     stale: 4,
+    highStorage: 2,
   },
   storage: {
     totalBytes: 1048576 * 25, // 25 MB
@@ -118,6 +140,26 @@ const MOCK_HEALTH: HealthSummary = {
       namespaceName: 'SessionStore',
       lastAccessed: new Date(Date.now() - 86400000 * 10).toISOString(), // 10 days ago
       daysSinceAccess: 10,
+    },
+  ],
+  highStorageInstances: [
+    {
+      id: 'inst-20',
+      name: 'large-data-store',
+      namespaceId: 'ns-3',
+      namespaceName: 'DataStore',
+      storageSizeBytes: 9.5 * 1024 * 1024 * 1024, // 9.5 GB
+      percentUsed: 95,
+      level: 'critical',
+    },
+    {
+      id: 'inst-21',
+      name: 'media-cache-001',
+      namespaceId: 'ns-3',
+      namespaceName: 'MediaCache',
+      storageSizeBytes: 8.2 * 1024 * 1024 * 1024, // 8.2 GB
+      percentUsed: 82,
+      level: 'warning',
     },
   ],
   recentJobs: {
@@ -248,14 +290,16 @@ async function getHealthSummary(
       FROM namespaces
     `).first<{ total: number; withEndpoint: number }>()
 
-    // Get instance counts
+    // Get instance counts (including high storage - above 80% of 10GB limit)
+    const warningThresholdBytes = Math.floor(STORAGE_QUOTA.MAX_BYTES * STORAGE_QUOTA.WARNING_THRESHOLD)
     const instanceResult = await env.METADATA.prepare(`
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN has_alarm = 1 THEN 1 ELSE 0 END) as withAlarms,
-        SUM(CASE WHEN last_accessed IS NOT NULL AND datetime(last_accessed) < datetime('now', '-7 days') THEN 1 ELSE 0 END) as stale
+        SUM(CASE WHEN last_accessed IS NOT NULL AND datetime(last_accessed) < datetime('now', '-7 days') THEN 1 ELSE 0 END) as stale,
+        SUM(CASE WHEN storage_size_bytes IS NOT NULL AND storage_size_bytes >= ? THEN 1 ELSE 0 END) as highStorage
       FROM instances
-    `).first<{ total: number; withAlarms: number; stale: number }>()
+    `).bind(warningThresholdBytes).first<{ total: number; withAlarms: number; stale: number; highStorage: number }>()
 
     // Get storage stats
     const storageResult = await env.METADATA.prepare(`
@@ -339,6 +383,29 @@ async function getHealthSummary(
       daysSinceAccess: number
     }>()
 
+    // Get high storage instances (above 80% of 10GB limit)
+    const criticalThresholdBytes = Math.floor(STORAGE_QUOTA.MAX_BYTES * STORAGE_QUOTA.CRITICAL_THRESHOLD)
+    const highStorageResult = await env.METADATA.prepare(`
+      SELECT 
+        i.id,
+        COALESCE(i.name, i.object_id) as name,
+        i.namespace_id as namespaceId,
+        n.name as namespaceName,
+        i.storage_size_bytes as storageSizeBytes
+      FROM instances i
+      JOIN namespaces n ON i.namespace_id = n.id
+      WHERE i.storage_size_bytes IS NOT NULL 
+        AND i.storage_size_bytes >= ?
+      ORDER BY i.storage_size_bytes DESC
+      LIMIT 10
+    `).bind(warningThresholdBytes).all<{
+      id: string
+      name: string
+      namespaceId: string
+      namespaceName: string
+      storageSizeBytes: number
+    }>()
+
     // Get recent job counts
     const jobsResult = await env.METADATA.prepare(`
       SELECT 
@@ -360,6 +427,7 @@ async function getHealthSummary(
         total: totalInstances,
         withAlarms: instanceResult?.withAlarms ?? 0,
         stale: instanceResult?.stale ?? 0,
+        highStorage: instanceResult?.highStorage ?? 0,
       },
       storage: {
         totalBytes,
@@ -390,6 +458,18 @@ async function getHealthSummary(
         lastAccessed: row.lastAccessed,
         daysSinceAccess: row.daysSinceAccess,
       })),
+      highStorageInstances: highStorageResult.results.map((row) => {
+        const percentUsed = Math.round((row.storageSizeBytes / STORAGE_QUOTA.MAX_BYTES) * 100)
+        return {
+          id: row.id,
+          name: row.name,
+          namespaceId: row.namespaceId,
+          namespaceName: row.namespaceName,
+          storageSizeBytes: row.storageSizeBytes,
+          percentUsed,
+          level: row.storageSizeBytes >= criticalThresholdBytes ? 'critical' as const : 'warning' as const,
+        }
+      }),
       recentJobs: {
         last24h: jobsResult?.last24h ?? 0,
         last7d: jobsResult?.last7d ?? 0,

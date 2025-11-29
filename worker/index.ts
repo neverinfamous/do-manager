@@ -13,6 +13,8 @@ import { handleBatchRoutes } from './routes/batch'
 import { handleSearchRoutes } from './routes/search'
 import { handleWebhookRoutes } from './routes/webhooks'
 import { handleHealthRoutes } from './routes/health'
+import { handleQueriesRoutes } from './routes/queries'
+import { handleDiffRoutes } from './routes/diff'
 
 /**
  * Main request handler
@@ -66,10 +68,18 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
     if (url.pathname.includes('/export')) {
       return handleExportRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
     }
+    // Check for saved queries sub-route
+    if (url.pathname.includes('/queries')) {
+      return handleQueriesRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
+    }
     return handleNamespaceRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
   }
 
   if (url.pathname.startsWith('/api/instances')) {
+    // Check for diff sub-route (compare two instances)
+    if (url.pathname === '/api/instances/diff') {
+      return handleDiffRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
+    }
     // Check for storage, sql, or import sub-routes
     if (url.pathname.includes('/storage') || url.pathname.includes('/sql') || url.pathname.includes('/import')) {
       return handleStorageRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
@@ -116,6 +126,10 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
 
   if (url.pathname.startsWith('/api/health')) {
     return handleHealthRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
+  }
+
+  if (url.pathname.startsWith('/api/queries')) {
+    return handleQueriesRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
   }
 
   // 404 for unknown API routes

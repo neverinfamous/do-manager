@@ -2,6 +2,11 @@ import type { Env, CorsHeaders, Instance, Namespace } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 
 /**
+ * Valid instance colors
+ */
+const VALID_COLORS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'] as const
+
+/**
  * Mock instances for local development
  */
 const MOCK_INSTANCES: Instance[] = [
@@ -13,6 +18,7 @@ const MOCK_INSTANCES: Instance[] = [
     last_accessed: '2024-03-01T10:00:00Z',
     storage_size_bytes: 1024,
     has_alarm: 1,
+    color: 'blue',
     created_at: '2024-01-15T10:00:00Z',
     updated_at: '2024-03-01T10:00:00Z',
     metadata: null,
@@ -25,6 +31,7 @@ const MOCK_INSTANCES: Instance[] = [
     last_accessed: '2024-03-02T14:30:00Z',
     storage_size_bytes: 2048,
     has_alarm: 0,
+    color: 'green',
     created_at: '2024-02-20T14:30:00Z',
     updated_at: '2024-03-02T14:30:00Z',
     metadata: null,
@@ -37,6 +44,7 @@ const MOCK_INSTANCES: Instance[] = [
     last_accessed: '2024-03-03T09:15:00Z',
     storage_size_bytes: 512,
     has_alarm: 0,
+    color: null,
     created_at: '2024-02-25T09:00:00Z',
     updated_at: '2024-03-03T09:15:00Z',
     metadata: null,
@@ -115,6 +123,16 @@ export async function handleInstanceRoutes(
     return cloneInstance(request, instanceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
+  // PUT /api/instances/:id/color - Update instance color
+  const colorMatch = path.match(/^\/api\/instances\/([^/]+)\/color$/)
+  if (method === 'PUT' && colorMatch) {
+    const instanceId = colorMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return updateInstanceColor(request, instanceId, env, corsHeaders, isLocalDev)
+  }
+
   return errorResponse('Not Found', corsHeaders, 404)
 }
 
@@ -191,6 +209,7 @@ async function createInstance(
       last_accessed: nowISO(),
       storage_size_bytes: null,
       has_alarm: 0,
+      color: null,
       created_at: nowISO(),
       updated_at: nowISO(),
       metadata: null,
@@ -383,6 +402,7 @@ async function cloneInstance(
       last_accessed: nowISO(),
       storage_size_bytes: sourceInstance.storage_size_bytes,
       has_alarm: 0,
+      color: sourceInstance.color,
       created_at: nowISO(),
       updated_at: nowISO(),
       metadata: null,
@@ -521,6 +541,65 @@ async function cloneInstance(
       corsHeaders,
       500
     )
+  }
+}
+
+/**
+ * Update instance color for visual organization
+ */
+async function updateInstanceColor(
+  request: Request,
+  instanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean
+): Promise<Response> {
+  interface UpdateColorBody {
+    color: string | null
+  }
+
+  const body = await parseJsonBody<UpdateColorBody>(request)
+  
+  // Validate color
+  const color = body?.color
+  if (color !== null && color !== undefined) {
+    if (!VALID_COLORS.includes(color as typeof VALID_COLORS[number])) {
+      return errorResponse(
+        `Invalid color. Valid options: ${VALID_COLORS.join(', ')} or null`,
+        corsHeaders,
+        400
+      )
+    }
+  }
+
+  if (isLocalDev) {
+    const instance = MOCK_INSTANCES.find((i) => i.id === instanceId)
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+    // Update mock instance color
+    instance.color = color ?? null
+    return jsonResponse({ instance, success: true }, corsHeaders)
+  }
+
+  try {
+    const now = nowISO()
+    await env.METADATA.prepare(`
+      UPDATE instances SET color = ?, updated_at = ? WHERE id = ?
+    `).bind(color ?? null, now, instanceId).run()
+
+    const updated = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!updated) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    return jsonResponse({ instance: updated, success: true }, corsHeaders)
+  } catch (error) {
+    console.error('[Instances] Update color error:', error)
+    return errorResponse('Failed to update instance color', corsHeaders, 500)
   }
 }
 

@@ -1,4 +1,4 @@
-import type { Instance } from '../types'
+import type { Instance, InstanceColor } from '../types'
 import type { InstancesResponse, InstanceResponse, CreateInstanceRequest, CloneInstanceResponse } from '../types/instance'
 
 const API_BASE = '/api'
@@ -98,6 +98,20 @@ export const instanceApi = {
       method: 'POST',
       body: JSON.stringify({ name: newName }),
     })
+  },
+
+  /**
+   * Update instance color for visual organization
+   */
+  async updateColor(instanceId: string, color: InstanceColor): Promise<Instance> {
+    const result = await apiFetch<{ instance: Instance; success: boolean }>(
+      `/instances/${instanceId}/color`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ color }),
+      }
+    )
+    return result.instance
   },
 }
 

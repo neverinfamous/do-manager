@@ -64,7 +64,7 @@
 
 ---
 
-### Phase 7: Observability & Monitoring (Variable)
+### Phase 7: Observability & Monitoring [COMPLETED!]
 *Documentation and integration heavy*
 
 | # | Feature | Description | Effort |
@@ -75,14 +75,14 @@
 
 ---
 
-### 💡 Additional Possibilities
+### Phase 8
 
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **Instance Diff** | Compare storage between two instances or two backup points | Nice-to-have |
-| **Saved SQL Queries** | Store frequently used queries per namespace | Nice-to-have |
-| **Storage Quota Alerts** | Warn when approaching 10GB DO limit | Nice-to-have |
-| **Dark Mode Per-Instance** | Color-code instances for visual organization | Low |
+| Feature | Description|
+|---------|-------------|
+| **Storage Quota Alerts** | Warn when approaching 10GB DO limit
+| **Instance Diff** | Compare storage between two instances
+| **Dark Mode Per-Instance** | Color-code instances for visual organization
+| **Saved SQL Queries** | Store frequently used queries per namespace
 
 ---
 

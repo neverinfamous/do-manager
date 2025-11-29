@@ -14,6 +14,7 @@ import {
   Timer,
   CheckCircle2,
   Ban,
+  HardDrive,
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
@@ -23,7 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../ui/card'
-import { healthApi, type HealthSummary, type ActiveAlarmInfo, type CompletedAlarmInfo, type StaleInstance } from '../../services/healthApi'
+import { healthApi, type HealthSummary, type ActiveAlarmInfo, type CompletedAlarmInfo, type StaleInstance, type HighStorageInstance, STORAGE_QUOTA } from '../../services/healthApi'
 
 export function HealthDashboard(): React.ReactElement {
   const [health, setHealth] = useState<HealthSummary | null>(null)
@@ -101,6 +102,11 @@ export function HealthDashboard(): React.ReactElement {
     if (health.instances.stale > 0) issues++
     if (health.recentJobs.failedLast24h > 0) issues++
     if (health.namespaces.total > 0 && health.namespaces.withEndpoint === 0) issues++
+    // High storage is a more serious issue
+    if (health.instances.highStorage > 0) issues++
+    // Critical storage instances count as additional issues
+    const criticalCount = health.highStorageInstances.filter((i) => i.level === 'critical').length
+    if (criticalCount > 0) issues++
 
     if (issues === 0) return { score: 100, label: 'Healthy', color: 'text-green-500' }
     if (issues === 1) return { score: 75, label: 'Good', color: 'text-yellow-500' }
@@ -392,6 +398,67 @@ export function HealthDashboard(): React.ReactElement {
             </CardContent>
           </Card>
 
+          {/* High Storage Instances */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <HardDrive className="h-5 w-5 text-yellow-500" />
+                <CardTitle>Storage Quota Alerts</CardTitle>
+              </div>
+              <CardDescription>
+                Instances approaching 10GB DO storage limit
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {health.highStorageInstances.length === 0 ? (
+                <div className="flex items-center gap-2 text-muted-foreground py-4">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span>All instances within safe storage limits</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {health.highStorageInstances.map((instance: HighStorageInstance) => (
+                    <div
+                      key={instance.id}
+                      className={`flex items-center justify-between p-3 rounded-lg ${
+                        instance.level === 'critical'
+                          ? 'bg-red-500/10 border border-red-500/30'
+                          : 'bg-yellow-500/10 border border-yellow-500/30'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate flex items-center gap-2">
+                          {instance.level === 'critical' ? (
+                            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          ) : (
+                            <HardDrive className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                          )}
+                          {instance.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {instance.namespaceName}
+                        </div>
+                      </div>
+                      <div className="text-right ml-4">
+                        <div className={`text-sm font-medium ${
+                          instance.level === 'critical' ? 'text-red-500' : 'text-yellow-500'
+                        }`}>
+                          {instance.percentUsed}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatBytes(instance.storageSizeBytes)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-3">
+                Warning at {String(STORAGE_QUOTA.WARNING_THRESHOLD * 100)}% (8GB) • Critical at {String(STORAGE_QUOTA.CRITICAL_THRESHOLD * 100)}% (9GB) of 10GB limit
+              </p>
+            </CardContent>
+          </Card>
+
           {/* Quick Stats */}
           <Card>
             <CardHeader>
@@ -399,7 +466,7 @@ export function HealthDashboard(): React.ReactElement {
               <CardDescription>Quick overview of system configuration</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="flex items-center gap-2">
                   {health.namespaces.withEndpoint > 0 ? (
                     <CheckCircle className="h-5 w-5 text-green-500" />
@@ -418,6 +485,16 @@ export function HealthDashboard(): React.ReactElement {
                   )}
                   <span className="text-sm">
                     {health.instances.stale} stale instances
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {health.instances.highStorage === 0 ? (
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <HardDrive className="h-5 w-5 text-yellow-500" />
+                  )}
+                  <span className="text-sm">
+                    {health.instances.highStorage} high storage
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

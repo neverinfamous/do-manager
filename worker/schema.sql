@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS instances (
   last_accessed TEXT,
   storage_size_bytes INTEGER,
   has_alarm INTEGER DEFAULT 0,
+  color TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now')),
   metadata TEXT,
@@ -103,6 +104,18 @@ CREATE TABLE IF NOT EXISTS alarm_history (
   FOREIGN KEY (instance_id) REFERENCES instances(id) ON DELETE CASCADE
 );
 
+-- Saved SQL queries per namespace
+CREATE TABLE IF NOT EXISTS saved_queries (
+  id TEXT PRIMARY KEY,
+  namespace_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  query TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (namespace_id) REFERENCES namespaces(id) ON DELETE CASCADE
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_instances_namespace ON instances(namespace_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
@@ -113,4 +126,5 @@ CREATE INDEX IF NOT EXISTS idx_backups_instance ON backups(instance_id);
 CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON webhooks(enabled);
 CREATE INDEX IF NOT EXISTS idx_alarm_history_instance ON alarm_history(instance_id);
 CREATE INDEX IF NOT EXISTS idx_alarm_history_status ON alarm_history(status);
+CREATE INDEX IF NOT EXISTS idx_saved_queries_namespace ON saved_queries(namespace_id);
 

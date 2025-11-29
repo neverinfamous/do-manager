@@ -38,6 +38,28 @@ export interface StaleInstance {
 }
 
 /**
+ * High storage instance info in health summary
+ */
+export interface HighStorageInstance {
+  id: string
+  name: string
+  namespaceId: string
+  namespaceName: string
+  storageSizeBytes: number
+  percentUsed: number
+  level: 'warning' | 'critical'
+}
+
+/**
+ * Storage quota constants (10GB DO limit)
+ */
+export const STORAGE_QUOTA = {
+  MAX_BYTES: 10 * 1024 * 1024 * 1024, // 10GB
+  WARNING_THRESHOLD: 0.8, // 80%
+  CRITICAL_THRESHOLD: 0.9, // 90%
+}
+
+/**
  * Health summary data
  */
 export interface HealthSummary {
@@ -49,6 +71,7 @@ export interface HealthSummary {
     total: number
     withAlarms: number
     stale: number
+    highStorage: number
   }
   storage: {
     totalBytes: number
@@ -57,6 +80,7 @@ export interface HealthSummary {
   activeAlarms: ActiveAlarmInfo[]
   completedAlarms: CompletedAlarmInfo[]
   staleInstances: StaleInstance[]
+  highStorageInstances: HighStorageInstance[]
   recentJobs: {
     last24h: number
     last7d: number

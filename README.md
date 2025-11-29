@@ -36,8 +36,11 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - **Clone instance** - Copy all storage data to a new instance
 - **Download instance** - Export instance storage as JSON
 - **Search & filter** - Real-time filtering by instance name or object ID
+- **Color tags** - Color-code instances for visual organization (9 preset colors)
+- **Instance diff** - Compare storage between two instances to see differences
 - View storage contents (keys/values)
 - SQL console for SQLite-backed DOs
+- **Saved SQL queries** - Store frequently used queries per namespace
 
 ### Multi-Select & Batch Operations
 - **Always-visible checkboxes** - Select namespaces, instances, and storage keys directly from lists
@@ -46,6 +49,7 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - **Batch download (keys)** - Export selected storage keys as JSON with metadata
 - **Batch delete** - Delete multiple namespaces, instances, or storage keys with confirmation
 - **Batch backup** - Backup multiple instances to R2 with progress tracking
+- **Compare instances** - Select exactly 2 instances to compare storage differences
 - **Selection toolbar** - Floating toolbar with count, Select All, and Clear actions
 - **Job history integration** - All batch operations are tracked in job history
 
@@ -109,6 +113,7 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 ### Health Dashboard
 - **System overview** - Total namespaces, instances, and alarms at a glance
 - **Stale instance detection** - Identify instances not accessed in 7+ days
+- **Storage quota alerts** - Warn when instances approach 10GB DO storage limit (80% warning, 90% critical)
 - **Active alarms list** - See all pending alarms with countdown timers
 - **Storage summary** - Aggregate storage usage across all instances
 - **Recent activity** - Timeline of operations in last 24h/7d
@@ -458,6 +463,12 @@ Click "Get Admin Hook Code" in the namespace view to generate copy-paste TypeScr
 | `PUT /api/webhooks/:id` | Update a webhook |
 | `DELETE /api/webhooks/:id` | Delete a webhook |
 | `POST /api/webhooks/:id/test` | Send a test webhook |
+| `PUT /api/instances/:id/color` | Update instance color tag |
+| `POST /api/instances/diff` | Compare storage between two instances |
+| `GET /api/namespaces/:id/queries` | List saved SQL queries for namespace |
+| `POST /api/namespaces/:id/queries` | Create a saved SQL query |
+| `PUT /api/queries/:id` | Update a saved SQL query |
+| `DELETE /api/queries/:id` | Delete a saved SQL query |
 
 ---
 
@@ -488,7 +499,9 @@ do-manager/
 │   │   ├── metrics.ts    # GraphQL analytics
 │   │   ├── jobs.ts       # Job history
 │   │   ├── webhooks.ts   # Webhook management
-│   │   └── health.ts     # Health dashboard API
+│   │   ├── health.ts     # Health dashboard API
+│   │   ├── queries.ts    # Saved SQL queries
+│   │   └── diff.ts       # Instance comparison
 │   ├── types/            # Worker types
 │   ├── utils/            # Utilities (CORS, auth, helpers, webhooks)
 │   ├── schema.sql        # D1 schema

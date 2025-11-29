@@ -38,6 +38,11 @@ export interface Namespace {
 }
 
 /**
+ * Instance color options for visual organization
+ */
+export type InstanceColor = 'red' | 'orange' | 'yellow' | 'green' | 'teal' | 'blue' | 'purple' | 'pink' | 'gray' | null
+
+/**
  * Instance record from D1
  */
 export interface Instance {
@@ -48,6 +53,7 @@ export interface Instance {
   last_accessed: string | null
   storage_size_bytes: number | null
   has_alarm: number
+  color: InstanceColor
   created_at: string
   updated_at: string
   metadata: string | null
@@ -132,6 +138,19 @@ export interface WebhookPayload {
   event: WebhookEventType
   timestamp: string
   data: Record<string, unknown>
+}
+
+/**
+ * Saved SQL query record from D1
+ */
+export interface SavedQuery {
+  id: string
+  namespace_id: string
+  name: string
+  description: string | null
+  query: string
+  created_at: string
+  updated_at: string
 }
 
 /**

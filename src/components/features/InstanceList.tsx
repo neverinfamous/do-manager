@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2, CheckSquare, Archive, Search, X } from 'lucide-react'
+import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2, CheckSquare, Archive, Search, X, AlertTriangle, HardDrive, ArrowLeftRight } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import {
@@ -16,10 +16,13 @@ import { SelectionToolbar } from './SelectionToolbar'
 import { BatchDeleteDialog } from './BatchDeleteDialog'
 import { BatchBackupDialog } from './BatchBackupDialog'
 import { BatchDownloadDialog } from './BatchDownloadDialog'
+import { InstanceDiffDialog } from './InstanceDiffDialog'
 import { instanceApi } from '../../services/instanceApi'
 import { exportApi } from '../../services/exportApi'
 import { useSelection } from '../../hooks/useSelection'
-import type { Namespace, Instance } from '../../types'
+import { getStorageQuotaStatus } from './StorageQuotaAlert'
+import { InstanceColorPicker, getColorConfig } from './InstanceColorPicker'
+import type { Namespace, Instance, InstanceColor } from '../../types'
 
 interface InstanceListProps {
   namespace: Namespace
@@ -40,6 +43,7 @@ export function InstanceList({
   const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false)
   const [showBatchBackupDialog, setShowBatchBackupDialog] = useState(false)
   const [showBatchDownloadDialog, setShowBatchDownloadDialog] = useState(false)
+  const [showDiffDialog, setShowDiffDialog] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
   // Selection state
@@ -105,6 +109,17 @@ export function InstanceList({
     setInstances((prev) => [instance, ...prev])
     setTotal((prev) => prev + 1)
     setCloneInstance(null)
+  }
+
+  const handleColorChange = async (instanceId: string, color: InstanceColor): Promise<void> => {
+    try {
+      const updated = await instanceApi.updateColor(instanceId, color)
+      setInstances((prev) =>
+        prev.map((inst) => (inst.id === instanceId ? updated : inst))
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update color')
+    }
   }
 
   const handleSelectionChange = (instance: Instance): void => {
@@ -203,6 +218,16 @@ export function InstanceList({
           onClear={selection.clear}
           itemLabel="instance"
         >
+          {selection.count === 2 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDiffDialog(true)}
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" />
+              Compare
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -339,14 +364,23 @@ export function InstanceList({
       {/* Instance Grid */}
       {!loading && filteredInstances.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredInstances.map((instance) => (
+          {filteredInstances.map((instance) => {
+            const colorConfig = getColorConfig(instance.color)
+            return (
             <Card
               key={instance.id}
-              className={`hover:shadow-md transition-shadow ${
+              className={`hover:shadow-md transition-shadow relative overflow-hidden ${
                 selection.isSelected(instance.id) ? 'ring-2 ring-primary bg-primary/5' : ''
               }`}
             >
-              <CardHeader className="pb-2">
+              {/* Color indicator bar */}
+              {colorConfig && (
+                <div 
+                  className={`absolute left-0 top-0 bottom-0 w-1 ${colorConfig.bgClass}`}
+                  aria-hidden="true"
+                />
+              )}
+              <CardHeader className={`pb-2 ${colorConfig ? 'pl-5' : ''}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <Checkbox
@@ -364,6 +398,10 @@ export function InstanceList({
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
+                    <InstanceColorPicker
+                      value={instance.color}
+                      onChange={(color) => handleColorChange(instance.id, color)}
+                    />
                     {instance.has_alarm === 1 && (
                       <span title="Has alarm">
                         <Bell className="h-4 w-4 text-yellow-500" />
@@ -372,16 +410,44 @@ export function InstanceList({
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+              <CardContent className={colorConfig ? 'pl-5' : ''}>
+                <div className="flex items-center gap-4 text-sm mb-3">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
                     <span>{formatDate(instance.last_accessed)}</span>
                   </div>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Database className="h-3.5 w-3.5" />
-                    <span>{formatSize(instance.storage_size_bytes)}</span>
-                  </div>
+                  {instance.storage_size_bytes !== null && ((): React.ReactElement => {
+                    const storageStatus = getStorageQuotaStatus(instance.storage_size_bytes)
+                    const isHighStorage = storageStatus.level !== 'normal'
+                    const isCritical = storageStatus.level === 'critical'
+                    
+                    return (
+                      <div className={`flex items-center gap-1 ${
+                        isCritical 
+                          ? 'text-red-500' 
+                          : isHighStorage 
+                            ? 'text-yellow-500' 
+                            : 'text-muted-foreground'
+                      }`}>
+                        {isCritical ? (
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                        ) : isHighStorage ? (
+                          <HardDrive className="h-3.5 w-3.5" />
+                        ) : (
+                          <Database className="h-3.5 w-3.5" />
+                        )}
+                        <span>{formatSize(instance.storage_size_bytes)}</span>
+                        {isHighStorage && (
+                          <span 
+                            className="text-xs font-medium"
+                            title={`${storageStatus.percentUsed.toFixed(1)}% of 10GB DO limit`}
+                          >
+                            ({storageStatus.percentUsed.toFixed(0)}%)
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -424,7 +490,7 @@ export function InstanceList({
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
 
@@ -469,6 +535,15 @@ export function InstanceList({
         instances={selectedInstances}
         namespace={namespace}
         onComplete={handleBatchDownloadComplete}
+      />
+
+      {/* Instance Diff Dialog */}
+      <InstanceDiffDialog
+        open={showDiffDialog}
+        onOpenChange={setShowDiffDialog}
+        instanceA={selectedInstances[0] ?? null}
+        instanceB={selectedInstances[1] ?? null}
+        namespaceName={namespace.name}
       />
     </div>
   )
