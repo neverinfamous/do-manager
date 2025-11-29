@@ -2,10 +2,10 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 env:
   REGISTRY: docker.io
@@ -32,7 +32,7 @@ jobs:
       deployments: write  # Required for deployment tracking
     
     environment:
-      name: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && 'production' || '' }}
+      name: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && 'production' || '' }}
       url: https://hub.docker.com/r/writenotenow/do-manager
 
     steps:
@@ -158,9 +158,9 @@ jobs:
         provenance: mode=max
         sbom: true
 
-    # Update Docker Hub description (optional - can be done manually)
+    # Update Docker Hub description from DOCKER_README.md
     - name: Update Docker Hub Description
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: peter-evans/dockerhub-description@v5
       continue-on-error: true
       timeout-minutes: 5
@@ -169,10 +169,10 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         repository: ${{ env.IMAGE_NAME }}
         readme-filepath: ./DOCKER_README.md
-        short-description: "Cloudflare Durable Object Manager — Auto-discover, Storage Editor, SQL Console, R2 Backup."
+        short-description: "Cloudflare DO Manager – Instance Tools, SQL Access, Batch Ops, Global Search, Backups, GitHub SSO."
     
     - name: Deployment Summary
-      if: success() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         echo "✅ Successfully published Docker images to production"
         echo "🐳 Registry: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
