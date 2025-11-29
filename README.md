@@ -1,11 +1,13 @@
 # Cloudflare Durable Object Manager
 
-Last Updated November 29, 2025 - Development v0.1.0
+Last Updated November 30, 2025 - v1.0.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-![Version](https://img.shields.io/badge/version-v0.1.0-green)
-![Status](https://img.shields.io/badge/status-Development-yellow)
+![Version](https://img.shields.io/badge/version-v1.0.0-green)
+![Status](https://img.shields.io/badge/status-Stable-brightgreen)
+[![Security](https://img.shields.io/badge/Security-Enhanced-green.svg)](https://github.com/neverinfamous/do-manager/blob/main/SECURITY.md)
+[![CodeQL](https://img.shields.io/badge/CodeQL-Passing-brightgreen.svg)](https://github.com/neverinfamous/do-manager/security/code-scanning)
 [![Type Safety](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://github.com/neverinfamous/do-manager)
 
 A full-featured web application for managing Cloudflare Durable Objects with enterprise-grade authentication via Cloudflare Access (Zero Trust). Auto-discover namespaces, manage instances, view/edit storage, set alarms, and backup state to R2.
@@ -14,7 +16,8 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 
 ## Tech Stack
 
-**Frontend**: React 19.2.0 | TypeScript 5.9.3 | Vite 7.2.4 | Tailwind CSS 4.1.17 | shadcn/ui  
+**Frontend**: React 19.2.0 | TypeScript 5.9.3 | Vite 7.2.4 | Tailwind CSS 4.1.17 | shadcn/ui
+
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
 ---
