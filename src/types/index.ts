@@ -59,6 +59,11 @@ export interface NamespaceResponse {
   namespace: Namespace
 }
 
+export interface CloneNamespaceResponse {
+  namespace: Namespace
+  clonedFrom: string
+}
+
 export interface DiscoverResponse {
   discovered: Namespace[]
 }

@@ -6,6 +6,7 @@ import { handleInstanceRoutes } from './routes/instances'
 import { handleStorageRoutes } from './routes/storage'
 import { handleAlarmRoutes } from './routes/alarms'
 import { handleBackupRoutes } from './routes/backup'
+import { handleExportRoutes } from './routes/export'
 import { handleMetricsRoutes } from './routes/metrics'
 import { handleJobRoutes } from './routes/jobs'
 
@@ -73,6 +74,11 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
     if (url.pathname.includes('/backup') || url.pathname.includes('/restore')) {
       return handleBackupRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
     }
+    // Check for export sub-routes
+    if (url.pathname.includes('/export')) {
+      return handleExportRoutes(request, env, url, corsHeaders, isLocalDev)
+    }
+    // Clone and other instance routes handled by instanceRoutes
     return handleInstanceRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
   }
 

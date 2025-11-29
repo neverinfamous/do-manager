@@ -111,6 +111,16 @@ export async function handleNamespaceRoutes(
     return deleteNamespace(namespaceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
+  // POST /api/namespaces/:id/clone - Clone namespace
+  const cloneMatch = path.match(/^\/api\/namespaces\/([^/]+)\/clone$/)
+  if (method === 'POST' && cloneMatch) {
+    const namespaceId = cloneMatch[1]
+    if (!namespaceId) {
+      return errorResponse('Namespace ID required', corsHeaders, 400)
+    }
+    return cloneNamespace(request, namespaceId, env, corsHeaders, isLocalDev, userEmail)
+  }
+
   return errorResponse('Not Found', corsHeaders, 404)
 }
 
@@ -453,6 +463,121 @@ async function deleteNamespace(
     console.error('[Namespaces] Delete error:', error)
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Failed to delete namespace')
     return errorResponse('Failed to delete namespace', corsHeaders, 500)
+  }
+}
+
+/**
+ * Clone a namespace with a new name
+ */
+async function cloneNamespace(
+  request: Request,
+  sourceNamespaceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean,
+  userEmail: string | null
+): Promise<Response> {
+  interface CloneNamespaceBody {
+    name: string
+  }
+
+  const body = await parseJsonBody<CloneNamespaceBody>(request)
+  if (!body || !body.name || !body.name.trim()) {
+    return errorResponse('name is required', corsHeaders, 400)
+  }
+
+  const newName = body.name.trim()
+
+  if (isLocalDev) {
+    // Mock clone for local development
+    const sourceNs = MOCK_NAMESPACES.find((n) => n.id === sourceNamespaceId)
+    if (!sourceNs) {
+      return errorResponse('Source namespace not found', corsHeaders, 404)
+    }
+
+    const newNs: Namespace = {
+      id: generateId(),
+      name: newName,
+      script_name: sourceNs.script_name,
+      class_name: sourceNs.class_name,
+      storage_backend: sourceNs.storage_backend,
+      endpoint_url: sourceNs.endpoint_url,
+      admin_hook_enabled: sourceNs.admin_hook_enabled,
+      created_at: nowISO(),
+      updated_at: nowISO(),
+      metadata: null,
+    }
+
+    return jsonResponse({
+      namespace: newNs,
+      clonedFrom: sourceNs.name,
+    }, corsHeaders, 201)
+  }
+
+  const jobId = await createJob(env.METADATA, 'clone_namespace', userEmail, sourceNamespaceId)
+
+  try {
+    // Get source namespace
+    const sourceNs = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(sourceNamespaceId).first<Namespace>()
+
+    if (!sourceNs) {
+      await failJob(env.METADATA, jobId, 'Source namespace not found')
+      return errorResponse('Source namespace not found', corsHeaders, 404)
+    }
+
+    // Check if name already exists
+    const existing = await env.METADATA.prepare(
+      'SELECT id FROM namespaces WHERE name = ?'
+    ).bind(newName).first<{ id: string }>()
+
+    if (existing) {
+      await failJob(env.METADATA, jobId, 'Namespace with this name already exists')
+      return errorResponse('Namespace with this name already exists', corsHeaders, 409)
+    }
+
+    // Create cloned namespace
+    const newId = generateId()
+    const now = nowISO()
+
+    await env.METADATA.prepare(`
+      INSERT INTO namespaces (id, name, script_name, class_name, storage_backend, endpoint_url, admin_hook_enabled, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      newId,
+      newName,
+      sourceNs.script_name,
+      sourceNs.class_name,
+      sourceNs.storage_backend,
+      sourceNs.endpoint_url,
+      sourceNs.admin_hook_enabled,
+      now,
+      now
+    ).run()
+
+    const newNs = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(newId).first<Namespace>()
+
+    await completeJob(env.METADATA, jobId, {
+      source_namespace_id: sourceNamespaceId,
+      new_namespace_id: newId,
+      name: newName,
+    })
+
+    return jsonResponse({
+      namespace: newNs,
+      clonedFrom: sourceNs.name,
+    }, corsHeaders, 201)
+  } catch (error) {
+    console.error('[Namespaces] Clone error:', error)
+    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Clone failed')
+    return errorResponse(
+      `Failed to clone namespace: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      corsHeaders,
+      500
+    )
   }
 }
 

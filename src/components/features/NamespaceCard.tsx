@@ -1,4 +1,4 @@
-import { Box, Database, Settings, Trash2 } from 'lucide-react'
+import { Box, Copy, Database, Download, Settings, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
   Card,
@@ -7,11 +7,13 @@ import {
   CardHeader,
   CardTitle,
 } from '../ui/card'
+import { downloadJson, generateTimestampedFilename } from '../../lib/downloadUtils'
 import type { Namespace } from '../../types'
 
 interface NamespaceCardProps {
   namespace: Namespace
   onSelect: (namespace: Namespace) => void
+  onClone: (namespace: Namespace) => void
   onSettings: (namespace: Namespace) => void
   onDelete: (namespace: Namespace) => void
 }
@@ -19,6 +21,7 @@ interface NamespaceCardProps {
 export function NamespaceCard({
   namespace,
   onSelect,
+  onClone,
   onSettings,
   onDelete,
 }: NamespaceCardProps): React.ReactElement {
@@ -28,6 +31,19 @@ export function NamespaceCard({
       month: 'short',
       day: 'numeric',
     })
+  }
+
+  const handleDownloadConfig = (): void => {
+    const config = {
+      name: namespace.name,
+      class_name: namespace.class_name,
+      script_name: namespace.script_name,
+      storage_backend: namespace.storage_backend,
+      endpoint_url: namespace.endpoint_url,
+      exported_at: new Date().toISOString(),
+    }
+    const filename = generateTimestampedFilename(`namespace-${namespace.name}`, 'json')
+    downloadJson(config, filename)
   }
 
   return (
@@ -79,6 +95,22 @@ export function NamespaceCard({
           >
             <Database className="h-3.5 w-3.5 mr-1.5" />
             Browse
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadConfig}
+            title="Download namespace config"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onClone(namespace)}
+            title="Clone namespace"
+          >
+            <Copy className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="outline"

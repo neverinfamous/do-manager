@@ -24,3 +24,11 @@ export interface CreateInstanceRequest {
   object_id: string
 }
 
+/**
+ * API response for cloning an instance
+ */
+export interface CloneInstanceResponse {
+  instance: Instance
+  clonedFrom: string
+}
+

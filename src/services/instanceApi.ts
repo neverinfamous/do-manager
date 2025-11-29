@@ -1,5 +1,5 @@
 import type { Instance } from '../types'
-import type { InstancesResponse, InstanceResponse, CreateInstanceRequest } from '../types/instance'
+import type { InstancesResponse, InstanceResponse, CreateInstanceRequest, CloneInstanceResponse } from '../types/instance'
 
 const API_BASE = '/api'
 
@@ -88,6 +88,16 @@ export const instanceApi = {
    */
   async markAccessed(instanceId: string): Promise<void> {
     await apiFetch(`/instances/${instanceId}/accessed`, { method: 'PUT' })
+  },
+
+  /**
+   * Clone an instance to a new name
+   */
+  async clone(instanceId: string, newName: string): Promise<CloneInstanceResponse> {
+    return apiFetch<CloneInstanceResponse>(`/instances/${instanceId}/clone`, {
+      method: 'POST',
+      body: JSON.stringify({ name: newName }),
+    })
   },
 }
 

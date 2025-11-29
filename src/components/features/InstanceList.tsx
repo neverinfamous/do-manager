@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Trash2 } from 'lucide-react'
+import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
   Card,
@@ -9,7 +9,9 @@ import {
   CardTitle,
 } from '../ui/card'
 import { CreateInstanceDialog } from './CreateInstanceDialog'
+import { CloneInstanceDialog } from './CloneInstanceDialog'
 import { instanceApi } from '../../services/instanceApi'
+import { exportApi } from '../../services/exportApi'
 import type { Namespace, Instance } from '../../types'
 
 interface InstanceListProps {
@@ -26,6 +28,8 @@ export function InstanceList({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [exportingId, setExportingId] = useState<string | null>(null)
+  const [cloneInstance, setCloneInstance] = useState<Instance | null>(null)
 
   const loadInstances = useCallback(async (): Promise<void> => {
     try {
@@ -58,6 +62,24 @@ export function InstanceList({
     setInstances((prev) => [instance, ...prev])
     setTotal((prev) => prev + 1)
     setShowCreateDialog(false)
+  }
+
+  const handleExport = async (instance: Instance): Promise<void> => {
+    try {
+      setExportingId(instance.id)
+      setError('')
+      await exportApi.downloadInstance(instance.id, instance.name ?? instance.object_id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export instance')
+    } finally {
+      setExportingId(null)
+    }
+  }
+
+  const handleCloneComplete = (instance: Instance): void => {
+    setInstances((prev) => [instance, ...prev])
+    setTotal((prev) => prev + 1)
+    setCloneInstance(null)
   }
 
   useEffect(() => {
@@ -185,6 +207,27 @@ export function InstanceList({
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => void handleExport(instance)}
+                    disabled={exportingId === instance.id}
+                    title="Download instance data"
+                  >
+                    {exportingId === instance.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCloneInstance(instance)}
+                    title="Clone instance"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => void handleDelete(instance)}
                   >
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -202,6 +245,14 @@ export function InstanceList({
         onOpenChange={setShowCreateDialog}
         namespaceId={namespace.id}
         onComplete={handleCreateComplete}
+      />
+
+      {/* Clone Instance Dialog */}
+      <CloneInstanceDialog
+        open={cloneInstance !== null}
+        onOpenChange={(open) => !open && setCloneInstance(null)}
+        sourceInstance={cloneInstance}
+        onComplete={handleCloneComplete}
       />
     </div>
   )

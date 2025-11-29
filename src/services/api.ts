@@ -3,6 +3,7 @@ import type {
   Job,
   NamespacesResponse,
   NamespaceResponse,
+  CloneNamespaceResponse,
   DiscoverResponse,
   JobsResponse,
 } from '../types'
@@ -103,6 +104,16 @@ export const namespaceApi = {
    */
   async delete(id: string): Promise<void> {
     await apiFetch(`/namespaces/${id}`, { method: 'DELETE' })
+  },
+
+  /**
+   * Clone a namespace with a new name
+   */
+  async clone(id: string, newName: string): Promise<CloneNamespaceResponse> {
+    return apiFetch<CloneNamespaceResponse>(`/namespaces/${id}/clone`, {
+      method: 'POST',
+      body: JSON.stringify({ name: newName }),
+    })
   },
 }
 

@@ -4,6 +4,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { NamespaceCard } from './NamespaceCard'
 import { AddNamespaceDialog } from './AddNamespaceDialog'
+import { CloneNamespaceDialog } from './CloneNamespaceDialog'
 import { NamespaceSettingsDialog } from './NamespaceSettingsDialog'
 import { namespaceApi } from '../../services/api'
 import type { Namespace } from '../../types'
@@ -20,6 +21,7 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [selectedNamespace, setSelectedNamespace] = useState<Namespace | null>(null)
+  const [cloneNamespace, setCloneNamespace] = useState<Namespace | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
   // Filter namespaces based on search
@@ -102,6 +104,11 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
     setNamespaces((prev) =>
       prev.map((n) => (n.id === updatedNamespace.id ? updatedNamespace : n))
     )
+  }
+
+  const handleCloneComplete = (namespace: Namespace): void => {
+    setNamespaces((prev) => [namespace, ...prev])
+    setCloneNamespace(null)
   }
 
   useEffect(() => {
@@ -240,6 +247,7 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
                   key={namespace.id}
                   namespace={namespace}
                   onSelect={onSelectNamespace}
+                  onClone={setCloneNamespace}
                   onSettings={handleSettings}
                   onDelete={() => void handleDelete(namespace)}
                 />
@@ -262,6 +270,14 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
         open={showSettingsDialog}
         onOpenChange={setShowSettingsDialog}
         onUpdate={handleSettingsUpdate}
+      />
+
+      {/* Clone Namespace Dialog */}
+      <CloneNamespaceDialog
+        open={cloneNamespace !== null}
+        onOpenChange={(open) => !open && setCloneNamespace(null)}
+        sourceNamespace={cloneNamespace}
+        onComplete={handleCloneComplete}
       />
     </div>
   )

@@ -1,6 +1,6 @@
 # Cloudflare Durable Object Manager
 
-Last Updated November 28, 2025 - Development v0.1.0
+Last Updated November 29, 2025 - Development v0.1.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -24,6 +24,8 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 ### Namespace Management
 - **Auto-discover** DO namespaces from Cloudflare API
 - **Manual configuration** for custom setups
+- **Clone namespace** - Duplicate namespace configuration with a new name
+- **Download config** - Export namespace settings as JSON
 - **System namespace filtering** - Internal DOs (kv-manager, d1-manager, do-manager) are hidden to prevent accidental deletion
 - **Search & filter** - Real-time filtering by name, class name, or script name
 - Support for SQLite and KV storage backends
@@ -31,6 +33,8 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 ### Instance Management
 - Track DO instances by name or hex ID
 - Create new instances with custom names
+- **Clone instance** - Copy all storage data to a new instance
+- **Download instance** - Export instance storage as JSON
 - View storage contents (keys/values)
 - SQL console for SQLite-backed DOs
 
@@ -270,12 +274,15 @@ Click "Get Admin Hook Code" in the namespace view to generate copy-paste TypeScr
 | `GET /api/namespaces` | List tracked namespaces |
 | `GET /api/namespaces/discover` | Auto-discover from Cloudflare API |
 | `POST /api/namespaces` | Add namespace manually |
+| `POST /api/namespaces/:id/clone` | Clone namespace with new name |
 | `DELETE /api/namespaces/:id` | Remove namespace |
 | `GET /api/namespaces/:id/instances` | List instances |
 | `POST /api/namespaces/:id/instances` | Track new instance |
 | `GET /api/instances/:id/storage` | Get storage contents |
 | `PUT /api/instances/:id/storage` | Update storage |
 | `POST /api/instances/:id/sql` | Execute SQL query |
+| `GET /api/instances/:id/export` | Export instance storage as JSON |
+| `POST /api/instances/:id/clone` | Clone instance with new name |
 | `GET /api/instances/:id/alarm` | Get alarm state |
 | `PUT /api/instances/:id/alarm` | Set alarm |
 | `DELETE /api/instances/:id/alarm` | Delete alarm |
@@ -304,8 +311,9 @@ do-manager/
 ├── worker/
 │   ├── routes/           # API route handlers
 │   │   ├── namespaces.ts # Namespace discovery & management
-│   │   ├── instances.ts  # Instance tracking
+│   │   ├── instances.ts  # Instance tracking & cloning
 │   │   ├── storage.ts    # Storage operations
+│   │   ├── export.ts     # Instance export/download
 │   │   ├── alarms.ts     # Alarm management
 │   │   ├── backup.ts     # R2 backup/restore
 │   │   ├── metrics.ts    # GraphQL analytics

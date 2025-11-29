@@ -1,4 +1,4 @@
-import type { Env, CorsHeaders, Instance } from '../types'
+import type { Env, CorsHeaders, Instance, Namespace } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 
 /**
@@ -103,6 +103,16 @@ export async function handleInstanceRoutes(
       return errorResponse('Instance ID required', corsHeaders, 400)
     }
     return updateInstanceAccessed(instanceId, env, corsHeaders, isLocalDev)
+  }
+
+  // POST /api/instances/:id/clone - Clone instance
+  const cloneMatch = path.match(/^\/api\/instances\/([^/]+)\/clone$/)
+  if (method === 'POST' && cloneMatch) {
+    const instanceId = cloneMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return cloneInstance(request, instanceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
   return errorResponse('Not Found', corsHeaders, 404)
@@ -333,6 +343,184 @@ async function updateInstanceAccessed(
   } catch (error) {
     console.error('[Instances] Update accessed error:', error)
     return errorResponse('Failed to update instance', corsHeaders, 500)
+  }
+}
+
+/**
+ * Clone an instance to a new name
+ */
+async function cloneInstance(
+  request: Request,
+  sourceInstanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean,
+  userEmail: string | null
+): Promise<Response> {
+  interface CloneInstanceBody {
+    name: string
+  }
+
+  const body = await parseJsonBody<CloneInstanceBody>(request)
+  if (!body || !body.name || !body.name.trim()) {
+    return errorResponse('name is required', corsHeaders, 400)
+  }
+
+  const newName = body.name.trim()
+
+  if (isLocalDev) {
+    // Mock clone for local development
+    const sourceInstance = MOCK_INSTANCES.find((i) => i.id === sourceInstanceId)
+    if (!sourceInstance) {
+      return errorResponse('Source instance not found', corsHeaders, 404)
+    }
+
+    const newInstance: Instance = {
+      id: generateId(),
+      namespace_id: sourceInstance.namespace_id,
+      name: newName,
+      object_id: newName,
+      last_accessed: nowISO(),
+      storage_size_bytes: sourceInstance.storage_size_bytes,
+      has_alarm: 0,
+      created_at: nowISO(),
+      updated_at: nowISO(),
+      metadata: null,
+    }
+
+    return jsonResponse({
+      instance: newInstance,
+      clonedFrom: sourceInstance.name ?? sourceInstance.object_id,
+    }, corsHeaders, 201)
+  }
+
+  // Create job record
+  const jobId = await createJob(env.METADATA, 'clone_instance', userEmail)
+
+  try {
+    // Get source instance info
+    const sourceInstance = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(sourceInstanceId).first<Instance>()
+
+    if (!sourceInstance) {
+      await failJob(env.METADATA, jobId, 'Source instance not found')
+      return errorResponse('Source instance not found', corsHeaders, 404)
+    }
+
+    // Update job with namespace info
+    await env.METADATA.prepare(
+      'UPDATE jobs SET namespace_id = ?, instance_id = ? WHERE id = ?'
+    ).bind(sourceInstance.namespace_id, sourceInstanceId, jobId).run()
+
+    // Get namespace info
+    const namespace = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(sourceInstance.namespace_id).first<Namespace>()
+
+    if (!namespace?.endpoint_url) {
+      await failJob(env.METADATA, jobId, 'Namespace endpoint not configured')
+      return errorResponse(
+        'Namespace endpoint not configured. Set up admin hook first.',
+        corsHeaders,
+        400
+      )
+    }
+
+    // Check if target name already exists
+    const existing = await env.METADATA.prepare(
+      'SELECT id FROM instances WHERE namespace_id = ? AND (name = ? OR object_id = ?)'
+    ).bind(sourceInstance.namespace_id, newName, newName).first<{ id: string }>()
+
+    if (existing) {
+      await failJob(env.METADATA, jobId, 'Instance with this name already exists')
+      return errorResponse('Instance with this name already exists', corsHeaders, 409)
+    }
+
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const sourceInstanceName = sourceInstance.name ?? sourceInstance.object_id
+
+    // Step 1: Export data from source instance
+    const exportResponse = await fetch(
+      `${baseUrl}/admin/${encodeURIComponent(sourceInstanceName)}/export`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
+
+    if (!exportResponse.ok) {
+      const errorText = await exportResponse.text().catch(() => 'Unknown error')
+      await failJob(env.METADATA, jobId, `Export failed: ${String(exportResponse.status)}`)
+      return errorResponse(
+        `Failed to export source instance: ${errorText.slice(0, 100)}`,
+        corsHeaders,
+        exportResponse.status
+      )
+    }
+
+    interface ExportData { data: Record<string, unknown> }
+    const exportData: ExportData = await exportResponse.json()
+
+    // Step 2: Import data to new instance (this creates the DO if it doesn't exist)
+    const importResponse = await fetch(
+      `${baseUrl}/admin/${encodeURIComponent(newName)}/import`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: exportData.data }),
+      }
+    )
+
+    if (!importResponse.ok) {
+      const errorText = await importResponse.text().catch(() => 'Unknown error')
+      await failJob(env.METADATA, jobId, `Import failed: ${String(importResponse.status)}`)
+      return errorResponse(
+        `Failed to import to new instance: ${errorText.slice(0, 100)}`,
+        corsHeaders,
+        importResponse.status
+      )
+    }
+
+    // Step 3: Create tracking record for new instance
+    const newId = generateId()
+    const now = nowISO()
+
+    await env.METADATA.prepare(`
+      INSERT INTO instances (id, namespace_id, name, object_id, last_accessed, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      newId,
+      sourceInstance.namespace_id,
+      newName,
+      newName,
+      now,
+      now,
+      now
+    ).run()
+
+    const newInstance = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(newId).first<Instance>()
+
+    await completeJob(env.METADATA, jobId, {
+      source_instance_id: sourceInstanceId,
+      new_instance_id: newId,
+      name: newName,
+    })
+
+    return jsonResponse({
+      instance: newInstance,
+      clonedFrom: sourceInstanceName,
+    }, corsHeaders, 201)
+  } catch (error) {
+    console.error('[Instances] Clone error:', error)
+    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Clone failed')
+    return errorResponse(
+      `Failed to clone instance: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      corsHeaders,
+      500
+    )
   }
 }
 
