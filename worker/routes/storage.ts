@@ -108,6 +108,16 @@ export async function handleStorageRoutes(
     return executeSql(request, instanceId, env, corsHeaders, isLocalDev)
   }
 
+  // POST /api/instances/:id/import - Import storage keys from JSON
+  const importMatch = path.match(/^\/api\/instances\/([^/]+)\/import$/)
+  if (method === 'POST' && importMatch) {
+    const instanceId = importMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return importStorage(request, instanceId, env, corsHeaders, isLocalDev, userEmail)
+  }
+
   return errorResponse('Not Found', corsHeaders, 404)
 }
 
@@ -492,6 +502,119 @@ async function executeSql(
   } catch (error) {
     console.error('[Storage] SQL error:', error)
     return errorResponse(`Failed to execute SQL: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
+  }
+}
+
+/**
+ * Import request body type
+ */
+interface ImportStorageRequest {
+  data: Record<string, unknown>
+  mergeMode?: 'merge' | 'replace'
+}
+
+/**
+ * Import storage keys from JSON
+ */
+async function importStorage(
+  request: Request,
+  instanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean,
+  userEmail: string | null
+): Promise<Response> {
+  const body = await parseJsonBody<ImportStorageRequest>(request)
+  
+  // Validate request body
+  if (!body?.data) {
+    return errorResponse('data object is required', corsHeaders, 400)
+  }
+
+  const keyCount = Object.keys(body.data).length
+  if (keyCount === 0) {
+    return errorResponse('data object must contain at least one key', corsHeaders, 400)
+  }
+
+  if (isLocalDev) {
+    // Mock import for local development
+    const storage = MOCK_STORAGE[instanceId]
+    if (!storage) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    // Handle merge mode
+    if (body.mergeMode === 'replace') {
+      storage.keys = { ...body.data }
+    } else {
+      // Default is merge
+      storage.keys = { ...storage.keys, ...body.data }
+    }
+
+    return jsonResponse({
+      success: true,
+      imported: keyCount,
+      mergeMode: body.mergeMode ?? 'merge',
+    }, corsHeaders)
+  }
+
+  // Production: call admin hook
+  try {
+    const instance = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    const namespace = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(instance.namespace_id).first<Namespace>()
+
+    if (!namespace?.endpoint_url || namespace.admin_hook_enabled !== 1) {
+      return errorResponse('Admin hook not configured or enabled', corsHeaders, 400)
+    }
+
+    const jobId = await createJob(env.METADATA, 'import_keys', userEmail, instance.namespace_id, instanceId)
+
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.name || instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/import`
+
+    console.log('[Storage] Calling admin hook import:', adminUrl, 'keys:', keyCount)
+
+    const response = await fetch(adminUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: body.data }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error')
+      console.error('[Storage] Import admin hook error:', response.status, errorText)
+      await failJob(env.METADATA, jobId, `Admin hook error: ${String(response.status)} - ${errorText.slice(0, 100)}`)
+      return errorResponse(`Admin hook error: ${String(response.status)}`, corsHeaders, response.status)
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    const result = await response.json() as { success?: boolean; imported?: number }
+    
+    await completeJob(env.METADATA, jobId, {
+      key_count: keyCount,
+      instance_name: instanceName,
+      namespace_name: namespace.name,
+      merge_mode: body.mergeMode ?? 'merge',
+    })
+
+    return jsonResponse({
+      success: true,
+      imported: result.imported ?? keyCount,
+      mergeMode: body.mergeMode ?? 'merge',
+    }, corsHeaders)
+  } catch (error) {
+    console.error('[Storage] Import error:', error)
+    return errorResponse(`Failed to import: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
   }
 }
 

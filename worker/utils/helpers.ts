@@ -86,6 +86,7 @@ export type JobType =
   | 'delete_instance'
   | 'create_key'
   | 'delete_key'
+  | 'import_keys'
   | 'set_alarm'
   | 'delete_alarm'
   | 'export_instance'

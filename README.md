@@ -54,6 +54,7 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - **Multi-select keys** - Select multiple keys with checkboxes for batch operations
 - **Batch export keys** - Export selected keys as JSON with instance/namespace metadata
 - **Batch delete keys** - Delete multiple keys at once with confirmation
+- **Import keys from JSON** - Upload JSON files to bulk import keys into instance storage
 - View/edit storage values with JSON support
 - Clickable key rows for easy editing
 
@@ -77,14 +78,24 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - Storage usage
 - CPU time metrics (average and total)
 
+### Global Search
+- **Cross-namespace key search** - Search for storage keys by name across all instances
+- **Value search** - Search within JSON values to find data across instances
+- **Namespace filtering** - Filter search to specific namespaces
+- **Result grouping** - Results grouped by namespace for easy navigation
+- **Match highlighting** - Search terms highlighted in results
+- **Value previews** - Shows matching portion of values for value searches
+- **Job tracking** - All search operations logged to job history
+
 ### Job History
 - **Comprehensive tracking** - Records all operations including:
   - Namespace: create, delete, clone, download (single & batch)
   - Instance: create, delete, clone, download (single & batch)
-  - Storage keys: create/update/delete (single), batch delete, batch export
+  - Storage keys: create/update/delete (single), batch delete, batch export, import
   - Alarms: set, delete
   - Backup/restore operations
   - Batch operations: delete, backup, download (namespaces, instances, keys)
+  - **Search operations: key search, value search**
 - View status, progress, and timing
 - Error details for failed operations
 - Filter by status or namespace
@@ -299,6 +310,7 @@ Click "Get Admin Hook Code" in the namespace view to generate copy-paste TypeScr
 | `POST /api/namespaces/:id/instances` | Track new instance |
 | `GET /api/instances/:id/storage` | Get storage contents |
 | `PUT /api/instances/:id/storage` | Update storage |
+| `POST /api/instances/:id/import` | Import keys from JSON |
 | `POST /api/instances/:id/sql` | Execute SQL query |
 | `GET /api/instances/:id/export` | Export instance storage as JSON |
 | `POST /api/instances/:id/clone` | Clone instance with new name |
@@ -316,6 +328,8 @@ Click "Get Admin Hook Code" in the namespace view to generate copy-paste TypeScr
 | `POST /api/batch/instances/backup` | Batch backup instances to R2 |
 | `POST /api/batch/keys/delete` | Log batch delete keys job |
 | `POST /api/batch/keys/export` | Log batch export keys job |
+| `POST /api/search/keys` | Search for keys across all instances |
+| `POST /api/search/values` | Search within storage values |
 
 ---
 
@@ -342,6 +356,7 @@ do-manager/
 │   │   ├── alarms.ts     # Alarm management
 │   │   ├── backup.ts     # R2 backup/restore
 │   │   ├── batch.ts      # Batch operations
+│   │   ├── search.ts     # Cross-namespace search
 │   │   ├── metrics.ts    # GraphQL analytics
 │   │   └── jobs.ts       # Job history
 │   ├── types/            # Worker types

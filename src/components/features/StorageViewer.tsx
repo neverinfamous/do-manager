@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { RefreshCw, Loader2, Key, Table, Trash2, Edit, Plus, Bell, Archive, Search, X, Copy, Check, Download, CheckSquare } from 'lucide-react'
+import { RefreshCw, Loader2, Key, Table, Trash2, Edit, Plus, Bell, Archive, Search, X, Copy, Check, Download, CheckSquare, Upload } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Checkbox } from '../ui/checkbox'
@@ -16,6 +16,7 @@ import { StorageEditor } from './StorageEditor'
 import { AlarmManager } from './AlarmManager'
 import { BackupManager } from './BackupManager'
 import { SelectionToolbar } from './SelectionToolbar'
+import { ImportKeysDialog } from './ImportKeysDialog'
 import { storageApi, type StorageListResponse } from '../../services/storageApi'
 import { logBatchDeleteKeys, logBatchExportKeys } from '../../services/batchApi'
 import { downloadJson, generateTimestampedFilename } from '../../lib/downloadUtils'
@@ -25,6 +26,8 @@ interface StorageViewerProps {
   namespace: Namespace
   instance: Instance
   onBack: () => void
+  /** Optional key to open in edit dialog immediately */
+  initialEditKey?: string
 }
 
 /**
@@ -48,13 +51,15 @@ export function StorageViewer({
   namespace,
   instance,
   onBack,
+  initialEditKey,
 }: StorageViewerProps): React.ReactElement {
   const [storage, setStorage] = useState<StorageListResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [activeTab, setActiveTab] = useState('keys')
-  const [editingKey, setEditingKey] = useState<string | null>(null)
+  const [editingKey, setEditingKey] = useState<string | null>(initialEditKey ?? null)
   const [showAddKey, setShowAddKey] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
   const [keySearch, setKeySearch] = useState('')
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   
@@ -359,6 +364,10 @@ export function StorageViewer({
                     Select All
                   </Button>
                 )}
+                <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import
+                </Button>
                 <Button size="sm" onClick={() => setShowAddKey(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Key
@@ -601,6 +610,15 @@ export function StorageViewer({
           }}
         />
       )}
+
+      {/* Import Keys Dialog */}
+      <ImportKeysDialog
+        instanceId={instance.id}
+        instanceName={instance.name ?? instance.object_id}
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onSuccess={() => void loadStorage()}
+      />
     </div>
   )
 }

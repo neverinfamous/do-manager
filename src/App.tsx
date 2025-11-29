@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Box, History, BarChart3 } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { Box, History, BarChart3, Search } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { Header } from './components/layout/Header'
 import { NamespaceList } from './components/features/NamespaceList'
@@ -7,12 +7,15 @@ import { NamespaceView } from './components/features/NamespaceView'
 import { StorageViewer } from './components/features/StorageViewer'
 import { MetricsDashboard } from './components/features/MetricsDashboard'
 import { JobHistory } from './components/features/JobHistory'
+import { GlobalSearch } from './components/features/GlobalSearch'
+import { namespaceApi } from './services/api'
+import { instanceApi } from './services/instanceApi'
 import type { Namespace, Instance } from './types'
 
 type View =
   | { type: 'list' }
   | { type: 'namespace'; namespace: Namespace }
-  | { type: 'instance'; namespace: Namespace; instance: Instance }
+  | { type: 'instance'; namespace: Namespace; instance: Instance; initialEditKey?: string }
 
 export default function App(): React.ReactElement {
   const [currentView, setCurrentView] = useState<View>({ type: 'list' })
@@ -46,6 +49,23 @@ export default function App(): React.ReactElement {
     }
   }
 
+  // Navigate from search results to instance storage view
+  const handleNavigateToInstance = useCallback(async (namespaceId: string, instanceId: string, key?: string): Promise<void> => {
+    try {
+      // Fetch namespace and instance data
+      const [namespace, instanceData] = await Promise.all([
+        namespaceApi.get(namespaceId),
+        instanceApi.get(instanceId),
+      ])
+      
+      // Navigate to instance view, optionally opening the key edit dialog
+      setCurrentView({ type: 'instance', namespace, instance: instanceData, initialEditKey: key })
+    } catch (err) {
+      console.error('Failed to navigate to instance:', err)
+      // Could show a toast/error here, but for now just log it
+    }
+  }, [])
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -57,6 +77,10 @@ export default function App(): React.ReactElement {
               <TabsTrigger value="namespaces" className="flex items-center gap-2">
                 <Box className="h-4 w-4" />
                 Namespaces
+              </TabsTrigger>
+              <TabsTrigger value="search" className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Search
               </TabsTrigger>
               <TabsTrigger value="metrics" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
@@ -70,6 +94,10 @@ export default function App(): React.ReactElement {
 
             <TabsContent value="namespaces">
               <NamespaceList onSelectNamespace={handleSelectNamespace} />
+            </TabsContent>
+
+            <TabsContent value="search">
+              <GlobalSearch onNavigateToInstance={(nsId, instId, key) => void handleNavigateToInstance(nsId, instId, key)} />
             </TabsContent>
 
             <TabsContent value="metrics">
@@ -96,6 +124,7 @@ export default function App(): React.ReactElement {
             namespace={currentView.namespace}
             instance={currentView.instance}
             onBack={handleBackToNamespace}
+            initialEditKey={currentView.initialEditKey}
           />
         )}
       </main>

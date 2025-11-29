@@ -10,6 +10,7 @@ import { handleExportRoutes } from './routes/export'
 import { handleMetricsRoutes } from './routes/metrics'
 import { handleJobRoutes } from './routes/jobs'
 import { handleBatchRoutes } from './routes/batch'
+import { handleSearchRoutes } from './routes/search'
 
 /**
  * Main request handler
@@ -67,8 +68,8 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
   }
 
   if (url.pathname.startsWith('/api/instances')) {
-    // Check for storage or sql sub-routes
-    if (url.pathname.includes('/storage') || url.pathname.includes('/sql')) {
+    // Check for storage, sql, or import sub-routes
+    if (url.pathname.includes('/storage') || url.pathname.includes('/sql') || url.pathname.includes('/import')) {
       return handleStorageRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
     }
     // Check for alarm sub-routes
@@ -101,6 +102,10 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
 
   if (url.pathname.startsWith('/api/batch')) {
     return handleBatchRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
+  }
+
+  if (url.pathname.startsWith('/api/search')) {
+    return handleSearchRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
   }
 
   // 404 for unknown API routes
