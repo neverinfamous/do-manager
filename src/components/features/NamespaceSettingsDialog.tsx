@@ -29,7 +29,6 @@ export function NamespaceSettingsDialog({
 }: NamespaceSettingsDialogProps): React.ReactNode {
   const [name, setName] = useState('')
   const [endpointUrl, setEndpointUrl] = useState('')
-  const [adminHookEnabled, setAdminHookEnabled] = useState(false)
   const [storageBackend, setStorageBackend] = useState<'sqlite' | 'kv'>('sqlite')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -38,7 +37,6 @@ export function NamespaceSettingsDialog({
     if (namespace) {
       setName(namespace.name)
       setEndpointUrl(namespace.endpoint_url ?? '')
-      setAdminHookEnabled(namespace.admin_hook_enabled === 1)
       setStorageBackend(namespace.storage_backend)
     }
   }, [namespace])
@@ -50,10 +48,13 @@ export function NamespaceSettingsDialog({
       setSaving(true)
       setError('')
       
+      // Auto-enable admin hooks when endpoint URL is provided
+      const hasEndpoint = endpointUrl.trim().length > 0
+      
       const updated = await namespaceApi.update(namespace.id, {
         name,
-        endpoint_url: endpointUrl || null,
-        admin_hook_enabled: adminHookEnabled ? 1 : 0,
+        endpoint_url: hasEndpoint ? endpointUrl.trim() : null,
+        admin_hook_enabled: hasEndpoint ? 1 : 0,
         storage_backend: storageBackend,
       })
       
@@ -104,7 +105,7 @@ export function NamespaceSettingsDialog({
               placeholder="https://your-worker.workers.dev"
             />
             <p className="text-xs text-muted-foreground">
-              The Worker URL that forwards requests to this Durable Object
+              Your Worker URL with admin hooks installed. Admin hooks are auto-enabled when a URL is set.
             </p>
           </div>
           
@@ -135,22 +136,6 @@ export function NamespaceSettingsDialog({
               </label>
             </div>
           </fieldset>
-          
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="adminHook"
-              checked={adminHookEnabled}
-              onChange={(e) => setAdminHookEnabled(e.target.checked)}
-              className="w-4 h-4 rounded"
-            />
-            <Label htmlFor="adminHook" className="cursor-pointer">
-              Admin Hook Enabled
-            </Label>
-          </div>
-          <p className="text-xs text-muted-foreground -mt-2">
-            Enable this after adding admin hook methods to your DO class
-          </p>
         </div>
         
         <DialogFooter>

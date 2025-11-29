@@ -80,7 +80,9 @@ export function MetricsDashboard({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <label htmlFor="metrics-date-range" className="sr-only">Date range</label>
           <select
+            id="metrics-date-range"
             value={days}
             onChange={(e) => setDays(parseInt(e.target.value, 10))}
             className="px-3 py-2 text-sm border rounded-md bg-background"

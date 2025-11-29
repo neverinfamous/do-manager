@@ -41,8 +41,8 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - Clickable key rows for easy editing
 
 ### Admin Hook System
-- Copy-paste TypeScript template for your DO classes
-- Enable storage viewing, editing, and management
+- **NPM package** (`do-manager-admin-hooks`) for easy integration
+- Copy-paste template also available for custom setups
 - Support for both SQLite and KV backends
 
 ### Alarms
@@ -192,82 +192,73 @@ npx wrangler deploy
 
 ## 🔌 Admin Hook Setup
 
-To manage a Durable Object's storage, you need to add admin hook methods to your DO class. The manager provides a template generator:
+To manage a Durable Object's storage, you need to add admin hook methods to your DO class. There are two options:
 
-1. Navigate to your namespace
-2. Click "Admin Hook" button
-3. Copy the generated code
-4. Paste into your DO class
-5. Deploy your Worker
-6. Configure the endpoint URL in the manager
+### Option A: NPM Package (Recommended)
 
-### Example Admin Hook Methods
+Install the admin hooks package:
+
+```bash
+npm install do-manager-admin-hooks
+```
+
+Extend your Durable Object class:
 
 ```typescript
-// Add to your Durable Object class
-async fetch(request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  
-  // Admin hook endpoints
-  if (url.pathname === '/__admin/list') {
-    return Response.json(await this.adminList());
+import { withAdminHooks } from 'do-manager-admin-hooks';
+
+export class MyDurableObject extends withAdminHooks() {
+  async fetch(request: Request): Promise<Response> {
+    // Handle admin requests first (required for DO Manager)
+    const adminResponse = await this.handleAdminRequest(request);
+    if (adminResponse) return adminResponse;
+
+    // Your custom logic here
+    return new Response('Hello from my Durable Object!');
   }
-  if (url.pathname === '/__admin/get') {
-    const key = url.searchParams.get('key');
-    if (!key) return new Response('Missing key', { status: 400 });
-    return Response.json(await this.adminGet(key));
-  }
-  if (url.pathname === '/__admin/put' && request.method === 'POST') {
-    const { key, value } = await request.json();
-    await this.adminPut(key, value);
-    return Response.json({ success: true });
-  }
-  if (url.pathname === '/__admin/delete' && request.method === 'POST') {
-    const { key } = await request.json();
-    await this.adminDelete(key);
-    return Response.json({ success: true });
-  }
-  
-  // Your normal DO logic here
-  return new Response('Hello from DO!');
-}
-
-async adminList() {
-  if (this.ctx.storage.sql) {
-    const tables = this.ctx.storage.sql
-      .exec("SELECT name FROM sqlite_master WHERE type='table'")
-      .toArray()
-      .map((row) => row.name);
-    return { tables };
-  }
-  const entries = await this.ctx.storage.list();
-  return { keys: [...entries.keys()] };
-}
-
-async adminGet(key: string) {
-  return await this.ctx.storage.get(key);
-}
-
-async adminPut(key: string, value: unknown) {
-  await this.ctx.storage.put(key, value);
-}
-
-async adminDelete(key: string) {
-  await this.ctx.storage.delete(key);
-}
-
-async adminGetAlarm() {
-  return await this.ctx.storage.getAlarm();
-}
-
-async adminSetAlarm(timestamp: number) {
-  await this.ctx.storage.setAlarm(timestamp);
-}
-
-async adminDeleteAlarm() {
-  await this.ctx.storage.deleteAlarm();
 }
 ```
+
+That's it! The package handles all admin endpoints automatically.
+
+**Configuration options:**
+
+```typescript
+export class SecureDO extends withAdminHooks({
+  basePath: '/admin',      // Change admin endpoint path (default: '/admin')
+  requireAuth: true,       // Require authentication
+  adminKey: 'secret-key',  // Admin key for auth
+}) {
+  // ...
+}
+```
+
+📦 **[NPM Package](https://www.npmjs.com/package/do-manager-admin-hooks)** • **[GitHub](https://github.com/neverinfamous/do-manager-admin-hooks)**
+
+### Option B: Manual Copy-Paste
+
+Click "Get Admin Hook Code" in the namespace view to generate copy-paste TypeScript code for your DO class.
+
+### Enable in DO Manager
+
+1. Deploy your Worker with admin hooks
+2. In DO Manager, click your namespace → Settings
+3. Set the **Admin Hook Endpoint URL** (e.g., `https://my-worker.workers.dev`)
+4. Save - admin hooks are automatically enabled when a URL is set
+5. The green "Admin Hook Enabled" badge confirms it's working
+
+### Admin Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/admin/list` | GET | List storage keys (KV) or tables (SQLite) |
+| `/admin/get?key=X` | GET | Get value for a key |
+| `/admin/put` | POST | Set key-value pair |
+| `/admin/delete` | POST | Delete a key |
+| `/admin/sql` | POST | Execute SQL (SQLite only) |
+| `/admin/alarm` | GET/PUT/DELETE | Manage alarms |
+| `/admin/export` | GET | Export all storage |
+| `/admin/import` | POST | Import data |
 
 ---
 
