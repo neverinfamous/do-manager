@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, Loader2, Table, Download, Trash2 } from 'lucide-react'
+import { Play, Loader2, Table, Download, Trash2, FileCode } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
   Card,
@@ -8,7 +8,16 @@ import {
   CardHeader,
   CardTitle,
 } from '../ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
+import { Label } from '../ui/label'
 import { storageApi, type SqlResponse } from '../../services/storageApi'
+import { sqlTemplates } from '../../lib/sqlTemplates'
 
 interface SqlConsoleProps {
   instanceId: string
@@ -21,6 +30,17 @@ export function SqlConsole({ instanceId, tables }: SqlConsoleProps): React.React
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [history, setHistory] = useState<string[]>([])
+  const [selectedTable, setSelectedTable] = useState<string | undefined>(
+    tables.length > 0 ? tables[0] : undefined
+  )
+
+  const handleTemplateSelect = (templateId: string): void => {
+    const template = sqlTemplates.find((t) => t.id === templateId)
+    if (template) {
+      const generatedQuery = template.generateQuery(selectedTable)
+      setQuery(generatedQuery)
+    }
+  }
 
   const executeQuery = async (): Promise<void> => {
     if (!query.trim()) {
@@ -80,27 +100,69 @@ export function SqlConsole({ instanceId, tables }: SqlConsoleProps): React.React
 
   return (
     <div className="space-y-4">
-      {/* Tables List */}
+      {/* Tables & Templates */}
       {tables.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Available Tables</CardTitle>
+            <CardTitle className="text-sm">Query Builder</CardTitle>
             <CardDescription className="text-xs">
-              Click a table to generate a SELECT query
+              Select a table and use templates to quickly generate queries
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Table Selection */}
             <div className="flex flex-wrap gap-2">
               {tables.map((table) => (
                 <button
                   key={table}
-                  onClick={() => insertTableQuery(table)}
-                  className="px-2 py-1 text-xs font-mono rounded bg-muted hover:bg-accent transition-colors"
+                  onClick={() => {
+                    setSelectedTable(table)
+                    insertTableQuery(table)
+                  }}
+                  className={`px-2 py-1 text-xs font-mono rounded transition-colors ${
+                    selectedTable === table
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-accent'
+                  }`}
                 >
                   <Table className="h-3 w-3 inline mr-1" />
                   {table}
                 </button>
               ))}
+            </div>
+
+            {/* Query Templates */}
+            <div className="flex items-end gap-3">
+              <div className="flex-1 max-w-xs space-y-1.5">
+                <Label htmlFor="sql-template-select" className="text-xs">
+                  <FileCode className="h-3 w-3 inline mr-1" />
+                  Query Templates
+                </Label>
+                <Select onValueChange={handleTemplateSelect}>
+                  <SelectTrigger id="sql-template-select" className="h-9">
+                    <SelectValue placeholder="Select a template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sqlTemplates.map((template) => (
+                      <SelectItem
+                        key={template.id}
+                        value={template.id}
+                        disabled={template.requiresTable && !selectedTable}
+                      >
+                        <span className="font-medium">{template.name}</span>
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          — {template.description}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedTable && (
+                <p className="text-xs text-muted-foreground pb-2">
+                  Using table: <code className="font-mono bg-muted px-1 rounded">{selectedTable}</code>
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

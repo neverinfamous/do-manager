@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { RefreshCw, Loader2, Key, Table, Trash2, Edit, Plus, Bell, Archive, Search, X } from 'lucide-react'
+import { RefreshCw, Loader2, Key, Table, Trash2, Edit, Plus, Bell, Archive, Search, X, Copy, Check } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import {
@@ -52,6 +52,18 @@ export function StorageViewer({
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [showAddKey, setShowAddKey] = useState(false)
   const [keySearch, setKeySearch] = useState('')
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+
+  const handleCopyKey = async (key: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(key)
+      setCopiedKey(key)
+      setTimeout(() => setCopiedKey(null), 2000)
+    } catch {
+      // Clipboard API not available, silently fail
+      console.warn('Clipboard API not available')
+    }
+  }
 
   // Filter keys based on search term
   const filteredKeys = useMemo(() => {
@@ -273,8 +285,25 @@ export function StorageViewer({
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation()
+                              void handleCopyKey(key)
+                            }}
+                            aria-label={copiedKey === key ? 'Copied!' : 'Copy key name'}
+                            title={copiedKey === key ? 'Copied!' : 'Copy key name'}
+                          >
+                            {copiedKey === key ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setEditingKey(key)
                             }}
+                            aria-label="Edit key"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -285,6 +314,7 @@ export function StorageViewer({
                               e.stopPropagation()
                               void handleDeleteKey(key)
                             }}
+                            aria-label="Delete key"
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
