@@ -39,8 +39,22 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - **Color tags** - Color-code instances for visual organization (9 preset colors)
 - **Instance diff** - Compare storage between two instances to see differences
 - View storage contents (keys/values)
-- SQL console for SQLite-backed DOs
-- **Saved SQL queries** - Store frequently used queries per namespace
+
+### SQL Console (SQLite-backed DOs)
+- Execute raw SQL queries against SQLite storage
+- **Query Builder** with pre-built templates:
+  | Template | Description |
+  |----------|-------------|
+  | Select All Rows | `SELECT * FROM table LIMIT 100` |
+  | Row Count | `SELECT COUNT(*) FROM table` |
+  | Table Schema | `PRAGMA table_info(table)` |
+  | List All Tables | `SELECT name FROM sqlite_master` |
+  | List Indexes | `PRAGMA index_list(table)` |
+  | Sample Rows | Random 10 rows from table |
+  | Create Table | Boilerplate for new table creation |
+- **Saved queries** - Store frequently used queries per namespace
+- Query history - Quick access to recent queries
+- Results displayed in sortable table format
 
 ### Multi-Select & Batch Operations
 - **Always-visible checkboxes** - Select namespaces, instances, and storage keys directly from lists
