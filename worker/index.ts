@@ -51,12 +51,10 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
   // Check if we're in local dev mode (no credentials)
   const isLocalDev = isLocalhost && (!env.ACCOUNT_ID || !env.API_KEY)
 
-  console.log('[Environment]', {
-    isLocalhost,
-    hasAccountId: Boolean(env.ACCOUNT_ID),
-    hasApiKey: Boolean(env.API_KEY),
-    isLocalDev,
-  })
+  // Only log environment info in local development to avoid exposing sensitive configuration
+  if (isLocalDev) {
+    console.log('[Environment] Local development mode active')
+  }
 
   // Route API requests
   if (url.pathname.startsWith('/api/namespaces')) {
