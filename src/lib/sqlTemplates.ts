@@ -57,6 +57,19 @@ export const sqlTemplates: SqlTemplate[] = [
     generateQuery: (tableName) => `SELECT * FROM ${tableName ?? 'table_name'} ORDER BY RANDOM() LIMIT 10`,
     requiresTable: true,
   },
+  {
+    id: 'create-table',
+    name: 'Create Table',
+    description: 'Create a new table with common columns',
+    generateQuery: () => `CREATE TABLE IF NOT EXISTS new_table (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  data TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+)`,
+    requiresTable: false,
+  },
 ]
 
 /**
