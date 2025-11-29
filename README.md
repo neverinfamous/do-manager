@@ -241,11 +241,12 @@ Click "Get Admin Hook Code" in the namespace view to generate copy-paste TypeScr
 
 ### Enable in DO Manager
 
-1. Deploy your Worker with admin hooks
-2. In DO Manager, click your namespace → Settings
-3. Set the **Admin Hook Endpoint URL** (e.g., `https://my-worker.workers.dev`)
-4. Save - admin hooks are automatically enabled when a URL is set
-5. The green "Admin Hook Enabled" badge confirms it's working
+1. Deploy your Worker with admin hooks installed
+2. In DO Manager, add your namespace with the **Admin Hook Endpoint URL** (e.g., `https://my-worker.workers.dev`)
+3. Admin hooks are automatically enabled when you save with a URL
+4. The green "Admin Hook Enabled" badge confirms it's working
+
+**Tip:** You can set the endpoint URL when creating a namespace, or add it later via Settings.
 
 ### Admin Endpoints
 

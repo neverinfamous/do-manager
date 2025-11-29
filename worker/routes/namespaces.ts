@@ -244,6 +244,10 @@ async function addNamespace(
     return errorResponse('name and class_name are required', corsHeaders, 400)
   }
 
+  // Auto-enable admin hooks if endpoint URL is provided
+  const endpointUrl = body.endpoint_url?.trim() || null
+  const hasEndpoint = endpointUrl !== null && endpointUrl.length > 0
+
   if (isLocalDev) {
     const newNs: Namespace = {
       id: generateId(),
@@ -251,8 +255,8 @@ async function addNamespace(
       script_name: body.script_name ?? null,
       class_name: body.class_name,
       storage_backend: body.storage_backend ?? 'sqlite',
-      endpoint_url: body.endpoint_url ?? null,
-      admin_hook_enabled: 0,
+      endpoint_url: endpointUrl,
+      admin_hook_enabled: hasEndpoint ? 1 : 0,
       created_at: nowISO(),
       updated_at: nowISO(),
       metadata: null,
@@ -267,15 +271,16 @@ async function addNamespace(
     const now = nowISO()
 
     await env.METADATA.prepare(`
-      INSERT INTO namespaces (id, name, script_name, class_name, storage_backend, endpoint_url, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO namespaces (id, name, script_name, class_name, storage_backend, endpoint_url, admin_hook_enabled, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       body.name,
       body.script_name ?? null,
       body.class_name,
       body.storage_backend ?? 'sqlite',
-      body.endpoint_url ?? null,
+      endpointUrl,
+      hasEndpoint ? 1 : 0,
       now,
       now
     ).run()

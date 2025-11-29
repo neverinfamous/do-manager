@@ -120,7 +120,7 @@ export function AddNamespaceDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="endpoint_url">Endpoint URL</Label>
+            <Label htmlFor="endpoint_url">Admin Hook Endpoint URL</Label>
             <Input
               id="endpoint_url"
               placeholder="https://my-worker.account.workers.dev"
@@ -128,7 +128,7 @@ export function AddNamespaceDialog({
               onChange={(e) => setEndpointUrl(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Worker URL for admin hook requests
+              Your Worker URL with admin hooks installed. Setting this auto-enables admin hooks.
             </p>
           </div>
           <fieldset className="grid gap-2">

@@ -97,7 +97,7 @@ export class ${className} extends withAdminHooks() {
             
             <div className="space-y-3">
               <div>
-                <Label className="text-sm font-medium">1. Install the package</Label>
+                <p className="text-sm font-medium">1. Install the package</p>
                 <div className="mt-2 relative">
                   <pre className="bg-muted p-3 rounded-lg text-sm font-mono overflow-x-auto">
                     {npmInstallCommand}
@@ -107,6 +107,7 @@ export class ${className} extends withAdminHooks() {
                     variant="ghost"
                     className="absolute right-2 top-2"
                     onClick={() => void handleCopyNpm()}
+                    aria-label="Copy install command"
                   >
                     {copiedNpm ? (
                       <Check className="h-4 w-4 text-green-500" />
@@ -118,8 +119,9 @@ export class ${className} extends withAdminHooks() {
               </div>
               
               <div>
-                <Label className="text-sm font-medium">2. Enter your class name</Label>
+                <Label htmlFor="npm-class-name" className="text-sm font-medium">2. Enter your class name</Label>
                 <Input
+                  id="npm-class-name"
                   value={className}
                   onChange={(e) => setClassName(e.target.value)}
                   placeholder="MyDurableObject"
@@ -128,7 +130,7 @@ export class ${className} extends withAdminHooks() {
               </div>
               
               <div>
-                <Label className="text-sm font-medium">3. Update your Durable Object class</Label>
+                <p className="text-sm font-medium">3. Update your Durable Object class</p>
                 <div className="mt-2 relative">
                   <pre className="bg-muted p-3 rounded-lg text-sm font-mono overflow-x-auto whitespace-pre-wrap">
                     {npmUsageCode}
@@ -138,6 +140,7 @@ export class ${className} extends withAdminHooks() {
                     variant="ghost"
                     className="absolute right-2 top-2"
                     onClick={() => void handleCopyCode()}
+                    aria-label="Copy code"
                   >
                     {copiedCode ? (
                       <Check className="h-4 w-4 text-green-500" />
@@ -149,7 +152,7 @@ export class ${className} extends withAdminHooks() {
               </div>
               
               <div>
-                <Label className="text-sm font-medium">4. Deploy and configure</Label>
+                <p className="text-sm font-medium">4. Deploy and configure</p>
                 <div className="mt-2 text-sm text-muted-foreground space-y-1">
                   <p>• Deploy your Worker: <code className="bg-muted px-1 rounded">wrangler deploy</code></p>
                   <p>• In DO Manager Settings, set the <strong>Admin Hook Endpoint URL</strong> to your Worker URL</p>
