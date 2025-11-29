@@ -39,18 +39,21 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - SQL console for SQLite-backed DOs
 
 ### Multi-Select & Batch Operations
-- **Always-visible checkboxes** - Select namespaces and instances directly from the list
+- **Always-visible checkboxes** - Select namespaces, instances, and storage keys directly from lists
 - **Batch download (namespaces)** - Export multiple namespace configs as a ZIP file with manifest
 - **Batch download (instances)** - Export multiple instance storage as a ZIP file with manifest
-- **Batch delete** - Delete multiple instances or namespaces with confirmation dialog
+- **Batch download (keys)** - Export selected storage keys as JSON with metadata
+- **Batch delete** - Delete multiple namespaces, instances, or storage keys with confirmation
 - **Batch backup** - Backup multiple instances to R2 with progress tracking
 - **Selection toolbar** - Floating toolbar with count, Select All, and Clear actions
 - **Job history integration** - All batch operations are tracked in job history
 
 ### Storage Management
 - **Key search & filter** - Real-time filtering to find keys quickly
+- **Multi-select keys** - Select multiple keys with checkboxes for batch operations
+- **Batch export keys** - Export selected keys as JSON with instance/namespace metadata
+- **Batch delete keys** - Delete multiple keys at once with confirmation
 - View/edit storage values with JSON support
-- Delete keys with confirmation
 - Clickable key rows for easy editing
 
 ### Admin Hook System
@@ -77,10 +80,10 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 - **Comprehensive tracking** - Records all operations including:
   - Namespace: create, delete, clone, download (single & batch)
   - Instance: create, delete, clone, download (single & batch)
-  - Storage: key create/update/delete
+  - Storage keys: create/update/delete (single), batch delete, batch export
   - Alarms: set, delete
   - Backup/restore operations
-  - Batch operations: delete, backup, download
+  - Batch operations: delete, backup, download (namespaces, instances, keys)
 - View status, progress, and timing
 - Error details for failed operations
 - Filter by status or namespace
@@ -310,6 +313,8 @@ Click "Get Admin Hook Code" in the namespace view to generate copy-paste TypeScr
 | `POST /api/batch/namespaces/delete` | Batch delete namespaces |
 | `POST /api/batch/instances/delete` | Batch delete instances |
 | `POST /api/batch/instances/backup` | Batch backup instances to R2 |
+| `POST /api/batch/keys/delete` | Log batch delete keys job |
+| `POST /api/batch/keys/export` | Log batch export keys job |
 
 ---
 

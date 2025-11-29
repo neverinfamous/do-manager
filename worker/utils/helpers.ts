@@ -94,6 +94,8 @@ export type JobType =
   | 'batch_export_namespaces'
   | 'batch_delete_instances'
   | 'batch_delete_namespaces'
+  | 'batch_delete_keys'
+  | 'batch_export_keys'
   | 'batch_backup'
   | 'clone_instance'
 

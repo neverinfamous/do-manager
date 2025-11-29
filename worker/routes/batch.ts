@@ -26,6 +26,25 @@ interface BatchExportNamespacesRequest {
   namespaceIds?: string[]
 }
 
+interface BatchDeleteKeysRequest {
+  instanceId: string
+  instanceName: string
+  namespaceId: string
+  namespaceName: string
+  keys?: string[]
+  successCount: number
+  failedCount: number
+}
+
+interface BatchExportKeysRequest {
+  instanceId: string
+  instanceName: string
+  namespaceId: string
+  namespaceName: string
+  keys?: string[]
+  exportedCount: number
+}
+
 interface BatchOperationResult {
   id: string
   name: string
@@ -75,6 +94,16 @@ export async function handleBatchRoutes(
   // POST /api/batch/namespaces/export - Log batch export namespaces job
   if (method === 'POST' && path === '/api/batch/namespaces/export') {
     return batchExportNamespaces(request, env, corsHeaders, userEmail)
+  }
+
+  // POST /api/batch/keys/delete - Log batch delete keys job
+  if (method === 'POST' && path === '/api/batch/keys/delete') {
+    return batchDeleteKeys(request, env, corsHeaders, userEmail)
+  }
+
+  // POST /api/batch/keys/export - Log batch export keys job
+  if (method === 'POST' && path === '/api/batch/keys/export') {
+    return batchExportKeys(request, env, corsHeaders, userEmail)
   }
 
   return errorResponse('Not Found', corsHeaders, 404)
@@ -471,6 +500,63 @@ async function batchExportNamespaces(
   await completeJob(env.METADATA, jobId, {
     total: body.namespaceIds.length,
     namespace_ids: body.namespaceIds,
+  })
+
+  return jsonResponse({ success: true, jobId }, corsHeaders)
+}
+
+/**
+ * Log batch delete keys job (delete happens client-side, this logs the job)
+ */
+async function batchDeleteKeys(
+  request: Request,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  userEmail: string | null
+): Promise<Response> {
+  const body = await parseJsonBody<BatchDeleteKeysRequest>(request)
+  if (!body || !body.keys || body.keys.length === 0) {
+    return errorResponse('keys array is required', corsHeaders, 400)
+  }
+
+  // Create job record
+  const jobId = await createJob(env.METADATA, 'batch_delete_keys', userEmail, body.namespaceId, body.instanceId)
+
+  await completeJob(env.METADATA, jobId, {
+    total: body.keys.length,
+    success: body.successCount,
+    failed: body.failedCount,
+    instance_name: body.instanceName,
+    namespace_name: body.namespaceName,
+    keys: body.keys.slice(0, 20), // Limit to first 20 keys in result
+  })
+
+  return jsonResponse({ success: true, jobId }, corsHeaders)
+}
+
+/**
+ * Log batch export keys job (export happens client-side, this logs the job)
+ */
+async function batchExportKeys(
+  request: Request,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  userEmail: string | null
+): Promise<Response> {
+  const body = await parseJsonBody<BatchExportKeysRequest>(request)
+  if (!body || !body.keys || body.keys.length === 0) {
+    return errorResponse('keys array is required', corsHeaders, 400)
+  }
+
+  // Create job record
+  const jobId = await createJob(env.METADATA, 'batch_export_keys', userEmail, body.namespaceId, body.instanceId)
+
+  await completeJob(env.METADATA, jobId, {
+    total: body.keys.length,
+    exported: body.exportedCount,
+    instance_name: body.instanceName,
+    namespace_name: body.namespaceName,
+    keys: body.keys.slice(0, 20), // Limit to first 20 keys in result
   })
 
   return jsonResponse({ success: true, jobId }, corsHeaders)

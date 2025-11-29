@@ -22,7 +22,7 @@
 
 ---
 
-### Phase 3: Multi-Select Infrastructure
+### Phase 3: Multi-Select Infrastructure [COMPLETED!]
 *Foundation required for all batch operations*
 
 | # | Feature | Description | Effort |
@@ -32,7 +32,7 @@
 
 ---
 
-### Phase 4: Batch Operations
+### Phase 4: Batch Operations [COMPLETED!]
 *Requires Phase 3 infrastructure*
 
 | # | Feature | Description | Effort |
@@ -40,6 +40,7 @@
 | 9 | **Batch Download (.zip)** | Download multiple instance states as a ZIP file with manifest | Medium |
 | 10 | **Batch Delete** | Delete multiple instances with confirmation dialog showing what will be deleted | Medium |
 | 11 | **Batch Backup to R2** | Backup multiple instances in one operation with progress tracking | Medium |
+| 12 | **Bulk Key Operations** | Multi-select keys within an instance for batch delete and export | Medium |
 
 ---
 
@@ -48,8 +49,7 @@
 
 | # | Feature | Description | Effort |
 |---|---------|-------------|--------|
-| 12 | **JSON Import** | Import keys from JSON file into instance storage | Medium |
-| 13 | **Namespace Migration** | Export entire namespace config + all instances, import to different account | Large |
+| 13 | **JSON Import** | Import keys from JSON file into instance storage | Medium |
 
 ---
 
@@ -68,20 +68,19 @@
 
 | # | Feature | Description | Effort |
 |---|---------|-------------|--------|
-| 18 | **External Logging Guide** | Documentation for integrating with Datadog/Grafana/Sentry via Workers Analytics Engine or custom logging | Docs only |
-| 19 | **Webhook Notifications** | Send webhooks on events (backup complete, alarm triggered, error) | Medium |
-| 20 | **Health Dashboard** | Visual overview of all DOs: last accessed, storage size, alarm status | Medium |
+| 16 | **External Logging Guide** | Documentation for integrating with Datadog/Grafana/Sentry via Workers Analytics Engine or custom logging | Docs only |
+| 17 | **Webhook Notifications** | Send webhooks on events (backup complete, alarm triggered, error) | Medium |
+| 18 | **Health Dashboard** | Visual overview of all DOs: last accessed, storage size, alarm status | Medium |
 
 ---
 
-### 💡 Additional Suggestions
+### 💡 Additional Possibilities
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
 | **Instance Diff** | Compare storage between two instances or two backup points | Nice-to-have |
 | **Saved SQL Queries** | Store frequently used queries per namespace | Nice-to-have |
 | **Storage Quota Alerts** | Warn when approaching 10GB DO limit | Nice-to-have |
-| **Bulk Key Operations** | Multi-select keys within an instance for batch delete/export | Medium |
 | **Dark Mode Per-Instance** | Color-code instances for visual organization | Low |
 
 ---

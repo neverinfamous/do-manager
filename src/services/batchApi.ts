@@ -87,6 +87,51 @@ async function logBatchExportNamespaces(namespaceIds: string[]): Promise<void> {
 }
 
 /**
+ * Log batch delete keys job to server
+ */
+export async function logBatchDeleteKeys(params: {
+  instanceId: string
+  instanceName: string
+  namespaceId: string
+  namespaceName: string
+  keys: string[]
+  successCount: number
+  failedCount: number
+}): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/batch/keys/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+  } catch (err) {
+    console.error('Failed to log batch delete keys job:', err)
+  }
+}
+
+/**
+ * Log batch export keys job to server
+ */
+export async function logBatchExportKeys(params: {
+  instanceId: string
+  instanceName: string
+  namespaceId: string
+  namespaceName: string
+  keys: string[]
+  exportedCount: number
+}): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/batch/keys/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+  } catch (err) {
+    console.error('Failed to log batch export keys job:', err)
+  }
+}
+
+/**
  * Batch export instances and download as ZIP
  */
 export async function batchExportInstances(
