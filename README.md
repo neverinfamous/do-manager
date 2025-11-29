@@ -14,7 +14,7 @@ A full-featured web application for managing Cloudflare Durable Objects with ent
 
 ## Tech Stack
 
-**Frontend**: React 19.2.0 | TypeScript 5.9.3 | Vite 7.2.4 | Tailwind CSS 3.4.18 | shadcn/ui  
+**Frontend**: React 19.2.0 | TypeScript 5.9.3 | Vite 7.2.4 | Tailwind CSS 4.1.17 | shadcn/ui  
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
 ---
