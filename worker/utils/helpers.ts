@@ -5,6 +5,10 @@ export function generateId(): string {
   return crypto.randomUUID()
 }
 
+// Note: Job helpers use formatted console output instead of error-logger
+// because they don't have access to env for webhook triggering.
+// Formatted to match structured log format: [LEVEL] [module] [CODE] message
+
 /**
  * Create a JSON response with CORS headers
  */
@@ -82,6 +86,7 @@ export type JobType =
   | 'restore'
   | 'create_namespace'
   | 'delete_namespace'
+  | 'clone_namespace'
   | 'create_instance'
   | 'delete_instance'
   | 'create_key'
@@ -100,6 +105,8 @@ export type JobType =
   | 'batch_export_keys'
   | 'batch_backup'
   | 'clone_instance'
+  | 'search_keys'
+  | 'search_values'
 
 /**
  * Create a job record in the database
@@ -123,7 +130,8 @@ export async function createJob(
     
     return jobId
   } catch (error) {
-    console.error('[Jobs] Failed to create job:', error)
+    // Log locally - no env available for webhooks
+    console.error('[ERROR] [jobs] [JOB_CREATE_FAILED]', error instanceof Error ? error.message : String(error))
     return null
   }
 }
@@ -144,7 +152,8 @@ export async function completeJob(
       WHERE id = ?
     `).bind(result ? JSON.stringify(result) : null, nowISO(), jobId).run()
   } catch (error) {
-    console.error('[Jobs] Failed to complete job:', error)
+    // Log locally - no env available for webhooks
+    console.error('[ERROR] [jobs] [JOB_COMPLETE_FAILED]', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -164,7 +173,8 @@ export async function failJob(
       WHERE id = ?
     `).bind(error, nowISO(), jobId).run()
   } catch (err) {
-    console.error('[Jobs] Failed to fail job:', err)
+    // Log locally - no env available for webhooks
+    console.error('[ERROR] [jobs] [JOB_FAIL_FAILED]', err instanceof Error ? err.message : String(err))
   }
 }
 

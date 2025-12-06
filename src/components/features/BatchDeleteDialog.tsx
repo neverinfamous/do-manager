@@ -72,6 +72,7 @@ export function BatchDeleteDialog({
 
       setResults(deleteResults)
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Batch delete error:', err)
     } finally {
       setIsDeleting(false)

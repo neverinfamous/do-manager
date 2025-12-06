@@ -18,11 +18,11 @@ export interface DiffResult {
   }
   onlyInA: string[]
   onlyInB: string[]
-  different: Array<{
+  different: {
     key: string
     valueA: unknown
     valueB: unknown
-  }>
+  }[]
   identical: string[]
   summary: {
     totalA: number

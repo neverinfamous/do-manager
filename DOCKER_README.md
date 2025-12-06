@@ -1,6 +1,6 @@
 # Cloudflare Durable Object Manager - Docker
 
-Last Updated November 30, 2025 - Production/Stable v1.0.0
+Last Updated December 6, 2025 - Production/Stable v1.0.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
@@ -17,7 +17,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 
 ## Tech Stack
 
-**Frontend**: React 19.2.0 | Vite 7.2.4 | TypeScript 5.9.3 | Tailwind CSS 4.1.17 | shadcn/ui
+**Frontend**: React 19.2.1 | Vite 7.2.6 | TypeScript 5.9.3 | Tailwind CSS | shadcn/ui
 
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
@@ -67,6 +67,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Job History** - Comprehensive operation tracking
 - **Webhook Notifications** - Event-driven webhooks with HMAC signatures
 - **Health Dashboard** - System overview, stale instance detection, storage quota alerts
+- **Centralized Error Logging** - Structured error logging with consistent format across all modules
 
 ---
 

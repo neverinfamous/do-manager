@@ -108,7 +108,7 @@ export function WebhookManager(): React.ReactElement {
       const input: WebhookInput = {
         name: formName.trim(),
         url: formUrl.trim(),
-        secret: formSecret.trim() || undefined,
+        secret: formSecret.trim() || null,
         events: formEvents,
         enabled: formEnabled,
       }
@@ -421,7 +421,15 @@ export function WebhookManager(): React.ReactElement {
               Configure a webhook endpoint to receive event notifications
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <form
+            id="webhook-form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void (editingWebhook ? handleUpdateWebhook() : handleCreateWebhook())
+            }}
+            className="space-y-4 py-4"
+            autoComplete="off"
+          >
             <div className="space-y-2">
               <Label htmlFor="webhook-name">Name</Label>
               <Input
@@ -430,6 +438,7 @@ export function WebhookManager(): React.ReactElement {
                 placeholder="My Webhook"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
+                autoComplete="off"
               />
             </div>
             <div className="space-y-2">
@@ -441,6 +450,7 @@ export function WebhookManager(): React.ReactElement {
                 placeholder="https://example.com/webhook"
                 value={formUrl}
                 onChange={(e) => setFormUrl(e.target.value)}
+                autoComplete="off"
               />
             </div>
             <div className="space-y-2">
@@ -452,18 +462,20 @@ export function WebhookManager(): React.ReactElement {
                 placeholder="For HMAC signature verification"
                 value={formSecret}
                 onChange={(e) => setFormSecret(e.target.value)}
+                autoComplete="new-password"
               />
               <p className="text-xs text-muted-foreground">
                 If set, requests will include an X-Webhook-Signature header
               </p>
             </div>
-            <div className="space-y-2">
-              <Label>Events</Label>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium leading-none">Events</legend>
               <div className="grid grid-cols-2 gap-2">
                 {ALL_WEBHOOK_EVENTS.map((event) => (
                   <div key={event} className="flex items-center space-x-2">
                     <Checkbox
                       id={`event-${event}`}
+                      name={`event-${event}`}
                       checked={formEvents.includes(event)}
                       onCheckedChange={() => toggleEvent(event)}
                     />
@@ -476,10 +488,11 @@ export function WebhookManager(): React.ReactElement {
                   </div>
                 ))}
               </div>
-            </div>
+            </fieldset>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="webhook-enabled"
+                name="webhook-enabled"
                 checked={formEnabled}
                 onCheckedChange={(checked) => setFormEnabled(checked === true)}
               />
@@ -487,9 +500,10 @@ export function WebhookManager(): React.ReactElement {
                 Enabled
               </Label>
             </div>
-          </div>
+          </form>
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
               onClick={() => {
                 setShowCreateDialog(false)
@@ -500,7 +514,8 @@ export function WebhookManager(): React.ReactElement {
               Cancel
             </Button>
             <Button
-              onClick={() => void (editingWebhook ? handleUpdateWebhook() : handleCreateWebhook())}
+              type="submit"
+              form="webhook-form"
               disabled={submitting || !formName.trim() || !formUrl.trim() || formEvents.length === 0}
             >
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

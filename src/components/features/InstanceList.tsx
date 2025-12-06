@@ -20,8 +20,9 @@ import { InstanceDiffDialog } from './InstanceDiffDialog'
 import { instanceApi } from '../../services/instanceApi'
 import { exportApi } from '../../services/exportApi'
 import { useSelection } from '../../hooks/useSelection'
-import { getStorageQuotaStatus } from './StorageQuotaAlert'
-import { InstanceColorPicker, getColorConfig } from './InstanceColorPicker'
+import { getStorageQuotaStatus } from '../../lib/storageUtils'
+import { getColorConfig } from '../../lib/instanceColors'
+import { InstanceColorPicker } from './InstanceColorPicker'
 import type { Namespace, Instance, InstanceColor } from '../../types'
 
 interface InstanceListProps {
@@ -291,7 +292,7 @@ export function InstanceList({
             id="select-all-instances"
             checked={selection.isAllSelected(filteredInstances)}
             onCheckedChange={(checked) => {
-              if (checked) {
+              if (checked === true) {
                 selection.selectAll(filteredInstances)
               } else {
                 selection.deselectAll()

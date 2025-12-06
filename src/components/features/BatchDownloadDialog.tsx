@@ -46,6 +46,7 @@ export function BatchDownloadDialog({
       // Get results from final progress update
       setResults(progress?.results ?? [])
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Batch download error:', err)
     } finally {
       setIsDownloading(false)

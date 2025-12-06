@@ -1,6 +1,7 @@
 import type { Env, CorsHeaders, Webhook } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody } from '../utils/helpers'
 import { sendWebhook } from '../utils/webhooks'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * Mock webhooks for local development
@@ -53,7 +54,7 @@ export async function handleWebhookRoutes(
   }
 
   // GET /api/webhooks/:id - Get single webhook
-  const singleMatch = path.match(/^\/api\/webhooks\/([^/]+)$/)
+  const singleMatch = /^\/api\/webhooks\/([^/]+)$/.exec(path)
   if (method === 'GET' && singleMatch) {
     const webhookId = singleMatch[1]
     if (!webhookId) {
@@ -81,7 +82,7 @@ export async function handleWebhookRoutes(
   }
 
   // POST /api/webhooks/:id/test - Test webhook
-  const testMatch = path.match(/^\/api\/webhooks\/([^/]+)\/test$/)
+  const testMatch = /^\/api\/webhooks\/([^/]+)\/test$/.exec(path)
   if (method === 'POST' && testMatch) {
     const webhookId = testMatch[1]
     if (!webhookId) {
@@ -112,7 +113,11 @@ async function listWebhooks(
 
     return jsonResponse({ webhooks: result.results }, corsHeaders)
   } catch (error) {
-    console.error('[Webhooks] List error:', error)
+    logWarning(`List error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'webhooks',
+      operation: 'list',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to list webhooks', corsHeaders, 500)
   }
 }
@@ -145,7 +150,11 @@ async function getWebhook(
 
     return jsonResponse({ webhook }, corsHeaders)
   } catch (error) {
-    console.error('[Webhooks] Get error:', error)
+    logWarning(`Get error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'webhooks',
+      operation: 'get',
+      metadata: { webhookId, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to get webhook', corsHeaders, 500)
   }
 }
@@ -227,7 +236,11 @@ async function createWebhook(
 
     return jsonResponse({ webhook }, corsHeaders, 201)
   } catch (error) {
-    console.error('[Webhooks] Create error:', error)
+    logWarning(`Create error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'webhooks',
+      operation: 'create',
+      metadata: { name, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to create webhook', corsHeaders, 500)
   }
 }
@@ -339,7 +352,11 @@ async function updateWebhook(
 
     return jsonResponse({ webhook }, corsHeaders)
   } catch (error) {
-    console.error('[Webhooks] Update error:', error)
+    logWarning(`Update error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'webhooks',
+      operation: 'update',
+      metadata: { webhookId, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to update webhook', corsHeaders, 500)
   }
 }
@@ -376,7 +393,11 @@ async function deleteWebhook(
 
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
-    console.error('[Webhooks] Delete error:', error)
+    logWarning(`Delete error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'webhooks',
+      operation: 'delete',
+      metadata: { webhookId, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to delete webhook', corsHeaders, 500)
   }
 }
@@ -435,7 +456,11 @@ async function testWebhook(
       }, corsHeaders, 400)
     }
   } catch (error) {
-    console.error('[Webhooks] Test error:', error)
+    logWarning(`Test error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'webhooks',
+      operation: 'test',
+      metadata: { webhookId, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to test webhook', corsHeaders, 500)
   }
 }

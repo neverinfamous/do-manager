@@ -158,7 +158,7 @@ export interface SavedQuery {
  */
 export interface CloudflareApiResponse<T> {
   success: boolean
-  errors: Array<{ code: number; message: string }>
+  errors: { code: number; message: string }[]
   messages: string[]
   result: T
   result_info?: {
@@ -196,4 +196,33 @@ export interface DurableObjectNamespaceInfo {
  * CORS headers type
  */
 export type CorsHeaders = Record<string, string>
+
+/**
+ * Error context for structured logging
+ */
+export interface ErrorContext {
+  module: string
+  operation: string
+  namespaceId?: string
+  instanceId?: string
+  userId?: string
+  metadata?: Record<string, unknown>
+}
+
+/**
+ * Error severity levels
+ */
+export type ErrorSeverity = 'error' | 'warning' | 'info'
+
+/**
+ * Structured error for consistent logging
+ */
+export interface StructuredError {
+  timestamp: string
+  level: ErrorSeverity
+  code: string
+  message: string
+  context: ErrorContext
+  stack?: string
+}
 

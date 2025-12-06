@@ -1,6 +1,10 @@
 import type { Webhook, WebhookEventType, WebhookPayload, Env } from '../types'
 import { nowISO } from './helpers'
 
+// Note: This file uses formatted console output instead of error-logger
+// due to circular dependency (error-logger imports triggerWebhooks from this file).
+// Formatted to match structured log format: [LEVEL] [module] [CODE] message
+
 /**
  * Result of sending a webhook
  */
@@ -101,7 +105,8 @@ export async function getWebhooksForEvent(
       }
     })
   } catch (error) {
-    console.error('[Webhooks] Failed to get webhooks:', error)
+    // Log locally - can't use logError here due to circular dependency
+    console.error('[ERROR] [webhooks] [WEBHOOK_GET_FAILED]', error instanceof Error ? error.message : String(error))
     return []
   }
 }
@@ -117,7 +122,8 @@ export async function triggerWebhooks(
   isLocalDev: boolean
 ): Promise<void> {
   if (isLocalDev) {
-    console.log('[Webhooks] Mock trigger:', event, data)
+    // Log locally - can't use logInfo here due to circular dependency
+    console.log('[INFO] [webhooks] [WEBHOOK_MOCK_TRIGGER]', event, JSON.stringify(data))
     return
   }
 
@@ -128,17 +134,20 @@ export async function triggerWebhooks(
       return
     }
 
-    console.log(`[Webhooks] Triggering ${String(webhooks.length)} webhook(s) for event: ${event}`)
+    // Log locally - can't use logInfo here due to circular dependency
+    console.log(`[INFO] [webhooks] [WEBHOOK_TRIGGERING] Triggering ${String(webhooks.length)} webhook(s) for event: ${event}`)
 
     // Send webhooks in parallel, don't await completion
     const promises = webhooks.map(async (webhook) => {
       try {
         const result = await sendWebhook(webhook, event, data)
         if (!result.success) {
-          console.error(`[Webhooks] Failed to send to ${webhook.name}:`, result.error)
+          // Log locally - can't use logError here due to circular dependency
+          console.error(`[ERROR] [webhooks] [WEBHOOK_SEND_FAILED] ${webhook.name}: ${result.error ?? 'unknown'}`)
         }
       } catch (error) {
-        console.error(`[Webhooks] Error sending to ${webhook.name}:`, error)
+        // Log locally - can't use logError here due to circular dependency
+        console.error(`[ERROR] [webhooks] [WEBHOOK_SEND_ERROR] ${webhook.name}:`, error instanceof Error ? error.message : String(error))
       }
     })
 
@@ -146,7 +155,8 @@ export async function triggerWebhooks(
     // For now, we'll just fire and forget
     void Promise.all(promises)
   } catch (error) {
-    console.error('[Webhooks] Trigger error:', error)
+    // Log locally - can't use logError here due to circular dependency
+    console.error('[ERROR] [webhooks] [WEBHOOK_TRIGGER_ERROR]', error instanceof Error ? error.message : String(error))
   }
 }
 

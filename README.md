@@ -1,6 +1,6 @@
 # Cloudflare Durable Object Manager
 
-Last Updated November 30, 2025 - v1.0.0
+Last Updated December 6, 2025 - v1.0.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -16,7 +16,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 
 ## Tech Stack
 
-**Frontend**: React 19.2.0 | TypeScript 5.9.3 | Vite 7.2.4 | Tailwind CSS 4.1.17 | shadcn/ui
+**Frontend**: React 19.2.1 | TypeScript 5.9.3 | Vite 7.2.6 | Tailwind CSS | shadcn/ui
 
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
@@ -126,6 +126,13 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Configurable events** - backup_complete, restore_complete, alarm_set, alarm_deleted, job_failed, batch_complete
 - **HMAC signatures** - Optional secret-based request signing for security
 - **Test webhooks** - Verify endpoint connectivity before going live
+
+### Centralized Error Logging
+- **Structured error payloads** - Consistent format with module, operation, context, and metadata
+- **Module-prefixed error codes** - e.g., `NS_CREATE_FAILED`, `INST_DELETE_FAILED`, `BKP_RESTORE_FAILED`
+- **Severity levels** - error, warning, info
+- **Webhook integration** - Automatic webhook triggers for job failures
+- **Stack trace capture** - Full stack traces logged for debugging
 
 ### Health Dashboard
 - **System overview** - Total namespaces, instances, and alarms at a glance

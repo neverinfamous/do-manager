@@ -8,6 +8,7 @@ interface ThemeContextType {
   resolvedTheme: 'light' | 'dark'
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 interface ThemeProviderProps {
@@ -66,4 +67,3 @@ export function ThemeProvider({ children }: ThemeProviderProps): React.ReactElem
     </ThemeContext.Provider>
   )
 }
-

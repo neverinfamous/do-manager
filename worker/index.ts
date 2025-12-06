@@ -1,6 +1,7 @@
 import type { Env } from './types'
 import { validateAccessJWT } from './utils/auth'
 import { getCorsHeaders, handleCorsPreflightRequest, isLocalDevelopment } from './utils/cors'
+import { logError, logInfo } from './utils/error-logger'
 import { handleNamespaceRoutes } from './routes/namespaces'
 import { handleInstanceRoutes } from './routes/instances'
 import { handleStorageRoutes } from './routes/storage'
@@ -21,7 +22,12 @@ import { handleDiffRoutes } from './routes/diff'
  */
 async function handleApiRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url)
-  console.log('[Request]', request.method, url.pathname)
+  
+  logInfo(`[Request] ${request.method} ${url.pathname}`, {
+    module: 'worker',
+    operation: 'handleApiRequest',
+    metadata: { method: request.method, pathname: url.pathname }
+  })
 
   // Handle CORS
   const corsHeaders = getCorsHeaders(request)
@@ -39,7 +45,7 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
   let userEmail: string | null = null
 
   if (isLocalhost) {
-    console.log('[Auth] Localhost detected, skipping JWT validation')
+    logInfo('Localhost detected, skipping JWT validation', { module: 'worker', operation: 'handleApiRequest' })
     userEmail = 'dev@localhost'
   } else {
     userEmail = await validateAccessJWT(request, env)
@@ -53,7 +59,7 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
 
   // Only log environment info in local development to avoid exposing sensitive configuration
   if (isLocalDev) {
-    console.log('[Environment] Local development mode active')
+    logInfo('Local development mode active', { module: 'worker', operation: 'handleApiRequest' })
   }
 
   // Route API requests
@@ -148,7 +154,11 @@ export default {
     try {
       return await handleApiRequest(request, env)
     } catch (err) {
-      console.error('[Worker] Unhandled error:', err)
+      void logError(env, `Unhandled error: ${err instanceof Error ? err.message : String(err)}`, {
+        module: 'worker',
+        operation: 'fetch',
+        metadata: { method: request.method, pathname: request.url }
+      }, isLocalDevelopment(request))
       const corsHeaders = getCorsHeaders(request)
       return new Response(
         JSON.stringify({

@@ -95,12 +95,12 @@ export interface BatchExportManifest {
     className: string
     storageBackend: string
   }
-  instances: Array<{
+  instances: {
     id: string
     name: string | null
     objectId: string
     filename: string
-  }>
+  }[]
   totalInstances: number
 }
 
@@ -114,12 +114,12 @@ export function generateBatchExportManifest(
     class_name: string
     storage_backend: string
   },
-  instances: Array<{
+  instances: {
     id: string
     name: string | null
     object_id: string
     filename: string
-  }>
+  }[]
 ): BatchExportManifest {
   return {
     exportedAt: new Date().toISOString(),

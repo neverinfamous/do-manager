@@ -1,6 +1,7 @@
 import type { Env, CorsHeaders, Instance, Namespace } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 import { triggerWebhooks, createBatchCompleteWebhookData } from '../utils/webhooks'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * Batch operation request types
@@ -121,7 +122,7 @@ async function batchDeleteInstances(
   userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<BatchDeleteInstancesRequest>(request)
-  if (!body || !body.instanceIds || body.instanceIds.length === 0) {
+  if (!body?.instanceIds || body.instanceIds.length === 0) {
     return errorResponse('instanceIds array is required', corsHeaders, 400)
   }
 
@@ -211,7 +212,11 @@ async function batchDeleteInstances(
       },
     }, corsHeaders)
   } catch (error) {
-    console.error('[Batch] Delete instances error:', error)
+    logWarning(`Delete instances error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'batch',
+      operation: 'delete_instances',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Batch delete failed')
     return errorResponse('Batch delete failed', corsHeaders, 500)
   }
@@ -228,7 +233,7 @@ async function batchDeleteNamespaces(
   userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<BatchDeleteNamespacesRequest>(request)
-  if (!body || !body.namespaceIds || body.namespaceIds.length === 0) {
+  if (!body?.namespaceIds || body.namespaceIds.length === 0) {
     return errorResponse('namespaceIds array is required', corsHeaders, 400)
   }
 
@@ -318,7 +323,11 @@ async function batchDeleteNamespaces(
       },
     }, corsHeaders)
   } catch (error) {
-    console.error('[Batch] Delete namespaces error:', error)
+    logWarning(`Delete namespaces error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'batch',
+      operation: 'delete_namespaces',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Batch delete failed')
     return errorResponse('Batch delete failed', corsHeaders, 500)
   }
@@ -335,7 +344,7 @@ async function batchBackupInstances(
   userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<BatchBackupRequest>(request)
-  if (!body || !body.instanceIds || body.instanceIds.length === 0) {
+  if (!body?.instanceIds || body.instanceIds.length === 0) {
     return errorResponse('instanceIds array is required', corsHeaders, 400)
   }
 
@@ -491,7 +500,11 @@ async function batchBackupInstances(
       },
     }, corsHeaders)
   } catch (error) {
-    console.error('[Batch] Backup error:', error)
+    logWarning(`Backup error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'batch',
+      operation: 'backup',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Batch backup failed')
     return errorResponse('Batch backup failed', corsHeaders, 500)
   }
@@ -507,7 +520,7 @@ async function batchExportInstances(
   userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<BatchExportInstancesRequest>(request)
-  if (!body || !body.instanceIds || body.instanceIds.length === 0) {
+  if (!body?.instanceIds || body.instanceIds.length === 0) {
     return errorResponse('instanceIds array is required', corsHeaders, 400)
   }
 
@@ -533,7 +546,7 @@ async function batchExportNamespaces(
   userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<BatchExportNamespacesRequest>(request)
-  if (!body || !body.namespaceIds || body.namespaceIds.length === 0) {
+  if (!body?.namespaceIds || body.namespaceIds.length === 0) {
     return errorResponse('namespaceIds array is required', corsHeaders, 400)
   }
 
@@ -558,7 +571,7 @@ async function batchDeleteKeys(
   userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<BatchDeleteKeysRequest>(request)
-  if (!body || !body.keys || body.keys.length === 0) {
+  if (!body?.keys || body.keys.length === 0) {
     return errorResponse('keys array is required', corsHeaders, 400)
   }
 
@@ -587,7 +600,7 @@ async function batchExportKeys(
   userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<BatchExportKeysRequest>(request)
-  if (!body || !body.keys || body.keys.length === 0) {
+  if (!body?.keys || body.keys.length === 0) {
     return errorResponse('keys array is required', corsHeaders, 400)
   }
 

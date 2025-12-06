@@ -54,8 +54,8 @@ export function AddNamespaceDialog({
       const namespace = await namespaceApi.add({
         name: name.trim(),
         class_name: className.trim(),
-        script_name: scriptName.trim() || undefined,
-        endpoint_url: endpointUrl.trim() || undefined,
+        ...(scriptName.trim() && { script_name: scriptName.trim() }),
+        ...(endpointUrl.trim() && { endpoint_url: endpointUrl.trim() }),
         storage_backend: storageBackend,
       })
       onComplete(namespace)

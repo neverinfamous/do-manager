@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders } from '../types'
 import { jsonResponse, errorResponse, nowISO, generateId } from '../utils/helpers'
+import { logInfo, logWarning } from '../utils/error-logger'
 
 /**
  * Storage quota constants (10GB DO limit)
@@ -259,10 +260,18 @@ async function detectCompletedAlarms(env: Env): Promise<void> {
     }
 
     if (expiredAlarms.results.length > 0) {
-      console.log(`[Health] Marked ${String(expiredAlarms.results.length)} alarm(s) as completed`)
+      logInfo(`Marked ${String(expiredAlarms.results.length)} alarm(s) as completed`, {
+        module: 'health',
+        operation: 'detect_completed_alarms',
+        metadata: { count: expiredAlarms.results.length }
+      })
     }
   } catch (error) {
-    console.error('[Health] Failed to detect completed alarms:', error)
+    logWarning(`Failed to detect completed alarms: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'health',
+      operation: 'detect_completed_alarms',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
   }
 }
 
@@ -479,7 +488,11 @@ async function getHealthSummary(
 
     return jsonResponse(health, corsHeaders)
   } catch (error) {
-    console.error('[Health] Get summary error:', error)
+    logWarning(`Get summary error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'health',
+      operation: 'get_summary',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to get health summary', corsHeaders, 500)
   }
 }

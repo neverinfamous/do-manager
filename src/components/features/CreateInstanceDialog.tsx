@@ -60,8 +60,9 @@ export function CreateInstanceDialog({
       setLoading(true)
       setError('')
       
+      const trimmedName = name.trim() || (idType === 'name' ? objectId.trim() : '')
       const result = await instanceApi.create(namespaceId, {
-        name: name.trim() || (idType === 'name' ? objectId.trim() : undefined),
+        ...(trimmedName && { name: trimmedName }),
         object_id: objectId.trim(),
       })
       

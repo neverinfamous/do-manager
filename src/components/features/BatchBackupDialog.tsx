@@ -45,6 +45,7 @@ export function BatchBackupDialog({
       const backupResults = await batchBackupInstances(instances, setProgress)
       setResults(backupResults)
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Batch backup error:', err)
     } finally {
       setIsBackingUp(false)

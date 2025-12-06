@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders } from '../types'
 import { jsonResponse, errorResponse } from '../utils/helpers'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * Mock metrics for local development
@@ -50,7 +51,7 @@ export async function handleMetricsRoutes(
   }
 
   // GET /api/namespaces/:id/metrics - Get namespace-level metrics
-  const nsMatch = path.match(/^\/api\/namespaces\/([^/]+)\/metrics$/)
+  const nsMatch = /^\/api\/namespaces\/([^/]+)\/metrics$/.exec(path)
   if (method === 'GET' && nsMatch) {
     const namespaceId = nsMatch[1]
     if (!namespaceId) {
@@ -149,7 +150,11 @@ async function getAccountMetrics(
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('[Metrics] GraphQL error:', response.status, errorText)
+      logWarning(`GraphQL error: ${String(response.status)} ${errorText.slice(0, 200)}`, {
+        module: 'metrics',
+        operation: 'get_account',
+        metadata: { status: response.status, errorText: errorText.slice(0, 200) }
+      })
       // Return empty metrics instead of error to allow the UI to render
       return jsonResponse({
         invocations: {
@@ -174,30 +179,33 @@ async function getAccountMetrics(
     interface GraphQLResponse {
       data?: {
         viewer?: {
-          accounts?: Array<{
-            durableObjectsInvocationsAdaptiveGroups?: Array<{
+          accounts?: {
+            durableObjectsInvocationsAdaptiveGroups?: {
               sum?: { requests?: number }
               dimensions?: { date?: string }
-            }>
-            durableObjectsStorageGroups?: Array<{
+            }[]
+            durableObjectsStorageGroups?: {
               max?: { storedBytes?: number }
-            }>
-            durableObjectsPeriodicGroups?: Array<{
+            }[]
+            durableObjectsPeriodicGroups?: {
               sum?: { cpuTime?: number }
-            }>
-          }>
+            }[]
+          }[]
         }
       }
-      errors?: Array<{ message: string }>
+      errors?: { message: string }[]
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const data = await response.json() as GraphQLResponse
 
     if (data.errors && data.errors.length > 0) {
-      console.error('[Metrics] GraphQL errors:', data.errors)
-      // Return empty metrics with warning instead of error
       const firstError = data.errors[0]
+      logWarning(`GraphQL errors: ${firstError?.message ?? 'Unknown error'}`, {
+        module: 'metrics',
+        operation: 'get_account',
+        metadata: { errors: data.errors.map(e => e.message) }
+      })
+      // Return empty metrics with warning instead of error
       const errorMessage = firstError?.message ?? 'Unknown error'
       return jsonResponse({
         invocations: {
@@ -270,7 +278,11 @@ async function getAccountMetrics(
       },
     }, corsHeaders)
   } catch (error) {
-    console.error('[Metrics] Error:', error)
+    logWarning(`Metrics error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'metrics',
+      operation: 'get_account',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     // Return empty metrics instead of error to allow the UI to render
     return jsonResponse({
       invocations: {

@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders, Namespace } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * System DO namespaces to filter from discovery
@@ -84,7 +85,7 @@ export async function handleNamespaceRoutes(
   }
 
   // GET /api/namespaces/:id - Get single namespace
-  const singleMatch = path.match(/^\/api\/namespaces\/([^/]+)$/)
+  const singleMatch = /^\/api\/namespaces\/([^/]+)$/.exec(path)
   if (method === 'GET' && singleMatch) {
     const namespaceId = singleMatch[1]
     if (!namespaceId) {
@@ -112,7 +113,7 @@ export async function handleNamespaceRoutes(
   }
 
   // POST /api/namespaces/:id/clone - Clone namespace
-  const cloneMatch = path.match(/^\/api\/namespaces\/([^/]+)\/clone$/)
+  const cloneMatch = /^\/api\/namespaces\/([^/]+)\/clone$/.exec(path)
   if (method === 'POST' && cloneMatch) {
     const namespaceId = cloneMatch[1]
     if (!namespaceId) {
@@ -143,7 +144,11 @@ async function listNamespaces(
 
     return jsonResponse({ namespaces: result.results }, corsHeaders)
   } catch (error) {
-    console.error('[Namespaces] List error:', error)
+    logWarning(`List error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'namespaces',
+      operation: 'list',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to list namespaces', corsHeaders, 500)
   }
 }
@@ -183,7 +188,11 @@ async function discoverNamespaces(
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('[Namespaces] Cloudflare API error:', errorText)
+      logWarning(`Cloudflare API error: ${errorText}`, {
+        module: 'namespaces',
+        operation: 'discover',
+        metadata: { status: response.status, errorText: errorText.slice(0, 200) }
+      })
       return errorResponse('Failed to fetch from Cloudflare API', corsHeaders, response.status)
     }
 
@@ -195,11 +204,10 @@ async function discoverNamespaces(
     }
     interface CloudflareResponse {
       success: boolean
-      errors: Array<{ message: string }>
+      errors: { message: string }[]
       result: DurableObjectNs[]
     }
     
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const data = await response.json() as CloudflareResponse
     
     if (!data.success) {
@@ -226,7 +234,11 @@ async function discoverNamespaces(
 
     return jsonResponse({ discovered }, corsHeaders)
   } catch (error) {
-    console.error('[Namespaces] Discover error:', error)
+    logWarning(`Discover error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'namespaces',
+      operation: 'discover',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to discover namespaces', corsHeaders, 500)
   }
 }
@@ -250,12 +262,12 @@ async function addNamespace(
   }
 
   const body = await parseJsonBody<AddNamespaceBody>(request)
-  if (!body || !body.name || !body.class_name) {
+  if (!body?.name || !body.class_name) {
     return errorResponse('name and class_name are required', corsHeaders, 400)
   }
 
   // Auto-enable admin hooks if endpoint URL is provided
-  const endpointUrl = body.endpoint_url?.trim() || null
+  const endpointUrl = body.endpoint_url?.trim() ?? null
   const hasEndpoint = endpointUrl !== null && endpointUrl.length > 0
 
   if (isLocalDev) {
@@ -307,7 +319,11 @@ async function addNamespace(
 
     return jsonResponse({ namespace: result }, corsHeaders, 201)
   } catch (error) {
-    console.error('[Namespaces] Add error:', error)
+    logWarning(`Add error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'namespaces',
+      operation: 'add',
+      metadata: { name: body.name, error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Failed to add namespace')
     return errorResponse('Failed to add namespace', corsHeaders, 500)
   }
@@ -341,7 +357,12 @@ async function getNamespace(
 
     return jsonResponse({ namespace: result }, corsHeaders)
   } catch (error) {
-    console.error('[Namespaces] Get error:', error)
+    logWarning(`Get error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'namespaces',
+      operation: 'get',
+      namespaceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to get namespace', corsHeaders, 500)
   }
 }
@@ -428,7 +449,12 @@ async function updateNamespace(
 
     return jsonResponse({ namespace: result }, corsHeaders)
   } catch (error) {
-    console.error('[Namespaces] Update error:', error)
+    logWarning(`Update error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'namespaces',
+      operation: 'update',
+      namespaceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to update namespace', corsHeaders, 500)
   }
 }
@@ -460,7 +486,12 @@ async function deleteNamespace(
     await completeJob(env.METADATA, jobId, { namespace_id: namespaceId, name: ns?.name })
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
-    console.error('[Namespaces] Delete error:', error)
+    logWarning(`Delete error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'namespaces',
+      operation: 'delete',
+      namespaceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Failed to delete namespace')
     return errorResponse('Failed to delete namespace', corsHeaders, 500)
   }
@@ -482,7 +513,7 @@ async function cloneNamespace(
   }
 
   const body = await parseJsonBody<CloneNamespaceBody>(request)
-  if (!body || !body.name || !body.name.trim()) {
+  if (!body?.name?.trim()) {
     return errorResponse('name is required', corsHeaders, 400)
   }
 
@@ -571,7 +602,12 @@ async function cloneNamespace(
       clonedFrom: sourceNs.name,
     }, corsHeaders, 201)
   } catch (error) {
-    console.error('[Namespaces] Clone error:', error)
+    logWarning(`Clone error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'namespaces',
+      operation: 'clone',
+      namespaceId: sourceNamespaceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Clone failed')
     return errorResponse(
       `Failed to clone namespace: ${error instanceof Error ? error.message : 'Unknown error'}`,

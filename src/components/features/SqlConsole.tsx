@@ -63,6 +63,7 @@ export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps)
       const queries = await queriesApi.list(namespaceId)
       setSavedQueries(queries)
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Failed to load saved queries:', err)
     } finally {
       setLoadingSaved(false)
@@ -151,7 +152,7 @@ export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps)
       setSavingQuery(true)
       const saved = await queriesApi.create(namespaceId, {
         name: queryName.trim(),
-        description: queryDescription.trim() || undefined,
+        ...(queryDescription.trim() && { description: queryDescription.trim() }),
         query: query.trim(),
       })
       setSavedQueries((prev) => [...prev, saved])
@@ -172,7 +173,7 @@ export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps)
       setSavingQuery(true)
       const updated = await queriesApi.update(editingQuery.id, {
         name: queryName.trim(),
-        description: queryDescription.trim() || undefined,
+        ...(queryDescription.trim() && { description: queryDescription.trim() }),
         query: query.trim(),
       })
       setSavedQueries((prev) =>

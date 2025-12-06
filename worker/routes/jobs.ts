@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders, Job } from '../types'
 import { jsonResponse, errorResponse } from '../utils/helpers'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * Mock jobs for local development
@@ -55,7 +56,7 @@ export async function handleJobRoutes(
   }
 
   // GET /api/jobs/:id - Get single job
-  const singleMatch = path.match(/^\/api\/jobs\/([^/]+)$/)
+  const singleMatch = /^\/api\/jobs\/([^/]+)$/.exec(path)
   if (method === 'GET' && singleMatch) {
     const jobId = singleMatch[1]
     if (!jobId) {
@@ -111,7 +112,11 @@ async function listJobs(
 
     return jsonResponse({ jobs: result.results }, corsHeaders)
   } catch (error) {
-    console.error('[Jobs] List error:', error)
+    logWarning(`List error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'jobs',
+      operation: 'list',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to list jobs', corsHeaders, 500)
   }
 }
@@ -144,7 +149,11 @@ async function getJob(
 
     return jsonResponse({ job: result }, corsHeaders)
   } catch (error) {
-    console.error('[Jobs] Get error:', error)
+    logWarning(`Get error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'jobs',
+      operation: 'get',
+      metadata: { jobId, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to get job', corsHeaders, 500)
   }
 }

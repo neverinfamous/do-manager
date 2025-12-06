@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders, Namespace, Instance } from '../types'
 import { jsonResponse, errorResponse, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
+import { logInfo, logWarning } from '../utils/error-logger'
 
 /**
  * Mock storage data for local development
@@ -58,7 +59,7 @@ export async function handleStorageRoutes(
   const path = url.pathname
 
   // GET /api/instances/:id/storage - List storage contents
-  const listMatch = path.match(/^\/api\/instances\/([^/]+)\/storage$/)
+  const listMatch = /^\/api\/instances\/([^/]+)\/storage$/.exec(path)
   if (method === 'GET' && listMatch) {
     const instanceId = listMatch[1]
     if (!instanceId) {
@@ -68,7 +69,7 @@ export async function handleStorageRoutes(
   }
 
   // GET /api/instances/:id/storage/:key - Get storage value
-  const getMatch = path.match(/^\/api\/instances\/([^/]+)\/storage\/(.+)$/)
+  const getMatch = /^\/api\/instances\/([^/]+)\/storage\/(.+)$/.exec(path)
   if (method === 'GET' && getMatch) {
     const instanceId = getMatch[1]
     const key = getMatch[2]
@@ -99,7 +100,7 @@ export async function handleStorageRoutes(
   }
 
   // POST /api/instances/:id/sql - Execute SQL query
-  const sqlMatch = path.match(/^\/api\/instances\/([^/]+)\/sql$/)
+  const sqlMatch = /^\/api\/instances\/([^/]+)\/sql$/.exec(path)
   if (method === 'POST' && sqlMatch) {
     const instanceId = sqlMatch[1]
     if (!instanceId) {
@@ -109,7 +110,7 @@ export async function handleStorageRoutes(
   }
 
   // POST /api/instances/:id/import - Import storage keys from JSON
-  const importMatch = path.match(/^\/api\/instances\/([^/]+)\/import$/)
+  const importMatch = /^\/api\/instances\/([^/]+)\/import$/.exec(path)
   if (method === 'POST' && importMatch) {
     const instanceId = importMatch[1]
     if (!instanceId) {
@@ -186,10 +187,16 @@ async function listStorage(
     // Normalize endpoint URL (remove trailing slash)
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     // Use the instance name or object_id to route to the correct DO
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/list`
 
-    console.log('[Storage] Calling admin hook:', adminUrl)
+    logInfo(`Calling admin hook: ${adminUrl}`, {
+      module: 'storage',
+      operation: 'list',
+      instanceId,
+      namespaceId: namespace.id,
+      metadata: { adminUrl }
+    })
 
     // Call the DO's admin hook
     const response = await fetch(adminUrl, {
@@ -201,7 +208,13 @@ async function listStorage(
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error')
-      console.error('[Storage] Admin hook error:', response.status, errorText)
+      logWarning(`Admin hook error: ${String(response.status)} ${errorText}`, {
+        module: 'storage',
+        operation: 'list',
+        instanceId,
+        namespaceId: namespace.id,
+        metadata: { status: response.status, errorText: errorText.slice(0, 200) }
+      })
       return jsonResponse({
         keys: [],
         tables: [],
@@ -213,7 +226,12 @@ async function listStorage(
     const data = await response.json()
     return jsonResponse(data, corsHeaders)
   } catch (error) {
-    console.error('[Storage] List error:', error)
+    logWarning(`List error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'storage',
+      operation: 'list',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return jsonResponse({
       keys: [],
       tables: [],
@@ -263,7 +281,7 @@ async function getStorageValue(
     }
 
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/get?key=${encodeURIComponent(key)}`
 
     const response = await fetch(adminUrl, {
@@ -275,12 +293,16 @@ async function getStorageValue(
       return errorResponse(`Admin hook error: ${String(response.status)}`, corsHeaders, response.status)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const data = await response.json() as { value?: unknown }
     const resultValue: unknown = data.value ?? data
     return jsonResponse({ key, value: resultValue }, corsHeaders)
   } catch (error) {
-    console.error('[Storage] Get error:', error)
+    logWarning(`Get error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'storage',
+      operation: 'get',
+      instanceId,
+      metadata: { key, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse(`Failed to get value: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
   }
 }
@@ -298,7 +320,7 @@ async function setStorageValue(
   userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<{ value: unknown }>(request)
-  if (!body || body.value === undefined) {
+  if (body?.value === undefined) {
     return errorResponse('value is required', corsHeaders, 400)
   }
 
@@ -332,7 +354,7 @@ async function setStorageValue(
     const jobId = await createJob(env.METADATA, 'create_key', userEmail, instance.namespace_id, instanceId)
 
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/put`
 
     const response = await fetch(adminUrl, {
@@ -349,7 +371,12 @@ async function setStorageValue(
     await completeJob(env.METADATA, jobId, { key })
     return jsonResponse({ success: true, key, value: body.value }, corsHeaders)
   } catch (error) {
-    console.error('[Storage] Set error:', error)
+    logWarning(`Set error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'storage',
+      operation: 'set',
+      instanceId,
+      metadata: { key, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse(`Failed to set value: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
   }
 }
@@ -402,7 +429,7 @@ async function deleteStorageValue(
     const jobId = await createJob(env.METADATA, 'delete_key', userEmail, instance.namespace_id, instanceId)
 
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/delete`
 
     const response = await fetch(adminUrl, {
@@ -419,7 +446,12 @@ async function deleteStorageValue(
     await completeJob(env.METADATA, jobId, { key })
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
-    console.error('[Storage] Delete error:', error)
+    logWarning(`Delete error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'storage',
+      operation: 'delete',
+      instanceId,
+      metadata: { key, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse(`Failed to delete value: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
   }
 }
@@ -478,7 +510,7 @@ async function executeSql(
     }
 
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/sql`
 
     const response = await fetch(adminUrl, {
@@ -492,7 +524,6 @@ async function executeSql(
       return errorResponse(`SQL execution failed: ${errorText}`, corsHeaders, response.status)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const data = await response.json() as { result?: unknown[] }
     const results: unknown[] = data.result ?? []
     return jsonResponse({
@@ -500,7 +531,12 @@ async function executeSql(
       rowCount: results.length,
     }, corsHeaders)
   } catch (error) {
-    console.error('[Storage] SQL error:', error)
+    logWarning(`SQL error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'storage',
+      operation: 'sql',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse(`Failed to execute SQL: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
   }
 }
@@ -579,10 +615,16 @@ async function importStorage(
     const jobId = await createJob(env.METADATA, 'import_keys', userEmail, instance.namespace_id, instanceId)
 
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/import`
 
-    console.log('[Storage] Calling admin hook import:', adminUrl, 'keys:', keyCount)
+    logInfo(`Calling admin hook import: ${adminUrl} keys: ${String(keyCount)}`, {
+      module: 'storage',
+      operation: 'import',
+      instanceId,
+      namespaceId: namespace.id,
+      metadata: { adminUrl, keyCount }
+    })
 
     const response = await fetch(adminUrl, {
       method: 'POST',
@@ -592,12 +634,17 @@ async function importStorage(
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error')
-      console.error('[Storage] Import admin hook error:', response.status, errorText)
+      logWarning(`Import admin hook error: ${String(response.status)} ${errorText}`, {
+        module: 'storage',
+        operation: 'import',
+        instanceId,
+        namespaceId: namespace.id,
+        metadata: { status: response.status, errorText: errorText.slice(0, 100) }
+      })
       await failJob(env.METADATA, jobId, `Admin hook error: ${String(response.status)} - ${errorText.slice(0, 100)}`)
       return errorResponse(`Admin hook error: ${String(response.status)}`, corsHeaders, response.status)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const result = await response.json() as { success?: boolean; imported?: number }
     
     await completeJob(env.METADATA, jobId, {
@@ -613,7 +660,12 @@ async function importStorage(
       mergeMode: body.mergeMode ?? 'merge',
     }, corsHeaders)
   } catch (error) {
-    console.error('[Storage] Import error:', error)
+    logWarning(`Import error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'storage',
+      operation: 'import',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse(`Failed to import: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
   }
 }

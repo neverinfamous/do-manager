@@ -75,6 +75,7 @@ export function StorageViewer({
       setTimeout(() => setCopiedKey(null), 2000)
     } catch {
       // Clipboard API not available, silently fail
+      // eslint-disable-next-line no-console
       console.warn('Clipboard API not available')
     }
   }

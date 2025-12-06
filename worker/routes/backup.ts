@@ -1,6 +1,7 @@
 import type { Env, CorsHeaders, Instance, Namespace, Backup } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO } from '../utils/helpers'
 import { triggerWebhooks, createBackupWebhookData } from '../utils/webhooks'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * Helper to update job status
@@ -18,7 +19,11 @@ async function updateJobStatus(
       WHERE id = ?
     `).bind(status, status === 'completed' ? 100 : 0, error ?? null, result ?? null, nowISO(), jobId).run()
   } catch (updateError) {
-    console.error('[Jobs] Failed to update status:', updateError)
+    logWarning(`Failed to update job status: ${updateError instanceof Error ? updateError.message : String(updateError)}`, {
+      module: 'jobs',
+      operation: 'update_status',
+      metadata: { jobId, status, error: updateError instanceof Error ? updateError.message : String(updateError) }
+    })
   }
 }
 
@@ -70,7 +75,7 @@ export async function handleBackupRoutes(
   }
 
   // GET /api/instances/:id/backups - List backups for instance
-  const instanceBackupsMatch = path.match(/^\/api\/instances\/([^/]+)\/backups$/)
+  const instanceBackupsMatch = /^\/api\/instances\/([^/]+)\/backups$/.exec(path)
   if (method === 'GET' && instanceBackupsMatch) {
     const instanceId = instanceBackupsMatch[1]
     if (!instanceId) {
@@ -89,7 +94,7 @@ export async function handleBackupRoutes(
   }
 
   // POST /api/instances/:id/restore/:backupId - Restore from backup
-  const restoreMatch = path.match(/^\/api\/instances\/([^/]+)\/restore\/([^/]+)$/)
+  const restoreMatch = /^\/api\/instances\/([^/]+)\/restore\/([^/]+)$/.exec(path)
   if (method === 'POST' && restoreMatch) {
     const instanceId = restoreMatch[1]
     const backupId = restoreMatch[2]
@@ -100,7 +105,7 @@ export async function handleBackupRoutes(
   }
 
   // DELETE /api/backups/:id - Delete backup
-  const deleteMatch = path.match(/^\/api\/backups\/([^/]+)$/)
+  const deleteMatch = /^\/api\/backups\/([^/]+)$/.exec(path)
   if (method === 'DELETE' && deleteMatch) {
     const backupId = deleteMatch[1]
     if (!backupId) {
@@ -148,7 +153,11 @@ async function listBackups(
 
     return jsonResponse({ backups: result.results }, corsHeaders)
   } catch (error) {
-    console.error('[Backups] List error:', error)
+    logWarning(`List error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'backup',
+      operation: 'list',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to list backups', corsHeaders, 500)
   }
 }
@@ -174,7 +183,12 @@ async function listInstanceBackups(
 
     return jsonResponse({ backups: result.results }, corsHeaders)
   } catch (error) {
-    console.error('[Backups] List instance error:', error)
+    logWarning(`List instance backups error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'backup',
+      operation: 'list_instance',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to list backups', corsHeaders, 500)
   }
 }
@@ -215,7 +229,12 @@ async function createBackup(
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(jobId, 'backup', 'running', null, instanceId, userEmail, 0, now, now).run()
   } catch (jobError) {
-    console.error('[Backups] Failed to create job:', jobError)
+    logWarning(`Failed to create backup job: ${jobError instanceof Error ? jobError.message : String(jobError)}`, {
+      module: 'backup',
+      operation: 'create_job',
+      instanceId,
+      metadata: { error: jobError instanceof Error ? jobError.message : String(jobError) }
+    })
   }
 
   try {
@@ -249,7 +268,7 @@ async function createBackup(
     ).bind(instance.namespace_id, 25, jobId).run()
 
     // Fetch storage data from DO (use name if available, otherwise object_id)
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     const storageResponse = await fetch(
       `${baseUrl}/admin/${encodeURIComponent(instanceName)}/export`,
@@ -333,7 +352,12 @@ async function createBackup(
 
     return jsonResponse({ backup }, corsHeaders, 201)
   } catch (error) {
-    console.error('[Backups] Create error:', error)
+    logWarning(`Create backup error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'backup',
+      operation: 'create',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await updateJobStatus(env, jobId, 'failed', error instanceof Error ? error.message : 'Unknown error')
     return errorResponse('Failed to create backup', corsHeaders, 500)
   }
@@ -367,7 +391,12 @@ async function restoreBackup(
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(jobId, 'restore', 'running', null, instanceId, userEmail, 0, now, now).run()
   } catch (jobError) {
-    console.error('[Backups] Failed to create job:', jobError)
+    logWarning(`Failed to create restore job: ${jobError instanceof Error ? jobError.message : String(jobError)}`, {
+      module: 'backup',
+      operation: 'create_job',
+      instanceId,
+      metadata: { error: jobError instanceof Error ? jobError.message : String(jobError) }
+    })
   }
 
   try {
@@ -425,7 +454,7 @@ async function restoreBackup(
     const backupData = await r2Object.text()
 
     // Send restore request to DO (use name if available, otherwise object_id)
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     const restoreResponse = await fetch(
       `${baseUrl}/admin/${encodeURIComponent(instanceName)}/import`,
@@ -468,7 +497,12 @@ async function restoreBackup(
       message: 'Restore completed successfully',
     }, corsHeaders)
   } catch (error) {
-    console.error('[Backups] Restore error:', error)
+    logWarning(`Restore error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'backup',
+      operation: 'restore',
+      instanceId,
+      metadata: { backupId, error: error instanceof Error ? error.message : String(error) }
+    })
     await updateJobStatus(env, jobId, 'failed', error instanceof Error ? error.message : 'Unknown error')
     return errorResponse('Failed to restore backup', corsHeaders, 500)
   }
@@ -511,7 +545,11 @@ async function deleteBackup(
 
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
-    console.error('[Backups] Delete error:', error)
+    logWarning(`Delete backup error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'backup',
+      operation: 'delete',
+      metadata: { backupId, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to delete backup', corsHeaders, 500)
   }
 }

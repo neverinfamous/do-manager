@@ -33,7 +33,7 @@ export interface MetricsData {
     total: number
     success: number
     errors: number
-    byDay: Array<{ date: string; requests: number }>
+    byDay: { date: string; requests: number }[]
   }
   storage: {
     totalBytes: number

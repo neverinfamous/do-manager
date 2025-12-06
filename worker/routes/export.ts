@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders, Instance, Namespace } from '../types'
 import { jsonResponse, errorResponse, createJob, completeJob, failJob } from '../utils/helpers'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * Handle export routes
@@ -16,7 +17,7 @@ export async function handleExportRoutes(
   const path = url.pathname
 
   // GET /api/instances/:id/export - Export instance storage
-  const instanceExportMatch = path.match(/^\/api\/instances\/([^/]+)\/export$/)
+  const instanceExportMatch = /^\/api\/instances\/([^/]+)\/export$/.exec(path)
   if (method === 'GET' && instanceExportMatch) {
     const instanceId = instanceExportMatch[1]
     if (!instanceId) {
@@ -26,7 +27,7 @@ export async function handleExportRoutes(
   }
 
   // GET /api/namespaces/:id/export - Export namespace config
-  const namespaceExportMatch = path.match(/^\/api\/namespaces\/([^/]+)\/export$/)
+  const namespaceExportMatch = /^\/api\/namespaces\/([^/]+)\/export$/.exec(path)
   if (method === 'GET' && namespaceExportMatch) {
     const namespaceId = namespaceExportMatch[1]
     if (!namespaceId) {
@@ -158,7 +159,12 @@ async function exportInstance(
       storageBackend: namespace.storage_backend,
     }, corsHeaders)
   } catch (error) {
-    console.error('[Export] Error:', error)
+    logWarning(`Export error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'export',
+      operation: 'export_instance',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Unknown error')
     return errorResponse(
       `Failed to export: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -223,7 +229,12 @@ async function exportNamespace(
 
     return jsonResponse(config, corsHeaders)
   } catch (error) {
-    console.error('[Export] Namespace error:', error)
+    logWarning(`Namespace export error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'export',
+      operation: 'export_namespace',
+      namespaceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Unknown error')
     return errorResponse(
       `Failed to export namespace: ${error instanceof Error ? error.message : 'Unknown error'}`,

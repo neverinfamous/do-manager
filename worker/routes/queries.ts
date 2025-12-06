@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders, SavedQuery } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody } from '../utils/helpers'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * Mock saved queries for local development
@@ -40,7 +41,7 @@ export async function handleQueriesRoutes(
   const path = url.pathname
 
   // GET /api/namespaces/:nsId/queries - List saved queries for namespace
-  const listMatch = path.match(/^\/api\/namespaces\/([^/]+)\/queries$/)
+  const listMatch = /^\/api\/namespaces\/([^/]+)\/queries$/.exec(path)
   if (method === 'GET' && listMatch) {
     const namespaceId = listMatch[1]
     if (!namespaceId) {
@@ -59,7 +60,7 @@ export async function handleQueriesRoutes(
   }
 
   // PUT /api/queries/:id - Update saved query
-  const singleMatch = path.match(/^\/api\/queries\/([^/]+)$/)
+  const singleMatch = /^\/api\/queries\/([^/]+)$/.exec(path)
   if (method === 'PUT' && singleMatch) {
     const queryId = singleMatch[1]
     if (!queryId) {
@@ -103,7 +104,12 @@ async function listQueries(
 
     return jsonResponse({ queries: result.results }, corsHeaders)
   } catch (error) {
-    console.error('[Queries] List error:', error)
+    logWarning(`List error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'queries',
+      operation: 'list',
+      namespaceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to list saved queries', corsHeaders, 500)
   }
 }
@@ -125,10 +131,10 @@ async function createQuery(
   }
 
   const body = await parseJsonBody<CreateQueryBody>(request)
-  if (!body?.name || !body.name.trim()) {
+  if (!body?.name?.trim()) {
     return errorResponse('name is required', corsHeaders, 400)
   }
-  if (!body.query || !body.query.trim()) {
+  if (!body.query?.trim()) {
     return errorResponse('query is required', corsHeaders, 400)
   }
 
@@ -165,7 +171,12 @@ async function createQuery(
 
     return jsonResponse({ query: result }, corsHeaders, 201)
   } catch (error) {
-    console.error('[Queries] Create error:', error)
+    logWarning(`Create error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'queries',
+      operation: 'create',
+      namespaceId,
+      metadata: { name, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to create saved query', corsHeaders, 500)
   }
 }
@@ -202,10 +213,10 @@ async function updateQuery(
 
   if (isLocalDev) {
     const index = MOCK_SAVED_QUERIES.findIndex((q) => q.id === queryId)
-    if (index === -1) {
+    const existing = MOCK_SAVED_QUERIES[index]
+    if (index === -1 || !existing) {
       return errorResponse('Query not found', corsHeaders, 404)
     }
-    const existing = MOCK_SAVED_QUERIES[index]
     const updated: SavedQuery = {
       ...existing,
       ...updates,
@@ -249,7 +260,11 @@ async function updateQuery(
 
     return jsonResponse({ query: result }, corsHeaders)
   } catch (error) {
-    console.error('[Queries] Update error:', error)
+    logWarning(`Update error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'queries',
+      operation: 'update',
+      metadata: { queryId, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to update saved query', corsHeaders, 500)
   }
 }
@@ -278,7 +293,11 @@ async function deleteQuery(
 
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
-    console.error('[Queries] Delete error:', error)
+    logWarning(`Delete error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'queries',
+      operation: 'delete',
+      metadata: { queryId, error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to delete saved query', corsHeaders, 500)
   }
 }

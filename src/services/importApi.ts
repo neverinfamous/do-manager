@@ -82,23 +82,26 @@ export const importApi = {
     const obj = parsed as Record<string, unknown>
 
     // Check if it's an export file format (has 'data' property)
-    if ('data' in obj && obj.data && typeof obj.data === 'object') {
-      const data = obj.data as Record<string, unknown>
+    if ('data' in obj && obj['data'] && typeof obj['data'] === 'object') {
+      const data = obj['data'] as Record<string, unknown>
       const keys = Object.keys(data)
 
       if (keys.length === 0) {
         throw new Error('No keys found in data object')
       }
 
-      return {
+      const result: ParsedImportData = {
         data,
         keyCount: keys.length,
         keys,
-        exportedAt: typeof obj.exportedAt === 'string' ? obj.exportedAt : undefined,
-        sourceInstance: obj.instance && typeof obj.instance === 'object'
-          ? obj.instance as ParsedImportData['sourceInstance']
-          : undefined,
       }
+      if (typeof obj['exportedAt'] === 'string') {
+        result.exportedAt = obj['exportedAt']
+      }
+      if (obj['instance'] && typeof obj['instance'] === 'object') {
+        result.sourceInstance = obj['instance'] as NonNullable<ParsedImportData['sourceInstance']>
+      }
+      return result
     }
 
     // Treat the entire object as key-value data

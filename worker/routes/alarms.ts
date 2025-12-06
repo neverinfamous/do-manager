@@ -1,6 +1,7 @@
 import type { Env, CorsHeaders, Instance, Namespace } from '../types'
 import { jsonResponse, errorResponse, parseJsonBody, nowISO, createJob, completeJob, failJob, generateId } from '../utils/helpers'
 import { triggerWebhooks, createAlarmWebhookData } from '../utils/webhooks'
+import { logInfo, logWarning } from '../utils/error-logger'
 
 /**
  * Mock alarm data for local development
@@ -26,7 +27,7 @@ export async function handleAlarmRoutes(
   const path = url.pathname
 
   // GET /api/instances/:id/alarm - Get current alarm
-  const alarmMatch = path.match(/^\/api\/instances\/([^/]+)\/alarm$/)
+  const alarmMatch = /^\/api\/instances\/([^/]+)\/alarm$/.exec(path)
   if (method === 'GET' && alarmMatch) {
     const instanceId = alarmMatch[1]
     if (!instanceId) {
@@ -70,7 +71,7 @@ async function getAlarm(
     return jsonResponse({
       alarm: alarm ?? null,
       hasAlarm: alarm !== null && alarm !== undefined,
-      alarmDate: alarm ? new Date(alarm).toISOString() : null,
+      alarmDate: alarm !== null && alarm !== undefined ? new Date(alarm).toISOString() : null,
     }, corsHeaders)
   }
 
@@ -114,10 +115,16 @@ async function getAlarm(
 
     // Normalize endpoint URL (remove trailing slash)
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/alarm`
 
-    console.log('[Alarms] Calling admin hook:', adminUrl)
+    logInfo(`Calling admin hook: ${adminUrl}`, {
+      module: 'alarms',
+      operation: 'get',
+      instanceId,
+      namespaceId: namespace.id,
+      metadata: { adminUrl }
+    })
 
     // Call the DO's admin hook
     const response = await fetch(adminUrl, {
@@ -129,7 +136,13 @@ async function getAlarm(
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error')
-      console.error('[Alarms] Admin hook error:', response.status, errorText)
+      logWarning(`Admin hook error: ${String(response.status)} ${errorText}`, {
+        module: 'alarms',
+        operation: 'get',
+        instanceId,
+        namespaceId: namespace.id,
+        metadata: { status: response.status, errorText: errorText.slice(0, 200) }
+      })
       return jsonResponse({
         alarm: null,
         hasAlarm: false,
@@ -139,7 +152,6 @@ async function getAlarm(
       }, corsHeaders)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const data = await response.json() as { alarm: number | null }
     const alarmTimestamp: number | null = data.alarm
     return jsonResponse({
@@ -148,7 +160,12 @@ async function getAlarm(
       alarmDate: alarmTimestamp !== null ? new Date(alarmTimestamp).toISOString() : null,
     }, corsHeaders)
   } catch (error) {
-    console.error('[Alarms] Get error:', error)
+    logWarning(`Get error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'alarms',
+      operation: 'get',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return jsonResponse({
       alarm: null,
       hasAlarm: false,
@@ -170,7 +187,7 @@ async function setAlarm(
   userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<{ timestamp: number }>(request)
-  if (!body?.timestamp || typeof body.timestamp !== 'number') {
+  if (body?.timestamp === undefined || typeof body.timestamp !== 'number') {
     return errorResponse('timestamp (number) is required', corsHeaders, 400)
   }
 
@@ -215,7 +232,7 @@ async function setAlarm(
 
     // Normalize endpoint URL and build admin URL
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/alarm`
 
     // Call the DO's admin hook
@@ -275,7 +292,12 @@ async function setAlarm(
       alarmDate: scheduledTime,
     }, corsHeaders)
   } catch (error) {
-    console.error('[Alarms] Set error:', error)
+    logWarning(`Set error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'alarms',
+      operation: 'set',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to set alarm', corsHeaders, 500)
   }
 }
@@ -319,7 +341,7 @@ async function deleteAlarm(
 
     // Normalize endpoint URL and build admin URL
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name || instance.object_id
+    const instanceName = instance.name ?? instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/alarm`
 
     // Call the DO's admin hook
@@ -363,7 +385,12 @@ async function deleteAlarm(
 
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
-    console.error('[Alarms] Delete error:', error)
+    logWarning(`Delete error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'alarms',
+      operation: 'delete',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to delete alarm', corsHeaders, 500)
   }
 }

@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders, Namespace, Instance } from '../types'
 import { jsonResponse, errorResponse, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * Search request types
@@ -41,14 +42,6 @@ interface SearchSummary {
 }
 
 /**
- * Search response
- */
-interface SearchResponse {
-  results: SearchResult[]
-  summary: SearchSummary
-}
-
-/**
  * Mock data for local development
  */
 const MOCK_SEARCH_DATA: Record<string, Record<string, unknown>> = {
@@ -67,7 +60,7 @@ const MOCK_SEARCH_DATA: Record<string, Record<string, unknown>> = {
   },
 }
 
-const MOCK_INSTANCES: Array<{ id: string; namespaceId: string; namespaceName: string; name: string }> = [
+const MOCK_INSTANCES: { id: string; namespaceId: string; namespaceName: string; name: string }[] = [
   { id: 'inst-1', namespaceId: 'ns-1', namespaceName: 'ChatRooms', name: 'room-general' },
   { id: 'inst-2', namespaceId: 'ns-1', namespaceName: 'ChatRooms', name: 'room-support' },
   { id: 'inst-3', namespaceId: 'ns-2', namespaceName: 'Counters', name: 'counter-main' },
@@ -178,7 +171,6 @@ async function searchKeys(
             continue
           }
 
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           const data = await response.json() as { keys?: string[] }
           const keys = data.keys ?? []
 
@@ -218,9 +210,13 @@ async function searchKeys(
       instances_searched: instancesSearched,
     })
 
-    return jsonResponse<SearchResponse>({ results, summary }, corsHeaders)
+    return jsonResponse({ results, summary }, corsHeaders)
   } catch (error) {
-    console.error('[Search] Key search error:', error)
+    logWarning(`Key search error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'search',
+      operation: 'key_search',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Search failed')
     return errorResponse('Search failed', corsHeaders, 500)
   }
@@ -311,7 +307,6 @@ async function searchValues(
             continue
           }
 
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           const exportData = await response.json() as { data?: Record<string, unknown> }
           const data = exportData.data ?? {}
 
@@ -356,9 +351,13 @@ async function searchValues(
       instances_searched: instancesSearched,
     })
 
-    return jsonResponse<SearchResponse>({ results, summary }, corsHeaders)
+    return jsonResponse({ results, summary }, corsHeaders)
   } catch (error) {
-    console.error('[Search] Value search error:', error)
+    logWarning(`Value search error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'search',
+      operation: 'value_search',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Search failed')
     return errorResponse('Search failed', corsHeaders, 500)
   }
@@ -421,7 +420,7 @@ function mockKeySearch(
     errors: 0,
   }
 
-  return jsonResponse<SearchResponse>({ results, summary }, corsHeaders)
+  return jsonResponse({ results, summary }, corsHeaders)
 }
 
 /**
@@ -462,6 +461,6 @@ function mockValueSearch(
     errors: 0,
   }
 
-  return jsonResponse<SearchResponse>({ results, summary }, corsHeaders)
+  return jsonResponse({ results, summary }, corsHeaders)
 }
 

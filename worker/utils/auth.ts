@@ -1,5 +1,6 @@
 import * as jose from 'jose'
 import type { Env } from '../types'
+import { logInfo, logWarning } from './error-logger'
 
 /**
  * Cloudflare Access JWT payload
@@ -34,7 +35,7 @@ export async function validateAccessJWT(
   }
   
   if (!token) {
-    console.log('[Auth] No JWT token found')
+    logInfo('No JWT token found', { module: 'auth', operation: 'validateAccessJWT' })
     return null
   }
   
@@ -44,11 +45,14 @@ export async function validateAccessJWT(
     const certsResponse = await fetch(certsUrl)
     
     if (!certsResponse.ok) {
-      console.error('[Auth] Failed to fetch Access certs:', certsResponse.status)
+      logWarning(`Failed to fetch Access certs: ${String(certsResponse.status)}`, {
+        module: 'auth',
+        operation: 'validateAccessJWT',
+        metadata: { status: certsResponse.status }
+      })
       return null
     }
     
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const certs = await certsResponse.json() as { keys: jose.JWK[] }
     const jwks = jose.createLocalJWKSet({ keys: certs.keys })
     
@@ -62,12 +66,16 @@ export async function validateAccessJWT(
     const email = accessPayload.email ?? accessPayload.sub ?? null
     
     if (email) {
-      console.log('[Auth] Authenticated user:', email)
+      logInfo(`Authenticated user: ${email}`, { module: 'auth', operation: 'validateAccessJWT', userId: email })
     }
     
     return email
   } catch (error) {
-    console.error('[Auth] JWT validation failed:', error)
+    logWarning(`JWT validation failed: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'auth',
+      operation: 'validateAccessJWT',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return null
   }
 }

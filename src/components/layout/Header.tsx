@@ -7,7 +7,7 @@ export function Header(): React.ReactElement {
   const { theme, setTheme } = useTheme()
 
   const cycleTheme = (): void => {
-    const modes: Array<typeof theme> = ['system', 'light', 'dark']
+    const modes: (typeof theme)[] = ['system', 'light', 'dark']
     const currentIndex = modes.indexOf(theme)
     const nextIndex = (currentIndex + 1) % modes.length
     const nextTheme = modes[nextIndex]

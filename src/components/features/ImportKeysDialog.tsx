@@ -187,7 +187,7 @@ export function ImportKeysDialog({
 
               {/* Keys Preview */}
               <div className="space-y-2">
-                <Label>Keys to Import</Label>
+                <p className="text-sm font-medium leading-none">Keys to Import</p>
                 <div className="rounded-lg border p-2 max-h-32 overflow-y-auto">
                   <ul className="text-sm font-mono space-y-1">
                     {parsedData.keys.slice(0, 10).map((key) => (

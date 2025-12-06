@@ -1,5 +1,6 @@
-import type { Env, CorsHeaders, Instance, Namespace } from '../types'
+import type { Env, CorsHeaders, Instance, InstanceColor, Namespace } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * Valid instance colors
@@ -66,7 +67,7 @@ export async function handleInstanceRoutes(
   const path = url.pathname
 
   // GET /api/namespaces/:nsId/instances - List instances for namespace
-  const listMatch = path.match(/^\/api\/namespaces\/([^/]+)\/instances$/)
+  const listMatch = /^\/api\/namespaces\/([^/]+)\/instances$/.exec(path)
   if (method === 'GET' && listMatch) {
     const namespaceId = listMatch[1]
     if (!namespaceId) {
@@ -85,7 +86,7 @@ export async function handleInstanceRoutes(
   }
 
   // GET /api/instances/:id - Get single instance
-  const singleMatch = path.match(/^\/api\/instances\/([^/]+)$/)
+  const singleMatch = /^\/api\/instances\/([^/]+)$/.exec(path)
   if (method === 'GET' && singleMatch) {
     const instanceId = singleMatch[1]
     if (!instanceId) {
@@ -104,7 +105,7 @@ export async function handleInstanceRoutes(
   }
 
   // PUT /api/instances/:id/accessed - Update last accessed time
-  const accessedMatch = path.match(/^\/api\/instances\/([^/]+)\/accessed$/)
+  const accessedMatch = /^\/api\/instances\/([^/]+)\/accessed$/.exec(path)
   if (method === 'PUT' && accessedMatch) {
     const instanceId = accessedMatch[1]
     if (!instanceId) {
@@ -114,7 +115,7 @@ export async function handleInstanceRoutes(
   }
 
   // POST /api/instances/:id/clone - Clone instance
-  const cloneMatch = path.match(/^\/api\/instances\/([^/]+)\/clone$/)
+  const cloneMatch = /^\/api\/instances\/([^/]+)\/clone$/.exec(path)
   if (method === 'POST' && cloneMatch) {
     const instanceId = cloneMatch[1]
     if (!instanceId) {
@@ -124,7 +125,7 @@ export async function handleInstanceRoutes(
   }
 
   // PUT /api/instances/:id/color - Update instance color
-  const colorMatch = path.match(/^\/api\/instances\/([^/]+)\/color$/)
+  const colorMatch = /^\/api\/instances\/([^/]+)\/color$/.exec(path)
   if (method === 'PUT' && colorMatch) {
     const instanceId = colorMatch[1]
     if (!instanceId) {
@@ -174,7 +175,12 @@ async function listInstances(
       total: countResult?.count ?? 0,
     }, corsHeaders)
   } catch (error) {
-    console.error('[Instances] List error:', error)
+    logWarning(`List error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'instances',
+      operation: 'list',
+      namespaceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to list instances', corsHeaders, 500)
   }
 }
@@ -269,7 +275,12 @@ async function createInstance(
     await completeJob(env.METADATA, jobId, { instance_id: id, name: body.name ?? body.object_id })
     return jsonResponse({ instance: result, created: true }, corsHeaders, 201)
   } catch (error) {
-    console.error('[Instances] Create error:', error)
+    logWarning(`Create error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'instances',
+      operation: 'create',
+      namespaceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Failed to create instance')
     return errorResponse('Failed to create instance', corsHeaders, 500)
   }
@@ -303,7 +314,12 @@ async function getInstance(
 
     return jsonResponse({ instance: result }, corsHeaders)
   } catch (error) {
-    console.error('[Instances] Get error:', error)
+    logWarning(`Get error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'instances',
+      operation: 'get',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to get instance', corsHeaders, 500)
   }
 }
@@ -334,7 +350,12 @@ async function deleteInstance(
     await completeJob(env.METADATA, jobId, { instance_id: instanceId, name: inst?.name ?? inst?.object_id })
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
-    console.error('[Instances] Delete error:', error)
+    logWarning(`Delete error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'instances',
+      operation: 'delete',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to delete instance', corsHeaders, 500)
   }
 }
@@ -360,7 +381,12 @@ async function updateInstanceAccessed(
 
     return jsonResponse({ success: true, last_accessed: now }, corsHeaders)
   } catch (error) {
-    console.error('[Instances] Update accessed error:', error)
+    logWarning(`Update accessed error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'instances',
+      operation: 'update_accessed',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to update instance', corsHeaders, 500)
   }
 }
@@ -381,7 +407,7 @@ async function cloneInstance(
   }
 
   const body = await parseJsonBody<CloneInstanceBody>(request)
-  if (!body || !body.name || !body.name.trim()) {
+  if (!body?.name?.trim()) {
     return errorResponse('name is required', corsHeaders, 400)
   }
 
@@ -534,7 +560,12 @@ async function cloneInstance(
       clonedFrom: sourceInstanceName,
     }, corsHeaders, 201)
   } catch (error) {
-    console.error('[Instances] Clone error:', error)
+    logWarning(`Clone error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'instances',
+      operation: 'clone',
+      instanceId: sourceInstanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Clone failed')
     return errorResponse(
       `Failed to clone instance: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -577,8 +608,8 @@ async function updateInstanceColor(
     if (!instance) {
       return errorResponse('Instance not found', corsHeaders, 404)
     }
-    // Update mock instance color
-    instance.color = color ?? null
+    // Update mock instance color - cast is safe after validation
+    instance.color = (color ?? null) as InstanceColor
     return jsonResponse({ instance, success: true }, corsHeaders)
   }
 
@@ -598,7 +629,12 @@ async function updateInstanceColor(
 
     return jsonResponse({ instance: updated, success: true }, corsHeaders)
   } catch (error) {
-    console.error('[Instances] Update color error:', error)
+    logWarning(`Update color error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'instances',
+      operation: 'update_color',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse('Failed to update instance color', corsHeaders, 500)
   }
 }

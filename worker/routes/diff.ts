@@ -1,5 +1,6 @@
 import type { Env, CorsHeaders, Instance, Namespace } from '../types'
 import { jsonResponse, errorResponse, parseJsonBody } from '../utils/helpers'
+import { logWarning } from '../utils/error-logger'
 
 /**
  * Diff result for comparing two instances
@@ -19,11 +20,11 @@ interface DiffResult {
   }
   onlyInA: string[]
   onlyInB: string[]
-  different: Array<{
+  different: {
     key: string
     valueA: unknown
     valueB: unknown
-  }>
+  }[]
   identical: string[]
   summary: {
     totalA: number
@@ -125,7 +126,11 @@ async function fetchInstanceStorage(
         storage[key] = data.value ?? data
       }
     } catch (err) {
-      console.error(`[Diff] Failed to fetch key ${key}:`, err)
+      logWarning(`Failed to fetch key ${key}: ${err instanceof Error ? err.message : String(err)}`, {
+        module: 'diff',
+        operation: 'fetch_key',
+        metadata: { key, error: err instanceof Error ? err.message : String(err) }
+      })
     }
   }
 
@@ -147,7 +152,7 @@ async function compareInstances(
   }
 
   const body = await parseJsonBody<CompareBody>(request)
-  if (!body || !body.instanceIdA || !body.instanceIdB) {
+  if (!body?.instanceIdA || !body.instanceIdB) {
     return errorResponse('instanceIdA and instanceIdB are required', corsHeaders, 400)
   }
 
@@ -237,7 +242,11 @@ async function compareInstances(
 
     return jsonResponse({ diff: result }, corsHeaders)
   } catch (error) {
-    console.error('[Diff] Compare error:', error)
+    logWarning(`Compare error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'diff',
+      operation: 'compare',
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
     return errorResponse(
       `Failed to compare instances: ${error instanceof Error ? error.message : 'Unknown error'}`,
       corsHeaders,
@@ -260,7 +269,7 @@ function computeDiff(
 
   const onlyInA: string[] = []
   const onlyInB: string[] = []
-  const different: Array<{ key: string; valueA: unknown; valueB: unknown }> = []
+  const different: { key: string; valueA: unknown; valueB: unknown }[] = []
   const identical: string[] = []
 
   // Find keys only in A

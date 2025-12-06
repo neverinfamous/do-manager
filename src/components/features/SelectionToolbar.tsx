@@ -70,7 +70,7 @@ export function SelectionToolbar({
           </Button>
 
           {/* Divider */}
-          {children && (
+          {children !== undefined && (
             <div className="h-6 w-px bg-border mx-1" />
           )}
 

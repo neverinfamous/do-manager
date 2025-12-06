@@ -76,6 +76,7 @@ export function GlobalSearch({
         // Only show namespaces with admin hooks enabled
         setNamespaces(data.filter((ns) => ns.admin_hook_enabled === 1))
       } catch (err) {
+        // eslint-disable-next-line no-console
         console.error('Failed to load namespaces:', err)
       } finally {
         setLoadingNamespaces(false)
@@ -100,9 +101,14 @@ export function GlobalSearch({
         ? Array.from(selectedNamespaces)
         : undefined
 
+      const searchOptions = {
+        ...(namespaceIds && { namespaceIds }),
+        limit: 100,
+      }
+
       const response = activeTab === 'keys'
-        ? await searchApi.searchKeys(query, { namespaceIds, limit: 100 })
-        : await searchApi.searchValues(query, { namespaceIds, limit: 100 })
+        ? await searchApi.searchKeys(query, searchOptions)
+        : await searchApi.searchValues(query, searchOptions)
 
       setResults(response.results)
       setSummary(response.summary)
@@ -166,7 +172,7 @@ export function GlobalSearch({
 
   // Group results by namespace for better organization
   const groupedResults = useMemo(() => {
-    const groups: Map<string, { namespace: { id: string; name: string }; results: SearchResult[] }> = new Map()
+    const groups = new Map<string, { namespace: { id: string; name: string }; results: SearchResult[] }>()
     
     for (const result of results) {
       const key = result.namespaceId

@@ -74,7 +74,7 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
           await namespaceApi.add({
             name: ns.name,
             class_name: ns.class_name,
-            script_name: ns.script_name ?? undefined,
+            ...(ns.script_name && { script_name: ns.script_name }),
             storage_backend: ns.storage_backend,
           })
         }
@@ -300,7 +300,7 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
                 id="select-all-namespaces"
                 checked={selection.isAllSelected(filteredNamespaces)}
                 onCheckedChange={(checked) => {
-                  if (checked) {
+                  if (checked === true) {
                     selection.selectAll(filteredNamespaces)
                   } else {
                     selection.deselectAll()

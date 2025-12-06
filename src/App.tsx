@@ -61,8 +61,14 @@ export default function App(): React.ReactElement {
       ])
       
       // Navigate to instance view, optionally opening the key edit dialog
-      setCurrentView({ type: 'instance', namespace, instance: instanceData, initialEditKey: key })
+      setCurrentView({
+        type: 'instance',
+        namespace,
+        instance: instanceData,
+        ...(key !== undefined && { initialEditKey: key }),
+      })
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Failed to navigate to instance:', err)
       // Could show a toast/error here, but for now just log it
     }
@@ -142,7 +148,7 @@ export default function App(): React.ReactElement {
             namespace={currentView.namespace}
             instance={currentView.instance}
             onBack={handleBackToNamespace}
-            initialEditKey={currentView.initialEditKey}
+            {...(currentView.initialEditKey !== undefined && { initialEditKey: currentView.initialEditKey })}
           />
         )}
       </main>
