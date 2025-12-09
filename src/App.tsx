@@ -1,18 +1,27 @@
-import { useState, useCallback } from 'react'
-import { Box, History, BarChart3, Search, Activity, Bell } from 'lucide-react'
+import { useState, useCallback, lazy, Suspense } from 'react'
+import { Box, History, BarChart3, Search, Activity, Bell, Loader2 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { Header } from './components/layout/Header'
 import { NamespaceList } from './components/features/NamespaceList'
 import { NamespaceView } from './components/features/NamespaceView'
 import { StorageViewer } from './components/features/StorageViewer'
-import { MetricsDashboard } from './components/features/MetricsDashboard'
-import { JobHistory } from './components/features/JobHistory'
-import { GlobalSearch } from './components/features/GlobalSearch'
-import { HealthDashboard } from './components/features/HealthDashboard'
-import { WebhookManager } from './components/features/WebhookManager'
 import { namespaceApi } from './services/api'
 import { instanceApi } from './services/instanceApi'
 import type { Namespace, Instance } from './types'
+
+// Lazy-loaded tab components for better code splitting
+const MetricsDashboard = lazy(() => import('./components/features/MetricsDashboard').then(m => ({ default: m.MetricsDashboard })))
+const JobHistory = lazy(() => import('./components/features/JobHistory').then(m => ({ default: m.JobHistory })))
+const GlobalSearch = lazy(() => import('./components/features/GlobalSearch').then(m => ({ default: m.GlobalSearch })))
+const HealthDashboard = lazy(() => import('./components/features/HealthDashboard').then(m => ({ default: m.HealthDashboard })))
+const WebhookManager = lazy(() => import('./components/features/WebhookManager').then(m => ({ default: m.WebhookManager })))
+
+// Loading fallback for lazy-loaded components
+const LazyLoadingFallback = (): React.ReactElement => (
+  <div className="flex items-center justify-center py-16">
+    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  </div>
+)
 
 type View =
   | { type: 'list' }
@@ -59,7 +68,7 @@ export default function App(): React.ReactElement {
         namespaceApi.get(namespaceId),
         instanceApi.get(instanceId),
       ])
-      
+
       // Navigate to instance view, optionally opening the key edit dialog
       setCurrentView({
         type: 'instance',
@@ -108,29 +117,31 @@ export default function App(): React.ReactElement {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="health">
-              <HealthDashboard />
-            </TabsContent>
+            <Suspense fallback={<LazyLoadingFallback />}>
+              <TabsContent value="health">
+                <HealthDashboard />
+              </TabsContent>
 
-            <TabsContent value="jobs">
-              <JobHistory />
-            </TabsContent>
+              <TabsContent value="jobs">
+                <JobHistory />
+              </TabsContent>
 
-            <TabsContent value="metrics">
-              <MetricsDashboard />
-            </TabsContent>
+              <TabsContent value="metrics">
+                <MetricsDashboard />
+              </TabsContent>
 
-            <TabsContent value="namespaces">
-              <NamespaceList onSelectNamespace={handleSelectNamespace} />
-            </TabsContent>
+              <TabsContent value="namespaces">
+                <NamespaceList onSelectNamespace={handleSelectNamespace} />
+              </TabsContent>
 
-            <TabsContent value="search">
-              <GlobalSearch onNavigateToInstance={(nsId, instId, key) => void handleNavigateToInstance(nsId, instId, key)} />
-            </TabsContent>
+              <TabsContent value="search">
+                <GlobalSearch onNavigateToInstance={(nsId, instId, key) => void handleNavigateToInstance(nsId, instId, key)} />
+              </TabsContent>
 
-            <TabsContent value="webhooks">
-              <WebhookManager />
-            </TabsContent>
+              <TabsContent value="webhooks">
+                <WebhookManager />
+              </TabsContent>
+            </Suspense>
           </Tabs>
         )}
 
