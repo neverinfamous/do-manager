@@ -1,4 +1,4 @@
-import { Box, Moon, Sun, Monitor, LogOut } from 'lucide-react'
+import { Box, Moon, Sun, Monitor, LogOut, ExternalLink } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useTheme } from '../../hooks/useTheme'
 import { authApi } from '../../services/api'
@@ -42,6 +42,15 @@ export function Header(): React.ReactElement {
           </div>
         </button>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.open('https://dash.cloudflare.com/?to=/:account/workers/durable-objects', '_blank')}
+            title="Open Cloudflare Dashboard"
+            aria-label="Open Cloudflare Dashboard"
+          >
+            <ExternalLink className="h-5 w-5" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

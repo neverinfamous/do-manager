@@ -1,22 +1,22 @@
 # Cloudflare Durable Object Manager
 
-Last Updated December 6, 2025 - v1.0.0
+Last Updated December 10, 2025 - v1.1.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-![Version](https://img.shields.io/badge/version-v1.0.0-green)
+![Version](https://img.shields.io/badge/version-v1.1.0-green)
 ![Status](https://img.shields.io/badge/status-Stable-brightgreen)
 [![Security](https://img.shields.io/badge/Security-Enhanced-green.svg)](https://github.com/neverinfamous/do-manager/blob/main/SECURITY.md)
 [![CodeQL](https://img.shields.io/badge/CodeQL-Passing-brightgreen.svg)](https://github.com/neverinfamous/do-manager/security/code-scanning)
 [![Type Safety](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://github.com/neverinfamous/do-manager)
 
-Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage Durable Object namespaces, instances, and storage. Supports automatic namespace discovery, instance inspection, key/value editing, SQL for SQLite-backed DOs, batch operations, alarms, R2 backups, analytics, global search, and job history, with optional GitHub SSO.
+Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage Durable Object namespaces, instances, and storage. Supports automatic namespace discovery, instance inspection, key/value editing, Rich SQL Console,SQL for SQLite-backed DOs, batch operations, alarms, R2 backups, analytics, global search, and job history, with optional GitHub SSO.
 
 **[Live Demo](https://do.adamic.tech/)** • **[Wiki](https://github.com/neverinfamous/do-manager/wiki)** • **[Changelog](https://github.com/neverinfamous/do-manager/wiki/Changelog)** • **[Release Article](https://adamic.tech/articles/do-manager)**
 
 ## Tech Stack
 
-**Frontend**: React 19.2.1 | TypeScript 5.9.3 | Vite 7.2.6 | Tailwind CSS | shadcn/ui
+**Frontend**: React 19.2.1 | TypeScript 5.9.3 | Vite 7.2.7 | Tailwind CSS | shadcn/ui
 
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
@@ -27,7 +27,8 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 ### Namespace Management
 - **Auto-discover** DO namespaces from Cloudflare API
 - **Manual configuration** for custom setups
-- **Clone namespace** - Duplicate namespace configuration with a new name
+- **List/Grid toggle** - Switch between compact List view (default) and card-based Grid view; preference saved to localStorage
+- **Clone namespace** - Configuration only (fast) or **Deep Clone** with all instances and storage (requires admin hooks)
 - **Download config** - Export namespace settings as JSON
 - **System namespace filtering** - Internal DOs (kv-manager, d1-manager, do-manager) are hidden to prevent accidental deletion
 - **Search & filter** - Real-time filtering by name, class name, or script name
@@ -36,6 +37,8 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 ### Instance Management
 - Track DO instances by name or hex ID
 - Create new instances with custom names
+- **List/Grid toggle** - Switch between compact List view (default) and card-based Grid view; preference saved to localStorage
+- **Rename instance** - Change the display name of tracked instances
 - **Clone instance** - Copy all storage data to a new instance
 - **Download instance** - Export instance storage as JSON
 - **Search & filter** - Real-time filtering by instance name or object ID
@@ -44,19 +47,17 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - View storage contents (keys/values)
 
 ### SQL Console (SQLite-backed DOs)
-- Execute raw SQL queries against SQLite storage
-- **Query Builder** with pre-built templates:
-  | Template | Description |
-  |----------|-------------|
-  | Select All Rows | `SELECT * FROM table LIMIT 100` |
-  | Row Count | `SELECT COUNT(*) FROM table` |
-  | Table Schema | `PRAGMA table_info(table)` |
-  | List All Tables | `SELECT name FROM sqlite_master` |
-  | List Indexes | `PRAGMA index_list(table)` |
-  | Sample Rows | Random 10 rows from table |
-  | Create Table | Boilerplate for new table creation |
+- **Enhanced SQL Editor** with Prism.js syntax highlighting and line numbers
+- **Real-time validation** with inline error indicators
+- **Context-aware autocomplete** for SQL keywords, table names, and columns
+- **Hover documentation** for SQL keywords and functions
+- **Smart indentation** with bracket/quote auto-pairing
+- **Format button** for one-click SQL formatting
+- **Copy button** with clipboard feedback
+- **Word wrap toggle** and **suggestions toggle** (persisted to localStorage)
+- **Quick Queries** dropdown with grouped SQL templates (Information, Select Data, Modify Data, Table Management)
 - **Saved queries** - Store frequently used queries per namespace
-- Query history - Quick access to recent queries
+- **Query history** - Quick access to recent queries
 - Results displayed in sortable table format
 
 ### Multi-Select & Batch Operations
@@ -72,10 +73,11 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 
 ### Storage Management
 - **Key search & filter** - Real-time filtering to find keys quickly
+- **Rename keys** - Edit key names directly in the Edit Key dialog
 - **Multi-select keys** - Select multiple keys with checkboxes for batch operations
 - **Batch export keys** - Export selected keys as JSON with instance/namespace metadata
 - **Batch delete keys** - Delete multiple keys at once with confirmation
-- **Import keys from JSON** - Upload JSON files to bulk import keys into instance storage
+- **Import keys from JSON** - Upload JSON files or paste JSON directly to bulk import keys into instance storage
 - View/edit storage values with JSON support
 - Clickable key rows for easy editing
 
@@ -582,7 +584,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 📞 Support
 
 - 🐛 **Bug Reports:** [GitHub Issues](https://github.com/neverinfamous/do-manager/issues)
-- 💡 **Feature Requests:** [GitHub Discussions](https://github.com/neverinfamous/do-manager/discussions)
+
 - 📧 **Email:** admin@adamic.tech
 
 ---

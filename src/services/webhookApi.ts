@@ -5,46 +5,29 @@ import type {
   WebhookResponse,
   WebhookTestResult,
 } from '../types/webhook'
-
-const API_BASE = '/api'
-
-/**
- * Generic fetch wrapper with error handling
- */
-async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  if (options.headers) {
-    const optHeaders = options.headers instanceof Headers
-      ? options.headers
-      : new Headers(options.headers as Record<string, string>)
-    optHeaders.forEach((value, key) => headers.set(key, value))
-  }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: string }
-    throw new Error(errorData.error ?? `Request failed: ${String(response.status)}`)
-  }
-
-  return response.json() as Promise<T>
-}
+import { apiFetch } from '../lib/apiFetch'
+import { getCached, setCache, invalidateCache, CACHE_KEYS, CACHE_TTL } from '../lib/cache'
 
 /**
- * Webhook API functions
+ * Webhook API functions with caching support
  */
 export const webhookApi = {
   /**
    * List all webhooks
+   * @param skipCache Set true to bypass cache
    */
-  async list(): Promise<Webhook[]> {
+  async list(skipCache = false): Promise<Webhook[]> {
+    const cacheKey = CACHE_KEYS.WEBHOOKS
+
+    if (!skipCache) {
+      const cached = getCached(cacheKey, CACHE_TTL.DEFAULT) as Webhook[] | undefined
+      if (cached) {
+        return cached
+      }
+    }
+
     const data = await apiFetch<WebhooksResponse>('/webhooks')
+    setCache(cacheKey, data.webhooks)
     return data.webhooks
   },
 
@@ -58,31 +41,37 @@ export const webhookApi = {
 
   /**
    * Create a new webhook
+   * Invalidates webhook cache
    */
   async create(input: WebhookInput): Promise<Webhook> {
     const data = await apiFetch<WebhookResponse>('/webhooks', {
       method: 'POST',
       body: JSON.stringify(input),
     })
+    invalidateCache(CACHE_KEYS.WEBHOOKS)
     return data.webhook
   },
 
   /**
    * Update an existing webhook
+   * Invalidates webhook cache
    */
   async update(id: string, input: Partial<WebhookInput>): Promise<Webhook> {
     const data = await apiFetch<WebhookResponse>(`/webhooks/${id}`, {
       method: 'PUT',
       body: JSON.stringify(input),
     })
+    invalidateCache(CACHE_KEYS.WEBHOOKS)
     return data.webhook
   },
 
   /**
    * Delete a webhook
+   * Invalidates webhook cache
    */
   async delete(id: string): Promise<void> {
     await apiFetch(`/webhooks/${id}`, { method: 'DELETE' })
+    invalidateCache(CACHE_KEYS.WEBHOOKS)
   },
 
   /**
@@ -94,4 +83,3 @@ export const webhookApi = {
     })
   },
 }
-

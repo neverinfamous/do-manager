@@ -3,6 +3,7 @@ import {
   Search,
   Key,
   FileText,
+  Tag,
   Loader2,
   AlertCircle,
   ChevronRight,
@@ -53,14 +54,14 @@ export function GlobalSearch({
 }: GlobalSearchProps): React.ReactElement {
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState<'keys' | 'values'>('keys')
+  const [activeTab, setActiveTab] = useState<'keys' | 'values' | 'tags'>('keys')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
-  
+
   // Results state
   const [results, setResults] = useState<SearchResult[]>([])
   const [summary, setSummary] = useState<SearchSummary | null>(null)
-  
+
   // Filter state
   const [showFilters, setShowFilters] = useState(false)
   const [namespaces, setNamespaces] = useState<Namespace[]>([])
@@ -68,13 +69,18 @@ export function GlobalSearch({
   const [loadingNamespaces, setLoadingNamespaces] = useState(false)
 
   // Load namespaces for filtering
+  // For tag search, load ALL namespaces; for key/value search, only admin-hooked ones
   useEffect(() => {
     const loadNamespaces = async (): Promise<void> => {
       try {
         setLoadingNamespaces(true)
         const data = await namespaceApi.list()
-        // Only show namespaces with admin hooks enabled
-        setNamespaces(data.filter((ns) => ns.admin_hook_enabled === 1))
+        // For tags tab, show all namespaces; for keys/values, only admin-hooked
+        if (activeTab === 'tags') {
+          setNamespaces(data)
+        } else {
+          setNamespaces(data.filter((ns) => ns.admin_hook_enabled === 1))
+        }
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to load namespaces:', err)
@@ -83,7 +89,7 @@ export function GlobalSearch({
       }
     }
     void loadNamespaces()
-  }, [])
+  }, [activeTab])
 
   // Perform search
   const performSearch = useCallback(async (query: string): Promise<void> => {
@@ -106,9 +112,14 @@ export function GlobalSearch({
         limit: 100,
       }
 
-      const response = activeTab === 'keys'
-        ? await searchApi.searchKeys(query, searchOptions)
-        : await searchApi.searchValues(query, searchOptions)
+      let response
+      if (activeTab === 'keys') {
+        response = await searchApi.searchKeys(query, searchOptions)
+      } else if (activeTab === 'values') {
+        response = await searchApi.searchValues(query, searchOptions)
+      } else {
+        response = await searchApi.searchTags(query, searchOptions)
+      }
 
       setResults(response.results)
       setSummary(response.summary)
@@ -173,7 +184,7 @@ export function GlobalSearch({
   // Group results by namespace for better organization
   const groupedResults = useMemo(() => {
     const groups = new Map<string, { namespace: { id: string; name: string }; results: SearchResult[] }>()
-    
+
     for (const result of results) {
       const key = result.namespaceId
       if (!groups.has(key)) {
@@ -184,7 +195,7 @@ export function GlobalSearch({
       }
       groups.get(key)?.results.push(result)
     }
-    
+
     return Array.from(groups.values())
   }, [results])
 
@@ -211,6 +222,10 @@ export function GlobalSearch({
             <FileText className="h-4 w-4" />
             Value Search
           </TabsTrigger>
+          <TabsTrigger value="tags" className="flex items-center gap-2">
+            <Tag className="h-4 w-4" />
+            Tag Search
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="keys" className="mt-4">
@@ -222,6 +237,12 @@ export function GlobalSearch({
         <TabsContent value="values" className="mt-4">
           <p className="text-sm text-muted-foreground mb-4">
             Search within storage values. Finds keys where the JSON value contains your search term.
+          </p>
+        </TabsContent>
+
+        <TabsContent value="tags" className="mt-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            Search for instances by tag. Works for all namespaces (no admin hooks required).
           </p>
         </TabsContent>
       </Tabs>
@@ -236,7 +257,13 @@ export function GlobalSearch({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="global-search-input"
-              placeholder={activeTab === 'keys' ? 'Search for keys (e.g., user:, config)...' : 'Search within values...'}
+              placeholder={
+                activeTab === 'keys'
+                  ? 'Search for keys (e.g., user:, config)...'
+                  : activeTab === 'values'
+                    ? 'Search within values...'
+                    : 'Search for tags (e.g., production, team:backend)...'
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -426,6 +453,18 @@ export function GlobalSearch({
                             <div className="mt-2 p-2 bg-muted rounded text-xs font-mono overflow-hidden">
                               <span className="text-muted-foreground">Value: </span>
                               {highlightMatch(result.valuePreview, searchQuery)}
+                            </div>
+                          )}
+                          {result.matchType === 'tag' && result.tags && result.tags.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {result.tags.map((tag, tagIdx) => (
+                                <span
+                                  key={`${tag}-${tagIdx}`}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary"
+                                >
+                                  {highlightMatch(tag, searchQuery)}
+                                </span>
+                              ))}
                             </div>
                           )}
                         </div>

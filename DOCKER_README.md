@@ -1,23 +1,23 @@
 # Cloudflare Durable Object Manager - Docker
 
-Last Updated December 6, 2025 - Production/Stable v1.0.0
+Last Updated December 10, 2025 - Production/Stable v1.1.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-![Version](https://img.shields.io/badge/version-v1.0.0-green)
+![Version](https://img.shields.io/badge/version-v1.1.0-green)
 ![Status](https://img.shields.io/badge/status-Production%2FStable-brightgreen)
 [![Security](https://img.shields.io/badge/Security-Enhanced-green.svg)](https://github.com/neverinfamous/do-manager/blob/main/SECURITY.md)
 [![CodeQL](https://img.shields.io/badge/CodeQL-Passing-brightgreen.svg)](https://github.com/neverinfamous/do-manager/security/code-scanning)
 [![Type Safety](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://github.com/neverinfamous/do-manager)
 
-Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage Durable Object namespaces, instances, and storage. Supports automatic namespace discovery, instance inspection, key/value editing, SQL for SQLite-backed DOs, batch operations, alarms, R2 backups, analytics, global search, and job history, with optional GitHub SSO.
+Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage Durable Object namespaces, instances, and storage. Supports automatic namespace discovery, instance inspection, key/value editing, SQL for SQLite-backed DOs, batch operations, rich SQL Console,alarms, R2 backups, analytics, global search, and job history, with optional GitHub SSO.
 
 **[Live Demo](https://do.adamic.tech/)** • **[GitHub](https://github.com/neverinfamous/do-manager)** • **[Wiki](https://github.com/neverinfamous/do-manager/wiki)** • **[Changelog](https://github.com/neverinfamous/do-manager/wiki/Changelog)** • **[Release Article](https://adamic.tech/articles/do-manager)**
 
 ## Tech Stack
 
-**Frontend**: React 19.2.1 | Vite 7.2.6 | TypeScript 5.9.3 | Tailwind CSS | shadcn/ui
+**Frontend**: React 19.2.1 | Vite 7.2.7 | TypeScript 5.9.3 | Tailwind CSS | shadcn/ui
 
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
@@ -26,48 +26,130 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 ## 🎯 Features
 
 ### Namespace Management
-- Auto-discover DO namespaces from Cloudflare API
-- Manual configuration for custom setups
-- Clone, download, and batch operations
-- System namespace filtering (kv-manager, d1-manager, do-manager)
+- **Auto-discover** DO namespaces from Cloudflare API
+- **Manual configuration** for custom setups
+- **List/Grid toggle** - Switch between compact List view (default) and card-based Grid view; preference saved to localStorage
+- **Clone namespace** - Configuration only (fast) or **Deep Clone** with all instances and storage (requires admin hooks)
+- **Download config** - Export namespace settings as JSON
+- **System namespace filtering** - Internal DOs (kv-manager, d1-manager, do-manager) are hidden to prevent accidental deletion
+- **Search & filter** - Real-time filtering by name, class name, or script name
+- Support for SQLite and KV storage backends
 
 ### Instance Management
 - Track DO instances by name or hex ID
-- Clone instances with full storage copy
-- Color tags for visual organization
-- Instance diff — compare storage between two instances
+- Create new instances with custom names
+- **List/Grid toggle** - Switch between compact List view (default) and card-based Grid view; preference saved to localStorage
+- **Rename instance** - Change the display name of tracked instances
+- **Clone instance** - Copy all storage data to a new instance
+- **Download instance** - Export instance storage as JSON
+- **Search & filter** - Real-time filtering by instance name or object ID
+- **Color tags** - Color-code instances for visual organization (9 preset colors)
+- **Instance diff** - Compare storage between two instances to see differences
+- View storage contents (keys/values)
 
 ### SQL Console (SQLite-backed DOs)
-- Execute raw SQL queries against SQLite storage
-- Query Builder with pre-built templates
-- Saved queries per namespace
-- Query history for quick access
+- **Enhanced SQL Editor** with Prism.js syntax highlighting and line numbers
+- **Real-time validation** with inline error indicators
+- **Context-aware autocomplete** for SQL keywords, table names, and columns
+- **Hover documentation** for SQL keywords and functions
+- **Smart indentation** with bracket/quote auto-pairing
+- **Format button** for one-click SQL formatting
+- **Copy button** with clipboard feedback
+- **Word wrap toggle** and **suggestions toggle** (persisted to localStorage)
+- **Quick Queries** dropdown with grouped SQL templates (Information, Select Data, Modify Data, Table Management)
+- **Saved queries** - Store frequently used queries per namespace
+- **Query history** - Quick access to recent queries
+- Results displayed in sortable table format
 
 ### Multi-Select & Batch Operations
-- Batch download (namespaces, instances, keys) as ZIP
-- Batch delete with confirmation
-- Batch backup to R2 with progress tracking
-- Compare exactly 2 instances side-by-side
+- **Always-visible checkboxes** - Select namespaces, instances, and storage keys directly from lists
+- **Batch download (namespaces)** - Export multiple namespace configs as a ZIP file with manifest
+- **Batch download (instances)** - Export multiple instance storage as a ZIP file with manifest
+- **Batch download (keys)** - Export selected storage keys as JSON with metadata
+- **Batch delete** - Delete multiple namespaces, instances, or storage keys with confirmation
+- **Batch backup** - Backup multiple instances to R2 with progress tracking
+- **Compare instances** - Select exactly 2 instances to compare storage differences
+- **Selection toolbar** - Floating toolbar with count, Select All, and Clear actions
+- **Job history integration** - All batch operations are tracked in job history
 
 ### Storage Management
-- Key search & filter
-- Multi-select keys for batch operations
-- Import/export keys as JSON
+- **Key search & filter** - Real-time filtering to find keys quickly
+- **Rename keys** - Edit key names directly in the Edit Key dialog
+- **Multi-select keys** - Select multiple keys with checkboxes for batch operations
+- **Batch export keys** - Export selected keys as JSON with instance/namespace metadata
+- **Batch delete keys** - Delete multiple keys at once with confirmation
+- **Import keys from JSON** - Upload JSON files or paste JSON directly to bulk import keys into instance storage
 - View/edit storage values with JSON support
+- Clickable key rows for easy editing
+
+### Admin Hook System
+- **NPM package** (`do-manager-admin-hooks`) for easy integration
+- Copy-paste template also available for custom setups
+- Support for both SQLite and KV backends
+
+### Alarms
+- View current alarm state
+- Set new alarms with date/time picker
+- Delete existing alarms
 
 ### R2 Backup & Restore
 - Snapshot DO storage to R2
 - Browse backup history
 - Restore from any backup with auto-refresh
 
-### Additional Features
-- **Alarms** - View, set, and delete alarms with date/time picker
-- **Metrics Dashboard** - Request volume, storage usage, CPU time metrics
-- **Global Search** - Cross-namespace key and value search
-- **Job History** - Comprehensive operation tracking
-- **Webhook Notifications** - Event-driven webhooks with HMAC signatures
-- **Health Dashboard** - System overview, stale instance detection, storage quota alerts
-- **Centralized Error Logging** - Structured error logging with consistent format across all modules
+### Metrics Dashboard
+- Request volume over time
+- Storage usage
+- CPU time metrics (average and total)
+
+### Global Search
+- **Cross-namespace key search** - Search for storage keys by name across all instances
+- **Value search** - Search within JSON values to find data across instances
+- **Namespace filtering** - Filter search to specific namespaces
+- **Result grouping** - Results grouped by namespace for easy navigation
+- **Match highlighting** - Search terms highlighted in results
+- **Value previews** - Shows matching portion of values for value searches
+- **Job tracking** - All search operations logged to job history
+
+### Job History
+- **Comprehensive tracking** - Records all operations including:
+  - Namespace: create, delete, clone, download (single & batch)
+  - Instance: create, delete, clone, download (single & batch)
+  - Storage keys: create/update/delete (single), batch delete, batch export, import
+  - Alarms: set, delete
+  - Backup/restore operations
+  - Batch operations: delete, backup, download (namespaces, instances, keys)
+  - **Search operations: key search, value search**
+- View status, progress, and timing
+- Error details for failed operations
+- Filter by status or namespace
+
+### Webhook Notifications
+- **Event-driven webhooks** - Send HTTP notifications on key events
+- **Configurable events** - backup_complete, restore_complete, alarm_set, alarm_deleted, job_failed, batch_complete
+- **HMAC signatures** - Optional secret-based request signing for security
+- **Test webhooks** - Verify endpoint connectivity before going live
+
+### Centralized Error Logging
+- **Structured error payloads** - Consistent format with module, operation, context, and metadata
+- **Module-prefixed error codes** - e.g., `NS_CREATE_FAILED`, `INST_DELETE_FAILED`, `BKP_RESTORE_FAILED`
+- **Severity levels** - error, warning, info
+- **Webhook integration** - Automatic webhook triggers for job failures
+- **Stack trace capture** - Full stack traces logged for debugging
+
+### Health Dashboard
+- **System overview** - Total namespaces, instances, and alarms at a glance
+- **Stale instance detection** - Identify instances not accessed in 7+ days
+- **Storage quota alerts** - Warn when instances approach 10GB DO storage limit (80% warning, 90% critical)
+- **Active alarms list** - See all pending alarms with countdown timers
+- **Storage summary** - Aggregate storage usage across all instances
+- **Recent activity** - Timeline of operations in last 24h/7d
+
+### User Experience
+- Dark/Light/System themes
+- Responsive design
+- Enterprise auth via Cloudflare Access
+- **Accessible UI** - Proper form labels and ARIA attributes
 
 ---
 
@@ -241,7 +323,7 @@ docker-compose pull && docker-compose up -d
 | Tag | Description |
 |-----|-------------|
 | `latest` | Latest stable release |
-| `v1.0.0` | Specific version (recommended for production) |
+| `v1.1.0` | Specific version (recommended for production) |
 | `sha-XXXXXX` | Commit SHA for reproducible builds |
 
 ---
@@ -321,7 +403,6 @@ curl -X GET "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers
 ## 📞 Support
 
 - 🐛 **Bug Reports:** [GitHub Issues](https://github.com/neverinfamous/do-manager/issues)
-- 💬 **Discussions:** [GitHub Discussions](https://github.com/neverinfamous/do-manager/discussions)
 - 📧 **Email:** admin@adamic.tech
 
 ---

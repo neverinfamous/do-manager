@@ -91,7 +91,7 @@ async function fetchInstanceStorage(
   }
 
   const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-  const instanceName = instance.name ?? instance.object_id
+  const instanceName = instance.object_id
 
   // First, get list of keys
   const listResponse = await fetch(

@@ -1,4 +1,20 @@
 /**
+ * Namespace color options for visual organization
+ * Organized in rows by hue family for intuitive selection
+ */
+export type NamespaceColor =
+  | 'red' | 'red-light' | 'red-dark'
+  | 'orange' | 'orange-light' | 'amber'
+  | 'yellow' | 'yellow-light' | 'lime'
+  | 'green' | 'green-light' | 'emerald'
+  | 'teal' | 'cyan' | 'sky'
+  | 'blue' | 'blue-light' | 'indigo'
+  | 'purple' | 'violet' | 'fuchsia'
+  | 'pink' | 'rose' | 'pink-light'
+  | 'gray' | 'slate' | 'zinc'
+  | null
+
+/**
  * Namespace from API
  */
 export interface Namespace {
@@ -9,15 +25,29 @@ export interface Namespace {
   storage_backend: 'sqlite' | 'kv'
   endpoint_url: string | null
   admin_hook_enabled: number
+  color: NamespaceColor
   created_at: string
   updated_at: string
   metadata: string | null
+  /** Number of tracked instances in this namespace */
+  instance_count?: number
 }
 
 /**
  * Instance color options for visual organization
+ * Organized in rows by hue family for intuitive selection
  */
-export type InstanceColor = 'red' | 'orange' | 'yellow' | 'green' | 'teal' | 'blue' | 'purple' | 'pink' | 'gray' | null
+export type InstanceColor =
+  | 'red' | 'red-light' | 'red-dark'
+  | 'orange' | 'orange-light' | 'amber'
+  | 'yellow' | 'yellow-light' | 'lime'
+  | 'green' | 'green-light' | 'emerald'
+  | 'teal' | 'cyan' | 'sky'
+  | 'blue' | 'blue-light' | 'indigo'
+  | 'purple' | 'violet' | 'fuchsia'
+  | 'pink' | 'rose' | 'pink-light'
+  | 'gray' | 'slate' | 'zinc'
+  | null
 
 /**
  * Instance from API
@@ -34,6 +64,7 @@ export interface Instance {
   created_at: string
   updated_at: string
   metadata: string | null
+  tags: string[]
 }
 
 /**
@@ -68,6 +99,8 @@ export interface NamespaceResponse {
 export interface CloneNamespaceResponse {
   namespace: Namespace
   clonedFrom: string
+  instancesCloned?: number
+  warnings?: string[]
 }
 
 export interface DiscoverResponse {
@@ -99,3 +132,49 @@ export interface SavedQuery {
   updated_at: string
 }
 
+/**
+ * Migration types for database upgrade system
+ */
+export interface Migration {
+  version: number
+  name: string
+  description: string
+}
+
+export interface AppliedMigration {
+  version: number
+  migration_name: string
+  applied_at: string
+}
+
+export interface LegacyInstallationInfo {
+  isLegacy: boolean
+  existingTables: string[]
+  suggestedVersion: number
+}
+
+export interface MigrationStatus {
+  currentVersion: number
+  latestVersion: number
+  pendingMigrations: Migration[]
+  appliedMigrations: AppliedMigration[]
+  isUpToDate: boolean
+  legacy?: LegacyInstallationInfo
+}
+
+export interface MigrationResult {
+  success: boolean
+  migrationsApplied: number
+  currentVersion: number
+  errors: string[]
+}
+
+export interface MigrationStatusResponse {
+  result: MigrationStatus
+  success: boolean
+}
+
+export interface MigrationResultResponse {
+  result: MigrationResult
+  success: boolean
+}

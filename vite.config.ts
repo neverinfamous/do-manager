@@ -28,6 +28,10 @@ export default defineConfig({
           ],
           // Icons
           'lucide': ['lucide-react'],
+          // SQL editor dependencies
+          'sql-tools': ['sql-formatter', 'prismjs'],
+          // ZIP library for batch downloads
+          'fflate': ['fflate'],
         },
       },
     },

@@ -1,4 +1,5 @@
-const API_BASE = '/api'
+import { apiFetch } from '../lib/apiFetch'
+import { getCached, setCache, CACHE_KEYS, CACHE_TTL } from '../lib/cache'
 
 /**
  * Active alarm info in health summary
@@ -89,41 +90,26 @@ export interface HealthSummary {
 }
 
 /**
- * Generic fetch wrapper with error handling
- */
-async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  if (options.headers) {
-    const optHeaders = options.headers instanceof Headers
-      ? options.headers
-      : new Headers(options.headers as Record<string, string>)
-    optHeaders.forEach((value, key) => headers.set(key, value))
-  }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: string }
-    throw new Error(errorData.error ?? `Request failed: ${String(response.status)}`)
-  }
-
-  return response.json() as Promise<T>
-}
-
-/**
- * Health API functions
+ * Health API functions with caching support
  */
 export const healthApi = {
   /**
    * Get health summary
+   * Uses 2-minute TTL for health data
+   * @param skipCache Set true to bypass cache (e.g., on refresh)
    */
-  async getSummary(): Promise<HealthSummary> {
-    return apiFetch<HealthSummary>('/health')
+  async getSummary(skipCache = false): Promise<HealthSummary> {
+    const cacheKey = CACHE_KEYS.HEALTH
+
+    if (!skipCache) {
+      const cached = getCached(cacheKey, CACHE_TTL.HEALTH) as HealthSummary | undefined
+      if (cached) {
+        return cached
+      }
+    }
+
+    const data = await apiFetch<HealthSummary>('/health')
+    setCache(cacheKey, data)
+    return data
   },
 }

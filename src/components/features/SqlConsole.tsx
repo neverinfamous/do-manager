@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Play, Loader2, Table, Download, Trash2, FileCode, Save, BookOpen, Edit, X } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Play, Loader2, Download, Trash2, Save, BookOpen, Edit, X, Copy, Check, AlignLeft, AlertTriangle, CheckCircle2, FileCode } from 'lucide-react'
+import { format } from 'sql-formatter'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
+import { Checkbox } from '../ui/checkbox'
 import {
   Card,
   CardContent,
@@ -21,30 +23,64 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
+
 import { storageApi, type SqlResponse } from '../../services/storageApi'
 import { queriesApi } from '../../services/queriesApi'
-import { sqlTemplates } from '../../lib/sqlTemplates'
+
+import { validateSql } from '../../lib/sqlValidator'
+import { handleSqlKeydown } from '../../lib/sqlAutocomplete'
+import { parseContext, filterSuggestions } from '../../lib/sqlContextParser'
+import { ALL_SQL_KEYWORDS } from '../../lib/sqlKeywords'
+import { getCaretCoordinates } from '../../lib/caretPosition'
+import { SqlEditor } from '../SqlEditor'
+import { AutocompletePopup, type Suggestion } from '../AutocompletePopup'
+import { sqlTemplateGroups, sqlTemplates } from '../../lib/sqlTemplates'
 import type { SavedQuery } from '../../types'
+
 
 interface SqlConsoleProps {
   instanceId: string
   namespaceId: string
-  tables: string[]
 }
 
-export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps): React.ReactElement {
+export function SqlConsole({ instanceId, namespaceId }: SqlConsoleProps): React.ReactElement {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorContainerRef = useRef<HTMLDivElement>(null)
+
   const [query, setQuery] = useState('')
   const [result, setResult] = useState<SqlResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [history, setHistory] = useState<string[]>([])
-  const [selectedTable, setSelectedTable] = useState<string | undefined>(
-    tables.length > 0 ? tables[0] : undefined
-  )
+
+  // Validation state
+  const validation = validateSql(query)
+  const hasValidationError = !validation.isValid && query.trim().length > 5
+
+  // Copied state for Copy button
+  const [copied, setCopied] = useState(false)
+
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0)
+  const [showAutocomplete, setShowAutocomplete] = useState(false)
+  const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 })
+
+  // User preference toggles (persisted to localStorage)
+  const [enableSuggestions, setEnableSuggestions] = useState(() => {
+    const stored = localStorage.getItem('do-manager-sql-suggestions')
+    return stored !== 'false'
+  })
+  const [allowDestructive, setAllowDestructive] = useState(() => {
+    const stored = localStorage.getItem('do-manager-sql-destructive')
+    return stored === 'true'
+  })
 
   // Saved queries state
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([])
@@ -55,6 +91,7 @@ export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps)
   const [editingQuery, setEditingQuery] = useState<SavedQuery | null>(null)
   const [queryName, setQueryName] = useState('')
   const [queryDescription, setQueryDescription] = useState('')
+
 
   // Load saved queries
   const loadSavedQueries = useCallback(async (): Promise<void> => {
@@ -74,13 +111,7 @@ export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps)
     void loadSavedQueries()
   }, [loadSavedQueries])
 
-  const handleTemplateSelect = (templateId: string): void => {
-    const template = sqlTemplates.find((t) => t.id === templateId)
-    if (template) {
-      const generatedQuery = template.generateQuery(selectedTable)
-      setQuery(generatedQuery)
-    }
-  }
+
 
   const handleSavedQuerySelect = (queryId: string): void => {
     const saved = savedQueries.find((q) => q.id === queryId)
@@ -100,7 +131,7 @@ export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps)
       setError('')
       const data = await storageApi.sql(instanceId, query.trim())
       setResult(data)
-      
+
       // Add to history
       setHistory((prev) => {
         const newHistory = [query.trim(), ...prev.filter((q) => q !== query.trim())]
@@ -114,19 +145,194 @@ export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps)
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent): void => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    // Execute query with Ctrl+Enter
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault()
       void executeQuery()
+      return
+    }
+
+    // Autocomplete navigation
+    if (showAutocomplete && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setSelectedSuggestionIndex((prev) => (prev + 1) % suggestions.length)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setSelectedSuggestionIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length)
+        return
+      }
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault()
+        const selected = suggestions[selectedSuggestionIndex]
+        if (selected) {
+          acceptSuggestion(selected)
+        }
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setShowAutocomplete(false)
+        return
+      }
+    }
+
+    // Smart bracket pairing and indentation
+    const target = e.target as HTMLTextAreaElement
+    const result = handleSqlKeydown(
+      e.key,
+      target.value,
+      target.selectionStart,
+      target.selectionEnd,
+      e.shiftKey
+    )
+    if (result.handled && result.newValue !== undefined && result.newCursorPos !== undefined) {
+      e.preventDefault()
+      const newPos = result.newCursorPos
+      setQuery(result.newValue)
+      // Set cursor position after state update
+      setTimeout(() => {
+        target.setSelectionRange(newPos, newPos)
+      }, 0)
     }
   }
 
-  const insertTableQuery = (tableName: string): void => {
-    setQuery(`SELECT * FROM ${tableName} LIMIT 100`)
+  // Format SQL query
+  const handleFormat = (): void => {
+    if (!query.trim()) return
+    try {
+      const formatted = format(query, {
+        language: 'sqlite',
+        keywordCase: 'upper',
+        indentStyle: 'standard',
+      })
+      setQuery(formatted)
+    } catch {
+      // If formatting fails, keep original
+    }
   }
+
+  // Copy query to clipboard
+  const handleCopy = async (): Promise<void> => {
+    if (!query.trim()) return
+    try {
+      await navigator.clipboard.writeText(query)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Ignore copy errors
+    }
+  }
+
+  // Update autocomplete suggestions
+  const updateSuggestions = useCallback((): void => {
+    if (!enableSuggestions || !textareaRef.current) {
+      setShowAutocomplete(false)
+      return
+    }
+
+    const textarea = textareaRef.current
+    const cursorPos = textarea.selectionStart
+
+    // Parse context to determine what to suggest
+    const context = parseContext(query, cursorPos)
+
+    let items: string[] = []
+    if (context.type === 'keyword') {
+      items = [...ALL_SQL_KEYWORDS]
+    } else if (context.type === 'table') {
+      // Table suggestions from context (no external table list)
+      items = context.tableNames
+    } else if (context.type === 'column') {
+      // Column suggestions from context
+      items = context.tableNames
+    }
+
+    // Filter by current word
+    const filtered = filterSuggestions(items, context.currentWord)
+
+    if (filtered.length === 0 || context.currentWord.length < 1) {
+      setShowAutocomplete(false)
+      return
+    }
+
+    // Convert to Suggestion objects
+    const suggestionItems: Suggestion[] = filtered.map((text) => ({
+      text,
+      type: context.type,
+    }))
+
+    setSuggestions(suggestionItems)
+    setSelectedSuggestionIndex(0)
+
+    // Calculate popup position
+    try {
+      const coords = getCaretCoordinates(textarea)
+      const editorRect = editorContainerRef.current?.getBoundingClientRect()
+      if (editorRect) {
+        setPopupPosition({
+          top: coords.top + coords.height + 4,
+          left: coords.left,
+        })
+      }
+    } catch {
+      // Fallback position
+    }
+
+    setShowAutocomplete(true)
+  }, [query, enableSuggestions])
+
+  // Accept a suggestion
+  const acceptSuggestion = (suggestion: Suggestion): void => {
+    if (!textareaRef.current) return
+
+    const textarea = textareaRef.current
+    const cursorPos = textarea.selectionStart
+    const context = parseContext(query, cursorPos)
+
+    // Replace the current word with the suggestion
+    const before = query.slice(0, context.wordStart)
+    const after = query.slice(cursorPos)
+    const newQuery = before + suggestion.text + ' ' + after
+
+    setQuery(newQuery)
+    setShowAutocomplete(false)
+
+    // Set cursor after inserted text
+    const newPos = context.wordStart + suggestion.text.length + 1
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(newPos, newPos)
+    }, 0)
+  }
+
+  // Update suggestions when query changes
+  useEffect(() => {
+    if (enableSuggestions) {
+      const timer = setTimeout(updateSuggestions, 50)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [query, enableSuggestions, updateSuggestions])
+
+  // Persist toggle preferences
+  useEffect(() => {
+    localStorage.setItem('do-manager-sql-suggestions', String(enableSuggestions))
+  }, [enableSuggestions])
+
+  useEffect(() => {
+    localStorage.setItem('do-manager-sql-destructive', String(allowDestructive))
+  }, [allowDestructive])
+
+
+
 
   const exportResults = (): void => {
     if (!result?.results.length) return
-    
+
     const csv = [
       Object.keys(result.results[0] as Record<string, unknown>).join(','),
       ...result.results.map((row) =>
@@ -296,96 +502,148 @@ export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps)
         </CardContent>
       </Card>
 
-      {/* Tables & Templates */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Query Builder</CardTitle>
-          <CardDescription className="text-xs">
-            {tables.length > 0 
-              ? 'Select a table and use templates to quickly generate queries'
-              : 'Use templates to generate queries (no tables detected yet)'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Table Selection */}
-          {tables.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {tables.map((table) => (
-                <button
-                  key={table}
-                  onClick={() => {
-                    setSelectedTable(table)
-                    insertTableQuery(table)
-                  }}
-                  className={`px-2 py-1 text-xs font-mono rounded transition-colors ${
-                    selectedTable === table
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted hover:bg-accent'
-                  }`}
-                >
-                  <Table className="h-3 w-3 inline mr-1" />
-                  {table}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Query Templates */}
-          <div className="flex items-end gap-3">
-            <div className="flex-1 max-w-xs space-y-1.5">
-              <Label htmlFor="sql-template-select" className="text-xs">
-                <FileCode className="h-3 w-3 inline mr-1" />
-                Query Templates
-              </Label>
-              <Select onValueChange={handleTemplateSelect}>
-                <SelectTrigger id="sql-template-select" className="h-9">
-                  <SelectValue placeholder="Select a template..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {sqlTemplates.map((template) => (
-                    <SelectItem
-                      key={template.id}
-                      value={template.id}
-                      disabled={template.requiresTable && !selectedTable}
-                    >
-                      <span className="font-medium">{template.name}</span>
-                      <span className="text-muted-foreground ml-2 text-xs">
-                        — {template.description}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedTable && (
-              <p className="text-xs text-muted-foreground pb-2">
-                Using table: <code className="font-mono bg-muted px-1 rounded">{selectedTable}</code>
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Query Editor */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">SQL Query</CardTitle>
-            <span className="text-xs text-muted-foreground">
-              Ctrl+Enter to execute
-            </span>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-sm">SQL Query</CardTitle>
+              {/* Quick Queries Dropdown */}
+              <Label htmlFor="quick-queries-select" className="sr-only">
+                Quick Queries
+              </Label>
+              <Select
+                value=""
+                onValueChange={(templateId) => {
+                  const template = sqlTemplates.find(t => t.id === templateId)
+                  if (template) {
+                    setQuery(template.query)
+                    setShowAutocomplete(false)
+                  }
+                }}
+              >
+                <SelectTrigger id="quick-queries-select" className="w-[160px] h-8 text-xs">
+                  <FileCode className="h-3.5 w-3.5 mr-1.5" />
+                  <SelectValue placeholder="Quick Queries" />
+                </SelectTrigger>
+                <SelectContent className="max-h-80">
+                  {sqlTemplateGroups.map((group, groupIndex) => (
+                    <SelectGroup key={group.id} className={groupIndex % 2 === 1 ? 'bg-muted/50' : ''}>
+                      <SelectLabel className="text-xs font-semibold text-primary">
+                        {group.label}
+                      </SelectLabel>
+                      {group.templates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          <div className="flex flex-col">
+                            <span className="text-sm">{template.name}</span>
+                            <span className="text-xs text-muted-foreground">{template.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+              {/* Validation indicator */}
+              {query.trim() && (
+                hasValidationError ? (
+                  <span className="flex items-center gap-1 text-xs text-destructive">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    {validation.error}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Valid SQL
+                  </span>
+                )
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleFormat}
+                disabled={!query.trim()}
+                title="Format SQL"
+              >
+                <AlignLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void handleCopy()}
+                disabled={!query.trim()}
+                title="Copy to clipboard"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Ctrl+Enter to execute
+              </span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <textarea
-            id="sql-query-input"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="SELECT * FROM users LIMIT 10"
-            className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          />
-          <div className="flex items-center justify-between mt-3">
+          {/* SQL Editor with autocomplete */}
+          <div ref={editorContainerRef} className="relative">
+            <SqlEditor
+              id="sql-query-input"
+              name="query"
+              value={query}
+              onChange={setQuery}
+              onKeyDown={handleKeyDown}
+              onClick={() => setShowAutocomplete(false)}
+              placeholder="SELECT * FROM users LIMIT 10"
+              hasError={hasValidationError}
+              errorPosition={validation.errorPosition}
+              textareaRef={textareaRef}
+              ariaLabel="SQL query input"
+              ariaAutoComplete={enableSuggestions ? 'list' : 'none'}
+              ariaControls={showAutocomplete ? 'sql-suggestions' : undefined}
+              ariaExpanded={showAutocomplete}
+            />
+            {/* Autocomplete popup */}
+            <AutocompletePopup
+              suggestions={suggestions}
+              selectedIndex={selectedSuggestionIndex}
+              position={popupPosition}
+              visible={showAutocomplete}
+              onSelect={acceptSuggestion}
+              onSelectionChange={setSelectedSuggestionIndex}
+            />
+          </div>
+
+          {/* Toggle options */}
+          <div className="flex items-center gap-6 mt-3 mb-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="enable-suggestions"
+                checked={enableSuggestions}
+                onCheckedChange={(checked) => setEnableSuggestions(checked === true)}
+              />
+              <Label htmlFor="enable-suggestions" className="text-xs cursor-pointer">
+                Enable SQL suggestions
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="allow-destructive"
+                checked={allowDestructive}
+                onCheckedChange={(checked) => setAllowDestructive(checked === true)}
+              />
+              <Label htmlFor="allow-destructive" className="text-xs cursor-pointer">
+                Allow destructive queries (DROP, DELETE, TRUNCATE)
+              </Label>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button onClick={() => void executeQuery()} disabled={loading}>
                 {loading ? (
@@ -432,6 +690,7 @@ export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps)
           </div>
         </CardContent>
       </Card>
+
 
       {/* Error */}
       {error && (
@@ -548,7 +807,7 @@ export function SqlConsole({ instanceId, namespaceId, tables }: SqlConsoleProps)
               />
             </div>
             <div className="space-y-2">
-              <Label>Query Preview</Label>
+              <span className="text-sm font-medium">Query Preview</span>
               <pre className="p-2 bg-muted rounded-md text-xs font-mono overflow-x-auto max-h-32">
                 {query}
               </pre>

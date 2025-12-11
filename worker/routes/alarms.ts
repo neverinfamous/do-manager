@@ -115,7 +115,7 @@ async function getAlarm(
 
     // Normalize endpoint URL (remove trailing slash)
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/alarm`
 
     logInfo(`Calling admin hook: ${adminUrl}`, {
@@ -232,7 +232,7 @@ async function setAlarm(
 
     // Normalize endpoint URL and build admin URL
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/alarm`
 
     // Call the DO's admin hook
@@ -339,9 +339,12 @@ async function deleteAlarm(
       )
     }
 
+    // Create job to track deletion
+    const jobId = await createJob(env.METADATA, 'delete_alarm', userEmail, instance.namespace_id, instanceId)
+
     // Normalize endpoint URL and build admin URL
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/alarm`
 
     // Call the DO's admin hook
@@ -353,6 +356,7 @@ async function deleteAlarm(
     })
 
     if (!response.ok) {
+      await failJob(env.METADATA, jobId, `Failed to delete alarm: ${String(response.status)}`)
       return errorResponse('Failed to delete alarm on DO', corsHeaders, response.status)
     }
 
@@ -367,6 +371,9 @@ async function deleteAlarm(
     await env.METADATA.prepare(
       'UPDATE alarm_history SET status = ?, completed_at = ? WHERE instance_id = ? AND status = ?'
     ).bind('cancelled', now, instanceId, 'scheduled').run()
+
+    // Complete the job
+    await completeJob(env.METADATA, jobId)
 
     // Trigger webhook
     void triggerWebhooks(

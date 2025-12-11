@@ -81,7 +81,7 @@ export function safeJsonParse<T>(json: string | null, defaultValue: T): T {
 /**
  * Job types for tracking user actions
  */
-export type JobType = 
+export type JobType =
   | 'backup'
   | 'restore'
   | 'create_namespace'
@@ -89,8 +89,10 @@ export type JobType =
   | 'clone_namespace'
   | 'create_instance'
   | 'delete_instance'
+  | 'rename_instance'
   | 'create_key'
   | 'delete_key'
+  | 'rename_key'
   | 'import_keys'
   | 'set_alarm'
   | 'delete_alarm'
@@ -107,6 +109,8 @@ export type JobType =
   | 'clone_instance'
   | 'search_keys'
   | 'search_values'
+  | 'search_tags'
+
 
 /**
  * Create a job record in the database
@@ -122,12 +126,12 @@ export async function createJob(
   try {
     const jobId = generateId()
     const now = nowISO()
-    
+
     await db.prepare(`
       INSERT INTO jobs (id, type, status, namespace_id, instance_id, user_email, progress, created_at, started_at)
       VALUES (?, ?, 'running', ?, ?, ?, 0, ?, ?)
     `).bind(jobId, type, namespaceId, instanceId, userEmail, now, now).run()
-    
+
     return jobId
   } catch (error) {
     // Log locally - no env available for webhooks

@@ -16,13 +16,14 @@ import { handleWebhookRoutes } from './routes/webhooks'
 import { handleHealthRoutes } from './routes/health'
 import { handleQueriesRoutes } from './routes/queries'
 import { handleDiffRoutes } from './routes/diff'
+import { handleMigrationRoutes } from './routes/migrations'
 
 /**
  * Main request handler
  */
 async function handleApiRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url)
-  
+
   logInfo(`[Request] ${request.method} ${url.pathname}`, {
     module: 'worker',
     operation: 'handleApiRequest',
@@ -134,6 +135,10 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
 
   if (url.pathname.startsWith('/api/queries')) {
     return handleQueriesRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
+  }
+
+  if (url.pathname.startsWith('/api/migrations')) {
+    return handleMigrationRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
   }
 
   // 404 for unknown API routes

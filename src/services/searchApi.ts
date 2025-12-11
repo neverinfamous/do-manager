@@ -2,50 +2,59 @@ import type {
   SearchResponse,
   KeySearchOptions,
   ValueSearchOptions,
+  TagSearchOptions,
 } from '../types/search'
-
-const API_BASE = '/api'
+import { apiFetch } from '../lib/apiFetch'
+import { getCached, setCache, CACHE_KEYS, CACHE_TTL } from '../lib/cache'
 
 /**
- * Generic fetch wrapper with error handling
+ * Generate a cache key for search results
  */
-async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  if (options.headers) {
-    const optHeaders = options.headers instanceof Headers
-      ? options.headers
-      : new Headers(options.headers as Record<string, string>)
-    optHeaders.forEach((value, key) => headers.set(key, value))
-  }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: string }
-    throw new Error(errorData.error ?? `Request failed: ${String(response.status)}`)
-  }
-
-  return response.json() as Promise<T>
+function buildSearchCacheKey(
+  prefix: string,
+  query: string,
+  namespaceIds?: string[],
+  limit?: number
+): string {
+  const parts = [
+    prefix,
+    query.toLowerCase(),
+    namespaceIds?.sort().join(',') ?? 'all',
+    String(limit ?? 100),
+  ]
+  return parts.join(':')
 }
 
 /**
  * Search API functions
+ * Supports caching with 5-minute TTL; bypass with skipCache param
  */
 export const searchApi = {
   /**
    * Search for keys across all namespaces/instances
+   * @param query Search query string
+   * @param options Search options including skipCache to bypass cache
    */
   async searchKeys(
     query: string,
-    options: KeySearchOptions = {}
+    options: KeySearchOptions & { skipCache?: boolean } = {}
   ): Promise<SearchResponse> {
-    return apiFetch<SearchResponse>('/search/keys', {
+    const cacheKey = buildSearchCacheKey(
+      CACHE_KEYS.SEARCH_KEYS,
+      query,
+      options.namespaceIds,
+      options.limit
+    )
+
+    // Check cache unless skipCache is true
+    if (!options.skipCache) {
+      const cached = getCached(cacheKey, CACHE_TTL.DEFAULT) as SearchResponse | undefined
+      if (cached) {
+        return cached
+      }
+    }
+
+    const response = await apiFetch<SearchResponse>('/search/keys', {
       method: 'POST',
       body: JSON.stringify({
         query,
@@ -53,16 +62,37 @@ export const searchApi = {
         limit: options.limit,
       }),
     })
+
+    // Cache the result
+    setCache(cacheKey, response)
+    return response
   },
 
   /**
    * Search within storage values across namespaces/instances
+   * @param query Search query string
+   * @param options Search options including skipCache to bypass cache
    */
   async searchValues(
     query: string,
-    options: ValueSearchOptions = {}
+    options: ValueSearchOptions & { skipCache?: boolean } = {}
   ): Promise<SearchResponse> {
-    return apiFetch<SearchResponse>('/search/values', {
+    const cacheKey = buildSearchCacheKey(
+      CACHE_KEYS.SEARCH_VALUES,
+      query,
+      options.namespaceIds,
+      options.limit
+    )
+
+    // Check cache unless skipCache is true
+    if (!options.skipCache) {
+      const cached = getCached(cacheKey, CACHE_TTL.DEFAULT) as SearchResponse | undefined
+      if (cached) {
+        return cached
+      }
+    }
+
+    const response = await apiFetch<SearchResponse>('/search/values', {
       method: 'POST',
       body: JSON.stringify({
         query,
@@ -71,6 +101,47 @@ export const searchApi = {
         limit: options.limit,
       }),
     })
+
+    // Cache the result
+    setCache(cacheKey, response)
+    return response
+  },
+
+  /**
+   * Search for instances by tag (searches D1 metadata, no admin hooks required)
+   * @param query Search query string
+   * @param options Search options including skipCache to bypass cache
+   */
+  async searchTags(
+    query: string,
+    options: TagSearchOptions & { skipCache?: boolean } = {}
+  ): Promise<SearchResponse> {
+    const cacheKey = buildSearchCacheKey(
+      CACHE_KEYS.SEARCH_TAGS,
+      query,
+      options.namespaceIds,
+      options.limit
+    )
+
+    // Check cache unless skipCache is true
+    if (!options.skipCache) {
+      const cached = getCached(cacheKey, CACHE_TTL.DEFAULT) as SearchResponse | undefined
+      if (cached) {
+        return cached
+      }
+    }
+
+    const response = await apiFetch<SearchResponse>('/search/tags', {
+      method: 'POST',
+      body: JSON.stringify({
+        query,
+        namespaceIds: options.namespaceIds,
+        limit: options.limit,
+      }),
+    })
+
+    // Cache the result
+    setCache(cacheKey, response)
+    return response
   },
 }
-

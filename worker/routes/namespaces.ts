@@ -1,6 +1,22 @@
-import type { Env, CorsHeaders, Namespace } from '../types'
+import type { Env, CorsHeaders, Namespace, NamespaceColor } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 import { logWarning } from '../utils/error-logger'
+
+/**
+ * Valid namespace colors - organized by hue family
+ */
+const VALID_COLORS = [
+  // Reds & Pinks
+  'red-light', 'red', 'red-dark', 'rose', 'pink-light', 'pink',
+  // Oranges & Yellows
+  'orange-light', 'orange', 'amber', 'yellow-light', 'yellow', 'lime',
+  // Greens & Teals
+  'green-light', 'green', 'emerald', 'teal', 'cyan', 'sky',
+  // Blues & Purples
+  'blue-light', 'blue', 'indigo', 'violet', 'purple', 'fuchsia',
+  // Neutrals
+  'slate', 'gray', 'zinc',
+] as const
 
 /**
  * System DO namespaces to filter from discovery
@@ -20,7 +36,7 @@ const SYSTEM_DO_PATTERNS = [
  * Check if a namespace name matches a system pattern
  */
 function isSystemNamespace(name: string): boolean {
-  return SYSTEM_DO_PATTERNS.some((pattern) => 
+  return SYSTEM_DO_PATTERNS.some((pattern) =>
     name === pattern || name.startsWith(pattern)
   )
 }
@@ -28,7 +44,7 @@ function isSystemNamespace(name: string): boolean {
 /**
  * Mock namespaces for local development
  */
-const MOCK_NAMESPACES: Namespace[] = [
+const MOCK_NAMESPACES: (Namespace & { instance_count: number })[] = [
   {
     id: 'ns-1',
     name: 'ChatRoom',
@@ -37,9 +53,11 @@ const MOCK_NAMESPACES: Namespace[] = [
     storage_backend: 'sqlite',
     endpoint_url: null,
     admin_hook_enabled: 1,
+    color: 'blue',
     created_at: '2024-01-15T10:00:00Z',
     updated_at: '2024-01-15T10:00:00Z',
     metadata: null,
+    instance_count: 3,
   },
   {
     id: 'ns-2',
@@ -49,9 +67,11 @@ const MOCK_NAMESPACES: Namespace[] = [
     storage_backend: 'sqlite',
     endpoint_url: null,
     admin_hook_enabled: 0,
+    color: null,
     created_at: '2024-02-20T14:30:00Z',
     updated_at: '2024-02-20T14:30:00Z',
     metadata: null,
+    instance_count: 1,
   },
 ]
 
@@ -122,6 +142,16 @@ export async function handleNamespaceRoutes(
     return cloneNamespace(request, namespaceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
+  // PUT /api/namespaces/:id/color - Update namespace color
+  const colorMatch = /^\/api\/namespaces\/([^/]+)\/color$/.exec(path)
+  if (method === 'PUT' && colorMatch) {
+    const namespaceId = colorMatch[1]
+    if (!namespaceId) {
+      return errorResponse('Namespace ID required', corsHeaders, 400)
+    }
+    return updateNamespaceColor(request, namespaceId, env, corsHeaders, isLocalDev)
+  }
+
   return errorResponse('Not Found', corsHeaders, 404)
 }
 
@@ -138,9 +168,15 @@ async function listNamespaces(
   }
 
   try {
-    const result = await env.METADATA.prepare(
-      'SELECT * FROM namespaces ORDER BY created_at DESC'
-    ).all<Namespace>()
+    // Use LEFT JOIN with COUNT to get instance counts efficiently
+    // The idx_instances_namespace index makes this performant
+    const result = await env.METADATA.prepare(`
+      SELECT n.*, COUNT(i.id) as instance_count
+      FROM namespaces n
+      LEFT JOIN instances i ON n.id = i.namespace_id
+      GROUP BY n.id
+      ORDER BY n.created_at DESC
+    `).all<Namespace & { instance_count: number }>()
 
     return jsonResponse({ namespaces: result.results }, corsHeaders)
   } catch (error) {
@@ -168,12 +204,12 @@ async function discoverNamespaces(
   try {
     // Fetch DO namespaces from Cloudflare API
     const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/durable_objects/namespaces`
-    
+
     // Build auth headers - support both API Token (Bearer) and Global API Key
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     }
-    
+
     // Check if API_KEY looks like a Global API Key (shorter, no prefix) or API Token
     if (env.API_KEY && env.API_KEY.length < 50) {
       // Global API Key style - requires email
@@ -183,7 +219,7 @@ async function discoverNamespaces(
       // API Token style
       headers['Authorization'] = `Bearer ${env.API_KEY}`
     }
-    
+
     const response = await fetch(apiUrl, { headers })
 
     if (!response.ok) {
@@ -207,9 +243,9 @@ async function discoverNamespaces(
       errors: { message: string }[]
       result: DurableObjectNs[]
     }
-    
+
     const data = await response.json() as CloudflareResponse
-    
+
     if (!data.success) {
       const firstError = data.errors[0]
       const errorMessage = firstError?.message ?? 'API error'
@@ -279,6 +315,7 @@ async function addNamespace(
       storage_backend: body.storage_backend ?? 'sqlite',
       endpoint_url: endpointUrl,
       admin_hook_enabled: hasEndpoint ? 1 : 0,
+      color: null,
       created_at: nowISO(),
       updated_at: nowISO(),
       metadata: null,
@@ -510,6 +547,7 @@ async function cloneNamespace(
 ): Promise<Response> {
   interface CloneNamespaceBody {
     name: string
+    deepClone?: boolean
   }
 
   const body = await parseJsonBody<CloneNamespaceBody>(request)
@@ -518,6 +556,7 @@ async function cloneNamespace(
   }
 
   const newName = body.name.trim()
+  const deepClone = body.deepClone === true
 
   if (isLocalDev) {
     // Mock clone for local development
@@ -534,6 +573,7 @@ async function cloneNamespace(
       storage_backend: sourceNs.storage_backend,
       endpoint_url: sourceNs.endpoint_url,
       admin_hook_enabled: sourceNs.admin_hook_enabled,
+      color: sourceNs.color,
       created_at: nowISO(),
       updated_at: nowISO(),
       metadata: null,
@@ -542,10 +582,15 @@ async function cloneNamespace(
     return jsonResponse({
       namespace: newNs,
       clonedFrom: sourceNs.name,
+      instancesCloned: deepClone ? 2 : undefined,
     }, corsHeaders, 201)
   }
 
   const jobId = await createJob(env.METADATA, 'clone_namespace', userEmail, sourceNamespaceId)
+
+  // Track created resources for rollback on failure
+  let newNamespaceId: string | null = null
+  const createdInstanceIds: string[] = []
 
   try {
     // Get source namespace
@@ -568,8 +613,19 @@ async function cloneNamespace(
       return errorResponse('Namespace with this name already exists', corsHeaders, 409)
     }
 
+    // For deep clone, verify admin hooks are enabled
+    if (deepClone && (!sourceNs.endpoint_url || sourceNs.admin_hook_enabled !== 1)) {
+      await failJob(env.METADATA, jobId, 'Deep clone requires admin hooks to be enabled')
+      return errorResponse(
+        'Deep clone requires admin hooks to be enabled on the source namespace',
+        corsHeaders,
+        400
+      )
+    }
+
     // Create cloned namespace
     const newId = generateId()
+    newNamespaceId = newId
     const now = nowISO()
 
     await env.METADATA.prepare(`
@@ -587,6 +643,126 @@ async function cloneNamespace(
       now
     ).run()
 
+    let instancesCloned = 0
+    const warnings: string[] = []
+
+    // Deep clone: TWO-PHASE APPROACH for atomicity
+    // Phase 1: Clone all instance storage first (no D1 records yet)
+    // Phase 2: Batch insert D1 records only after all storage clones succeed
+    if (deepClone && sourceNs.endpoint_url) {
+      // Get all instances for source namespace
+      interface Instance {
+        id: string
+        name: string | null
+        object_id: string
+        color: string | null
+      }
+      const instancesResult = await env.METADATA.prepare(
+        'SELECT id, name, object_id, color FROM instances WHERE namespace_id = ?'
+      ).bind(sourceNamespaceId).all<Instance>()
+
+      const instances = instancesResult.results
+      const baseUrl = sourceNs.endpoint_url.replace(/\/+$/, '')
+
+      // Track successfully cloned instances for Phase 2
+      interface ClonedInstance {
+        originalName: string | null
+        newObjectId: string
+        color: string | null
+      }
+      const successfullyClonedInstances: ClonedInstance[] = []
+      const failedInstances: string[] = []
+
+      // PHASE 1: Clone all instance storage (DO-to-DO)
+      for (const instance of instances) {
+        const instanceName = instance.name ?? instance.object_id
+
+        try {
+          // Step 1: Export storage from source instance
+          const exportResponse = await fetch(
+            `${baseUrl}/admin/${encodeURIComponent(instance.object_id)}/export`,
+            {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+            }
+          )
+
+          if (!exportResponse.ok) {
+            const errorText = await exportResponse.text().catch(() => 'Unknown error')
+            warnings.push(`Failed to export instance "${instanceName}": ${errorText.slice(0, 50)}`)
+            failedInstances.push(instanceName)
+            continue
+          }
+
+          interface ExportData { data: Record<string, unknown> }
+          const exportData: ExportData = await exportResponse.json()
+
+          // Step 2: Import storage to new instance (creates DO if needed)
+          const newInstanceName = instanceName
+          const importResponse = await fetch(
+            `${baseUrl}/admin/${encodeURIComponent(newInstanceName)}/import`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ data: exportData.data }),
+            }
+          )
+
+          if (!importResponse.ok) {
+            const errorText = await importResponse.text().catch(() => 'Unknown error')
+            warnings.push(`Failed to import to instance "${newInstanceName}": ${errorText.slice(0, 50)}`)
+            failedInstances.push(instanceName)
+            continue
+          }
+
+          // Storage clone succeeded - track for Phase 2
+          successfullyClonedInstances.push({
+            originalName: instance.name,
+            newObjectId: newInstanceName,
+            color: instance.color,
+          })
+        } catch (err) {
+          warnings.push(`Error cloning instance "${instanceName}": ${err instanceof Error ? err.message : String(err)}`)
+          failedInstances.push(instanceName)
+        }
+      }
+
+      // PHASE 2: Batch insert D1 records only after all storage clones complete
+      // This ensures no orphaned D1 records if we fail during Phase 1
+      if (successfullyClonedInstances.length > 0) {
+        const instanceNow = nowISO()
+
+        // Use D1 batch for atomic insert of all instance records
+        const statements = successfullyClonedInstances.map((cloned) => {
+          const newInstanceId = generateId()
+          createdInstanceIds.push(newInstanceId)
+
+          return env.METADATA.prepare(`
+            INSERT INTO instances (id, namespace_id, name, object_id, color, last_accessed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            newInstanceId,
+            newId,
+            cloned.originalName,
+            cloned.newObjectId,
+            cloned.color,
+            instanceNow,
+            instanceNow,
+            instanceNow
+          )
+        })
+
+        // Execute all inserts as a batch (D1 handles as transaction)
+        await env.METADATA.batch(statements)
+        instancesCloned = successfullyClonedInstances.length
+      }
+
+      // Add summary warning if some instances failed
+      if (failedInstances.length > 0) {
+        warnings.unshift(`${String(failedInstances.length)} of ${String(instances.length)} instances had issues during cloning`)
+      }
+    }
+
     const newNs = await env.METADATA.prepare(
       'SELECT * FROM namespaces WHERE id = ?'
     ).bind(newId).first<Namespace>()
@@ -595,13 +771,52 @@ async function cloneNamespace(
       source_namespace_id: sourceNamespaceId,
       new_namespace_id: newId,
       name: newName,
+      deep_clone: deepClone,
+      instances_cloned: instancesCloned,
+      warnings: warnings.length > 0 ? warnings : undefined,
     })
 
     return jsonResponse({
       namespace: newNs,
       clonedFrom: sourceNs.name,
+      ...(deepClone ? { instancesCloned } : {}),
+      ...(warnings.length > 0 ? { warnings } : {}),
     }, corsHeaders, 201)
   } catch (error) {
+    // Rollback: delete any created instances and namespace on failure
+    if (createdInstanceIds.length > 0 || newNamespaceId) {
+      try {
+        // Delete created instances first
+        for (const instId of createdInstanceIds) {
+          await env.METADATA.prepare('DELETE FROM instances WHERE id = ?').bind(instId).run()
+        }
+        // Delete namespace
+        if (newNamespaceId) {
+          await env.METADATA.prepare('DELETE FROM namespaces WHERE id = ?').bind(newNamespaceId).run()
+        }
+        logWarning('Rolled back partial clone due to error', {
+          module: 'namespaces',
+          operation: 'clone_rollback',
+          namespaceId: sourceNamespaceId,
+          metadata: {
+            rolledBackInstances: createdInstanceIds.length,
+            rolledBackNamespace: newNamespaceId !== null
+          }
+        })
+      } catch (rollbackError) {
+        logWarning(`Rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`, {
+          module: 'namespaces',
+          operation: 'clone_rollback',
+          namespaceId: sourceNamespaceId,
+          metadata: {
+            error: rollbackError instanceof Error ? rollbackError.message : String(rollbackError),
+            orphanedNamespace: newNamespaceId,
+            orphanedInstances: createdInstanceIds
+          }
+        })
+      }
+    }
+
     logWarning(`Clone error: ${error instanceof Error ? error.message : String(error)}`, {
       module: 'namespaces',
       operation: 'clone',
@@ -617,3 +832,66 @@ async function cloneNamespace(
   }
 }
 
+/**
+ * Update namespace color for visual organization
+ */
+async function updateNamespaceColor(
+  request: Request,
+  namespaceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean
+): Promise<Response> {
+  interface UpdateColorBody {
+    color: string | null
+  }
+
+  const body = await parseJsonBody<UpdateColorBody>(request)
+
+  // Validate color
+  const color = body?.color
+  if (color !== null && color !== undefined) {
+    if (!VALID_COLORS.includes(color as typeof VALID_COLORS[number])) {
+      return errorResponse(
+        `Invalid color. Valid options: ${VALID_COLORS.join(', ')} or null`,
+        corsHeaders,
+        400
+      )
+    }
+  }
+
+  if (isLocalDev) {
+    const namespace = MOCK_NAMESPACES.find((n) => n.id === namespaceId)
+    if (!namespace) {
+      return errorResponse('Namespace not found', corsHeaders, 404)
+    }
+    // Update mock namespace color - cast is safe after validation
+    namespace.color = (color ?? null) as NamespaceColor
+    return jsonResponse({ namespace, success: true }, corsHeaders)
+  }
+
+  try {
+    const now = nowISO()
+    await env.METADATA.prepare(`
+      UPDATE namespaces SET color = ?, updated_at = ? WHERE id = ?
+    `).bind(color ?? null, now, namespaceId).run()
+
+    const updated = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(namespaceId).first<Namespace>()
+
+    if (!updated) {
+      return errorResponse('Namespace not found', corsHeaders, 404)
+    }
+
+    return jsonResponse({ namespace: updated, success: true }, corsHeaders)
+  } catch (error) {
+    logWarning(`Update color error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'namespaces',
+      operation: 'update_color',
+      namespaceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
+    return errorResponse('Failed to update namespace color', corsHeaders, 500)
+  }
+}

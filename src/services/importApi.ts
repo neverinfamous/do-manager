@@ -1,3 +1,5 @@
+import { fetchWithRetry } from '../lib/retry'
+
 const API_BASE = '/api'
 
 /**
@@ -48,7 +50,7 @@ export const importApi = {
     data: Record<string, unknown>,
     mergeMode: 'merge' | 'replace' = 'merge'
   ): Promise<ImportKeysResponse> {
-    const response = await fetch(`${API_BASE}/instances/${instanceId}/import`, {
+    const response = await fetchWithRetry(`${API_BASE}/instances/${instanceId}/import`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data, mergeMode }),
@@ -130,4 +132,3 @@ export const importApi = {
     return this.parseImportFile(content)
   },
 }
-

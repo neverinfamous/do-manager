@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Search, X, CheckSquare, Trash2, Download } from 'lucide-react'
+import { Plus, RefreshCw, Loader2, Box, Search, X, CheckSquare, Trash2, Download, LayoutGrid, LayoutList } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Checkbox } from '../ui/checkbox'
 import { NamespaceCard } from './NamespaceCard'
+import { NamespaceListView } from './NamespaceListView'
 import { AddNamespaceDialog } from './AddNamespaceDialog'
 import { CloneNamespaceDialog } from './CloneNamespaceDialog'
 import { NamespaceSettingsDialog } from './NamespaceSettingsDialog'
@@ -12,7 +13,22 @@ import { BatchDeleteDialog } from './BatchDeleteDialog'
 import { namespaceApi } from '../../services/api'
 import { useSelection } from '../../hooks/useSelection'
 import { batchExportNamespaces } from '../../services/batchApi'
-import type { Namespace } from '../../types'
+import type { Namespace, NamespaceColor } from '../../types'
+
+type NamespaceViewMode = 'grid' | 'list'
+
+// Helper to get view mode from localStorage
+const getStoredViewMode = (): NamespaceViewMode => {
+  try {
+    const stored = localStorage.getItem('do-manager-namespace-view-mode')
+    if (stored === 'grid' || stored === 'list') {
+      return stored
+    }
+  } catch {
+    // localStorage not available
+  }
+  return 'list' // Default to list view
+}
 
 interface NamespaceListProps {
   onSelectNamespace: (namespace: Namespace) => void
@@ -29,6 +45,20 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
   const [cloneNamespace, setCloneNamespace] = useState<Namespace | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false)
+  const [viewMode, setViewMode] = useState<NamespaceViewMode>(getStoredViewMode)
+
+  // Toggle view mode with localStorage persistence
+  const toggleViewMode = (): void => {
+    setViewMode((prev) => {
+      const newMode = prev === 'grid' ? 'list' : 'grid'
+      try {
+        localStorage.setItem('do-manager-namespace-view-mode', newMode)
+      } catch {
+        // localStorage not available
+      }
+      return newMode
+    })
+  }
 
   // Selection state
   const selection = useSelection<Namespace>()
@@ -118,6 +148,17 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
   const handleCloneComplete = (namespace: Namespace): void => {
     setNamespaces((prev) => [namespace, ...prev])
     setCloneNamespace(null)
+  }
+
+  const handleColorChange = async (namespaceId: string, color: NamespaceColor): Promise<void> => {
+    try {
+      const updated = await namespaceApi.updateColor(namespaceId, color)
+      setNamespaces((prev) =>
+        prev.map((n) => (n.id === namespaceId ? updated : n))
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update color')
+    }
   }
 
   const handleSelectionChange = (namespace: Namespace): void => {
@@ -238,28 +279,50 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
       {/* Namespace Grid */}
       {!loading && namespaces.length > 0 && (
         <>
-          {/* Search */}
-          <div className="relative mb-4">
-            <label htmlFor="namespace-filter" className="sr-only">Filter namespaces</label>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="namespace-filter"
-              placeholder="Filter namespaces by name, class, or script..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-10"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                onClick={() => setSearchTerm('')}
-                aria-label="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+          {/* Search and View Toggle */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="relative flex-1">
+              <label htmlFor="namespace-filter" className="sr-only">Filter namespaces</label>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="namespace-filter"
+                placeholder="Filter namespaces by name, class, or script..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setSearchTerm('')}
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleViewMode}
+              aria-label={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+              title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+              className="flex items-center gap-2"
+            >
+              {viewMode === 'grid' ? (
+                <>
+                  <LayoutList className="h-4 w-4" />
+                  <span className="hidden sm:inline">List</span>
+                </>
+              ) : (
+                <>
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="hidden sm:inline">Grid</span>
+                </>
+              )}
+            </Button>
           </div>
 
           {/* Selection toolbar */}
@@ -341,22 +404,40 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
             </div>
           )}
 
-          {/* Grid */}
+          {/* Namespace List or Grid */}
           {filteredNamespaces.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredNamespaces.map((namespace) => (
-                <NamespaceCard
-                  key={namespace.id}
-                  namespace={namespace}
+            <>
+              {viewMode === 'list' ? (
+                <NamespaceListView
+                  namespaces={filteredNamespaces}
+                  selectedIds={selection.selectedIds}
+                  onToggleSelection={handleSelectionChange}
+                  onSelectAll={() => selection.selectAll(filteredNamespaces)}
+                  onClearSelection={selection.clear}
                   onSelect={onSelectNamespace}
                   onClone={setCloneNamespace}
                   onSettings={handleSettings}
-                  onDelete={() => void handleDelete(namespace)}
-                  isSelected={selection.isSelected(namespace.id)}
-                  onSelectionChange={handleSelectionChange}
+                  onDelete={(ns) => void handleDelete(ns)}
+                  onColorChange={handleColorChange}
                 />
-              ))}
-            </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredNamespaces.map((namespace) => (
+                    <NamespaceCard
+                      key={namespace.id}
+                      namespace={namespace}
+                      onSelect={onSelectNamespace}
+                      onClone={setCloneNamespace}
+                      onSettings={handleSettings}
+                      onDelete={() => void handleDelete(namespace)}
+                      isSelected={selection.isSelected(namespace.id)}
+                      onSelectionChange={handleSelectionChange}
+                      onColorChange={handleColorChange}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </>
       )}

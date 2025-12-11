@@ -23,11 +23,14 @@ import { alarmApi, type AlarmResponse } from '../../services/alarmApi'
 interface AlarmManagerProps {
   instanceId: string
   instanceName: string | null
+  /** Called when an alarm is set or deleted, allowing parent to refresh instance data */
+  onAlarmChange?: () => void
 }
 
 export function AlarmManager({
   instanceId,
   instanceName,
+  onAlarmChange,
 }: AlarmManagerProps): React.ReactElement {
   const [alarm, setAlarm] = useState<AlarmResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -54,6 +57,7 @@ export function AlarmManager({
     try {
       await alarmApi.delete(instanceId)
       await loadAlarm()
+      onAlarmChange?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete alarm')
     }
@@ -180,6 +184,7 @@ export function AlarmManager({
         onComplete={() => {
           setShowSetDialog(false)
           void loadAlarm()
+          onAlarmChange?.()
         }}
       />
     </Card>

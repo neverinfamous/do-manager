@@ -268,7 +268,7 @@ async function createBackup(
     ).bind(instance.namespace_id, 25, jobId).run()
 
     // Fetch storage data from DO (use name if available, otherwise object_id)
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     const storageResponse = await fetch(
       `${baseUrl}/admin/${encodeURIComponent(instanceName)}/export`,
@@ -454,7 +454,7 @@ async function restoreBackup(
     const backupData = await r2Object.text()
 
     // Send restore request to DO (use name if available, otherwise object_id)
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     const restoreResponse = await fetch(
       `${baseUrl}/admin/${encodeURIComponent(instanceName)}/import`,

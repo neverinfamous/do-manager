@@ -1,32 +1,5 @@
-const API_BASE = '/api'
-
-/**
- * Generic fetch wrapper with error handling
- */
-async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  if (options.headers) {
-    const optHeaders = options.headers instanceof Headers
-      ? options.headers
-      : new Headers(options.headers as Record<string, string>)
-    optHeaders.forEach((value, key) => headers.set(key, value))
-  }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: string }
-    throw new Error(errorData.error ?? `Request failed: ${String(response.status)}`)
-  }
-
-  return response.json() as Promise<T>
-}
+import { apiFetch } from '../lib/apiFetch'
+import { invalidateCache, invalidatePrefix, CACHE_KEYS } from '../lib/cache'
 
 export interface AlarmResponse {
   alarm: number | null
@@ -57,19 +30,33 @@ export const alarmApi = {
 
   /**
    * Set alarm for an instance
+   * Invalidates health and instance caches since alarm state changes
    */
   async set(instanceId: string, timestamp: number): Promise<SetAlarmResponse> {
-    return apiFetch<SetAlarmResponse>(`/instances/${instanceId}/alarm`, {
+    const result = await apiFetch<SetAlarmResponse>(`/instances/${instanceId}/alarm`, {
       method: 'PUT',
       body: JSON.stringify({ timestamp }),
     })
+    // Invalidate health cache since it shows active alarms
+    invalidateCache(CACHE_KEYS.HEALTH)
+    // Invalidate instance cache since has_alarm changes
+    invalidateCache(`${CACHE_KEYS.INSTANCE}${instanceId}`)
+    // Invalidate all instances lists to refresh alarm indicators
+    invalidatePrefix(CACHE_KEYS.INSTANCES)
+    return result
   },
 
   /**
    * Delete alarm for an instance
+   * Invalidates health and instance caches since alarm state changes
    */
   async delete(instanceId: string): Promise<void> {
     await apiFetch(`/instances/${instanceId}/alarm`, { method: 'DELETE' })
+    // Invalidate health cache since it shows active alarms
+    invalidateCache(CACHE_KEYS.HEALTH)
+    // Invalidate instance cache since has_alarm changes
+    invalidateCache(`${CACHE_KEYS.INSTANCE}${instanceId}`)
+    // Invalidate all instances lists to refresh alarm indicators
+    invalidatePrefix(CACHE_KEYS.INSTANCES)
   },
 }
-

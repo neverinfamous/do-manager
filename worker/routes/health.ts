@@ -194,11 +194,12 @@ export async function handleHealthRoutes(
 
 /**
  * Check for alarms that have passed their scheduled time and mark them as completed
+ * Exported so it can be called from other routes (e.g., when listing instances)
  */
-async function detectCompletedAlarms(env: Env): Promise<void> {
+export async function detectCompletedAlarms(env: Env): Promise<void> {
   try {
     const now = nowISO()
-    
+
     // Find scheduled alarms where the scheduled time has passed
     // If the time has passed and status is still 'scheduled', the alarm must have fired
     // (If it was manually cancelled, it would already have status = 'cancelled')
@@ -232,7 +233,7 @@ async function detectCompletedAlarms(env: Env): Promise<void> {
       await env.METADATA.prepare(
         'UPDATE alarm_history SET status = ?, completed_at = ? WHERE id = ?'
       ).bind('completed', now, alarm.id).run()
-      
+
       // Update instance has_alarm to 0 since the alarm has fired
       await env.METADATA.prepare(
         'UPDATE instances SET has_alarm = 0, updated_at = ? WHERE id = ?'
@@ -291,138 +292,152 @@ async function getHealthSummary(
     // First, detect any alarms that have completed
     await detectCompletedAlarms(env)
 
-    // Get namespace counts
-    const namespaceResult = await env.METADATA.prepare(`
-      SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN endpoint_url IS NOT NULL AND endpoint_url != '' THEN 1 ELSE 0 END) as withEndpoint
-      FROM namespaces
-    `).first<{ total: number; withEndpoint: number }>()
-
-    // Get instance counts (including high storage - above 80% of 10GB limit)
+    // Calculate thresholds
     const warningThresholdBytes = Math.floor(STORAGE_QUOTA.MAX_BYTES * STORAGE_QUOTA.WARNING_THRESHOLD)
-    const instanceResult = await env.METADATA.prepare(`
-      SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN has_alarm = 1 THEN 1 ELSE 0 END) as withAlarms,
-        SUM(CASE WHEN last_accessed IS NOT NULL AND datetime(last_accessed) < datetime('now', '-7 days') THEN 1 ELSE 0 END) as stale,
-        SUM(CASE WHEN storage_size_bytes IS NOT NULL AND storage_size_bytes >= ? THEN 1 ELSE 0 END) as highStorage
-      FROM instances
-    `).bind(warningThresholdBytes).first<{ total: number; withAlarms: number; stale: number; highStorage: number }>()
-
-    // Get storage stats
-    const storageResult = await env.METADATA.prepare(`
-      SELECT 
-        COALESCE(SUM(storage_size_bytes), 0) as totalBytes
-      FROM instances
-    `).first<{ totalBytes: number }>()
-
-    // Get active alarms from alarm_history with instance and namespace info
-    const activeAlarmsResult = await env.METADATA.prepare(`
-      SELECT 
-        ah.instance_id as instanceId,
-        COALESCE(i.name, i.object_id) as instanceName,
-        ah.namespace_id as namespaceId,
-        n.name as namespaceName,
-        ah.scheduled_time as scheduledTime,
-        ah.created_at as createdAt
-      FROM alarm_history ah
-      JOIN instances i ON ah.instance_id = i.id
-      JOIN namespaces n ON ah.namespace_id = n.id
-      WHERE ah.status = 'scheduled'
-      ORDER BY ah.scheduled_time ASC
-      LIMIT 20
-    `).all<{
-      instanceId: string
-      instanceName: string
-      namespaceId: string
-      namespaceName: string
-      scheduledTime: string
-      createdAt: string
-    }>()
-
-    // Get recently completed/cancelled alarms (last 24 hours)
-    const completedAlarmsResult = await env.METADATA.prepare(`
-      SELECT 
-        ah.instance_id as instanceId,
-        COALESCE(i.name, i.object_id) as instanceName,
-        ah.namespace_id as namespaceId,
-        n.name as namespaceName,
-        ah.scheduled_time as scheduledTime,
-        ah.completed_at as completedAt,
-        ah.status
-      FROM alarm_history ah
-      JOIN instances i ON ah.instance_id = i.id
-      JOIN namespaces n ON ah.namespace_id = n.id
-      WHERE ah.status IN ('completed', 'cancelled')
-        AND datetime(ah.completed_at) > datetime('now', '-24 hours')
-      ORDER BY ah.completed_at DESC
-      LIMIT 10
-    `).all<{
-      instanceId: string
-      instanceName: string
-      namespaceId: string
-      namespaceName: string
-      scheduledTime: string
-      completedAt: string
-      status: string
-    }>()
-
-    // Get stale instances (not accessed in 7+ days, with namespace info)
-    const staleResult = await env.METADATA.prepare(`
-      SELECT 
-        i.id,
-        COALESCE(i.name, i.object_id) as name,
-        i.namespace_id as namespaceId,
-        n.name as namespaceName,
-        i.last_accessed as lastAccessed,
-        CAST(julianday('now') - julianday(i.last_accessed) AS INTEGER) as daysSinceAccess
-      FROM instances i
-      JOIN namespaces n ON i.namespace_id = n.id
-      WHERE i.last_accessed IS NOT NULL 
-        AND datetime(i.last_accessed) < datetime('now', '-7 days')
-      ORDER BY i.last_accessed ASC
-      LIMIT 10
-    `).all<{
-      id: string
-      name: string
-      namespaceId: string
-      namespaceName: string
-      lastAccessed: string | null
-      daysSinceAccess: number
-    }>()
-
-    // Get high storage instances (above 80% of 10GB limit)
     const criticalThresholdBytes = Math.floor(STORAGE_QUOTA.MAX_BYTES * STORAGE_QUOTA.CRITICAL_THRESHOLD)
-    const highStorageResult = await env.METADATA.prepare(`
-      SELECT 
-        i.id,
-        COALESCE(i.name, i.object_id) as name,
-        i.namespace_id as namespaceId,
-        n.name as namespaceName,
-        i.storage_size_bytes as storageSizeBytes
-      FROM instances i
-      JOIN namespaces n ON i.namespace_id = n.id
-      WHERE i.storage_size_bytes IS NOT NULL 
-        AND i.storage_size_bytes >= ?
-      ORDER BY i.storage_size_bytes DESC
-      LIMIT 10
-    `).bind(warningThresholdBytes).all<{
-      id: string
-      name: string
-      namespaceId: string
-      namespaceName: string
-      storageSizeBytes: number
-    }>()
 
-    // Get recent job counts
-    const jobsResult = await env.METADATA.prepare(`
-      SELECT 
-        SUM(CASE WHEN datetime(created_at) > datetime('now', '-1 day') THEN 1 ELSE 0 END) as last24h,
-        SUM(CASE WHEN datetime(created_at) > datetime('now', '-7 days') THEN 1 ELSE 0 END) as last7d,
-        SUM(CASE WHEN datetime(created_at) > datetime('now', '-1 day') AND status = 'failed' THEN 1 ELSE 0 END) as failedLast24h
-      FROM jobs
-    `).first<{ last24h: number; last7d: number; failedLast24h: number }>()
+    // Batch parallel D1 queries for performance (max 8 concurrent)
+    const [
+      namespaceResult,
+      instanceResult,
+      storageResult,
+      activeAlarmsResult,
+      completedAlarmsResult,
+      staleResult,
+      highStorageResult,
+      jobsResult,
+    ] = await Promise.all([
+      // Query 1: Namespace counts
+      env.METADATA.prepare(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN endpoint_url IS NOT NULL AND endpoint_url != '' THEN 1 ELSE 0 END) as withEndpoint
+        FROM namespaces
+      `).first<{ total: number; withEndpoint: number }>(),
+
+      // Query 2: Instance counts
+      env.METADATA.prepare(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN has_alarm = 1 THEN 1 ELSE 0 END) as withAlarms,
+          SUM(CASE WHEN last_accessed IS NOT NULL AND datetime(last_accessed) < datetime('now', '-7 days') THEN 1 ELSE 0 END) as stale,
+          SUM(CASE WHEN storage_size_bytes IS NOT NULL AND storage_size_bytes >= ? THEN 1 ELSE 0 END) as highStorage
+        FROM instances
+      `).bind(warningThresholdBytes).first<{ total: number; withAlarms: number; stale: number; highStorage: number }>(),
+
+      // Query 3: Storage stats
+      env.METADATA.prepare(`
+        SELECT 
+          COALESCE(SUM(storage_size_bytes), 0) as totalBytes
+        FROM instances
+      `).first<{ totalBytes: number }>(),
+
+      // Query 4: Active alarms
+      env.METADATA.prepare(`
+        SELECT 
+          ah.instance_id as instanceId,
+          COALESCE(i.name, i.object_id) as instanceName,
+          ah.namespace_id as namespaceId,
+          n.name as namespaceName,
+          ah.scheduled_time as scheduledTime,
+          ah.created_at as createdAt
+        FROM alarm_history ah
+        JOIN instances i ON ah.instance_id = i.id
+        JOIN namespaces n ON ah.namespace_id = n.id
+        WHERE ah.status = 'scheduled'
+        ORDER BY ah.scheduled_time ASC
+        LIMIT 20
+      `).all<{
+        instanceId: string
+        instanceName: string
+        namespaceId: string
+        namespaceName: string
+        scheduledTime: string
+        createdAt: string
+      }>(),
+
+      // Query 5: Completed alarms (last 24 hours)
+      env.METADATA.prepare(`
+        SELECT 
+          ah.instance_id as instanceId,
+          COALESCE(i.name, i.object_id) as instanceName,
+          ah.namespace_id as namespaceId,
+          n.name as namespaceName,
+          ah.scheduled_time as scheduledTime,
+          ah.completed_at as completedAt,
+          ah.status
+        FROM alarm_history ah
+        JOIN instances i ON ah.instance_id = i.id
+        JOIN namespaces n ON ah.namespace_id = n.id
+        WHERE ah.status IN ('completed', 'cancelled')
+          AND datetime(ah.completed_at) > datetime('now', '-24 hours')
+        ORDER BY ah.completed_at DESC
+        LIMIT 10
+      `).all<{
+        instanceId: string
+        instanceName: string
+        namespaceId: string
+        namespaceName: string
+        scheduledTime: string
+        completedAt: string
+        status: string
+      }>(),
+
+      // Query 6: Stale instances
+      env.METADATA.prepare(`
+        SELECT 
+          i.id,
+          COALESCE(i.name, i.object_id) as name,
+          i.namespace_id as namespaceId,
+          n.name as namespaceName,
+          i.last_accessed as lastAccessed,
+          CAST(julianday('now') - julianday(i.last_accessed) AS INTEGER) as daysSinceAccess
+        FROM instances i
+        JOIN namespaces n ON i.namespace_id = n.id
+        WHERE i.last_accessed IS NOT NULL 
+          AND datetime(i.last_accessed) < datetime('now', '-7 days')
+        ORDER BY i.last_accessed ASC
+        LIMIT 10
+      `).all<{
+        id: string
+        name: string
+        namespaceId: string
+        namespaceName: string
+        lastAccessed: string | null
+        daysSinceAccess: number
+      }>(),
+
+      // Query 7: High storage instances
+      env.METADATA.prepare(`
+        SELECT 
+          i.id,
+          COALESCE(i.name, i.object_id) as name,
+          i.namespace_id as namespaceId,
+          n.name as namespaceName,
+          i.storage_size_bytes as storageSizeBytes
+        FROM instances i
+        JOIN namespaces n ON i.namespace_id = n.id
+        WHERE i.storage_size_bytes IS NOT NULL 
+          AND i.storage_size_bytes >= ?
+        ORDER BY i.storage_size_bytes DESC
+        LIMIT 10
+      `).bind(warningThresholdBytes).all<{
+        id: string
+        name: string
+        namespaceId: string
+        namespaceName: string
+        storageSizeBytes: number
+      }>(),
+
+      // Query 8: Job counts
+      env.METADATA.prepare(`
+        SELECT 
+          SUM(CASE WHEN datetime(created_at) > datetime('now', '-1 day') THEN 1 ELSE 0 END) as last24h,
+          SUM(CASE WHEN datetime(created_at) > datetime('now', '-7 days') THEN 1 ELSE 0 END) as last7d,
+          SUM(CASE WHEN datetime(created_at) > datetime('now', '-1 day') AND status = 'failed' THEN 1 ELSE 0 END) as failedLast24h
+        FROM jobs
+      `).first<{ last24h: number; last7d: number; failedLast24h: number }>(),
+    ])
 
     const totalInstances = instanceResult?.total ?? 0
     const totalBytes = storageResult?.totalBytes ?? 0

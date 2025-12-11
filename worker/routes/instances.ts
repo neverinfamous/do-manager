@@ -1,11 +1,23 @@
 import type { Env, CorsHeaders, Instance, InstanceColor, Namespace } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 import { logWarning } from '../utils/error-logger'
+import { detectCompletedAlarms } from './health'
 
 /**
- * Valid instance colors
+ * Valid instance colors - organized by hue family
  */
-const VALID_COLORS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'] as const
+const VALID_COLORS = [
+  // Reds & Pinks
+  'red-light', 'red', 'red-dark', 'rose', 'pink-light', 'pink',
+  // Oranges & Yellows
+  'orange-light', 'orange', 'amber', 'yellow-light', 'yellow', 'lime',
+  // Greens & Teals
+  'green-light', 'green', 'emerald', 'teal', 'cyan', 'sky',
+  // Blues & Purples
+  'blue-light', 'blue', 'indigo', 'violet', 'purple', 'fuchsia',
+  // Neutrals
+  'slate', 'gray', 'zinc',
+] as const
 
 /**
  * Mock instances for local development
@@ -23,6 +35,7 @@ const MOCK_INSTANCES: Instance[] = [
     created_at: '2024-01-15T10:00:00Z',
     updated_at: '2024-03-01T10:00:00Z',
     metadata: null,
+    tags: ['production', 'priority:high'],
   },
   {
     id: 'inst-2',
@@ -36,6 +49,7 @@ const MOCK_INSTANCES: Instance[] = [
     created_at: '2024-02-20T14:30:00Z',
     updated_at: '2024-03-02T14:30:00Z',
     metadata: null,
+    tags: ['staging', 'team:support'],
   },
   {
     id: 'inst-3',
@@ -49,6 +63,7 @@ const MOCK_INSTANCES: Instance[] = [
     created_at: '2024-02-25T09:00:00Z',
     updated_at: '2024-03-03T09:15:00Z',
     metadata: null,
+    tags: [],
   },
 ]
 
@@ -134,6 +149,26 @@ export async function handleInstanceRoutes(
     return updateInstanceColor(request, instanceId, env, corsHeaders, isLocalDev)
   }
 
+  // PUT /api/instances/:id/rename - Rename instance
+  const renameMatch = /^\/api\/instances\/([^/]+)\/rename$/.exec(path)
+  if (method === 'PUT' && renameMatch) {
+    const instanceId = renameMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return renameInstance(request, instanceId, env, corsHeaders, isLocalDev, userEmail)
+  }
+
+  // PUT /api/instances/:id/tags - Update instance tags
+  const tagsMatch = /^\/api\/instances\/([^/]+)\/tags$/.exec(path)
+  if (method === 'PUT' && tagsMatch) {
+    const instanceId = tagsMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return updateInstanceTags(request, instanceId, env, corsHeaders, isLocalDev)
+  }
+
   return errorResponse('Not Found', corsHeaders, 404)
 }
 
@@ -159,16 +194,23 @@ async function listInstances(
   }
 
   try {
-    const countResult = await env.METADATA.prepare(
-      'SELECT COUNT(*) as count FROM instances WHERE namespace_id = ?'
-    ).bind(namespaceId).first<{ count: number }>()
+    // Detect any completed alarms before fetching instances
+    // This ensures has_alarm flags and Job History are up-to-date
+    await detectCompletedAlarms(env)
 
-    const result = await env.METADATA.prepare(`
-      SELECT * FROM instances 
-      WHERE namespace_id = ? 
-      ORDER BY last_accessed DESC NULLS LAST, created_at DESC
-      LIMIT ? OFFSET ?
-    `).bind(namespaceId, limit, offset).all<Instance>()
+    // Batch parallel D1 queries for performance
+    const [countResult, result] = await Promise.all([
+      env.METADATA.prepare(
+        'SELECT COUNT(*) as count FROM instances WHERE namespace_id = ?'
+      ).bind(namespaceId).first<{ count: number }>(),
+
+      env.METADATA.prepare(`
+        SELECT * FROM instances 
+        WHERE namespace_id = ? 
+        ORDER BY last_accessed DESC NULLS LAST, created_at DESC
+        LIMIT ? OFFSET ?
+      `).bind(namespaceId, limit, offset).all<Instance>(),
+    ])
 
     return jsonResponse({
       instances: result.results,
@@ -219,6 +261,7 @@ async function createInstance(
       created_at: nowISO(),
       updated_at: nowISO(),
       metadata: null,
+      tags: [],
     }
     return jsonResponse({ instance: newInstance }, corsHeaders, 201)
   }
@@ -432,6 +475,7 @@ async function cloneInstance(
       created_at: nowISO(),
       updated_at: nowISO(),
       metadata: null,
+      tags: [],
     }
 
     return jsonResponse({
@@ -590,7 +634,7 @@ async function updateInstanceColor(
   }
 
   const body = await parseJsonBody<UpdateColorBody>(request)
-  
+
   // Validate color
   const color = body?.color
   if (color !== null && color !== undefined) {
@@ -639,3 +683,168 @@ async function updateInstanceColor(
   }
 }
 
+/**
+ * Rename an instance
+ */
+async function renameInstance(
+  request: Request,
+  instanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean,
+  userEmail: string | null
+): Promise<Response> {
+  interface RenameInstanceBody {
+    name: string
+  }
+
+  const body = await parseJsonBody<RenameInstanceBody>(request)
+  if (!body?.name?.trim()) {
+    return errorResponse('name is required', corsHeaders, 400)
+  }
+
+  const newName = body.name.trim()
+
+  if (isLocalDev) {
+    const instance = MOCK_INSTANCES.find((i) => i.id === instanceId)
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+    // Update mock instance name
+    instance.name = newName
+    return jsonResponse({ instance, success: true }, corsHeaders)
+  }
+
+  // Create job record
+  const jobId = await createJob(env.METADATA, 'rename_instance', userEmail)
+
+  try {
+    // Get existing instance
+    const existing = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!existing) {
+      await failJob(env.METADATA, jobId, 'Instance not found')
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    // Update job with namespace info
+    await env.METADATA.prepare(
+      'UPDATE jobs SET namespace_id = ?, instance_id = ? WHERE id = ?'
+    ).bind(existing.namespace_id, instanceId, jobId).run()
+
+    const oldName = existing.name ?? existing.object_id
+
+    // Update instance name in D1
+    const now = nowISO()
+    await env.METADATA.prepare(`
+      UPDATE instances SET name = ?, updated_at = ? WHERE id = ?
+    `).bind(newName, now, instanceId).run()
+
+    const updated = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    await completeJob(env.METADATA, jobId, {
+      instance_id: instanceId,
+      old_name: oldName,
+      new_name: newName,
+    })
+
+    return jsonResponse({ instance: updated, success: true }, corsHeaders)
+  } catch (error) {
+    logWarning(`Rename error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'instances',
+      operation: 'rename',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
+    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Failed to rename instance')
+    return errorResponse('Failed to rename instance', corsHeaders, 500)
+  }
+}
+
+/**
+ * Update instance tags for organization and search
+ */
+async function updateInstanceTags(
+  request: Request,
+  instanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean
+): Promise<Response> {
+  interface UpdateTagsBody {
+    tags: string[]
+  }
+
+  const body = await parseJsonBody<UpdateTagsBody>(request)
+
+  // Validate tags
+  if (!body || !Array.isArray(body.tags)) {
+    return errorResponse('tags must be an array of strings', corsHeaders, 400)
+  }
+
+  // Validate each tag
+  const MAX_TAGS = 20
+  const MAX_TAG_LENGTH = 50
+
+  if (body.tags.length > MAX_TAGS) {
+    return errorResponse(`Maximum ${MAX_TAGS} tags allowed`, corsHeaders, 400)
+  }
+
+  const validatedTags: string[] = []
+  for (const tag of body.tags) {
+    if (typeof tag !== 'string') {
+      return errorResponse('Each tag must be a string', corsHeaders, 400)
+    }
+    const trimmed = tag.trim()
+    if (trimmed.length === 0) {
+      continue // Skip empty tags
+    }
+    if (trimmed.length > MAX_TAG_LENGTH) {
+      return errorResponse(`Each tag must be ${MAX_TAG_LENGTH} characters or less`, corsHeaders, 400)
+    }
+    if (!validatedTags.includes(trimmed)) {
+      validatedTags.push(trimmed) // Deduplicate
+    }
+  }
+
+  if (isLocalDev) {
+    const instance = MOCK_INSTANCES.find((i) => i.id === instanceId)
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+    // Update mock instance tags
+    instance.tags = validatedTags
+    return jsonResponse({ instance, success: true }, corsHeaders)
+  }
+
+  try {
+    const now = nowISO()
+    const tagsJson = JSON.stringify(validatedTags)
+
+    await env.METADATA.prepare(`
+      UPDATE instances SET tags = ?, updated_at = ? WHERE id = ?
+    `).bind(tagsJson, now, instanceId).run()
+
+    const updated = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!updated) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    return jsonResponse({ instance: updated, success: true }, corsHeaders)
+  } catch (error) {
+    logWarning(`Update tags error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'tags',
+      operation: 'update',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
+    return errorResponse('Failed to update instance tags', corsHeaders, 500)
+  }
+}

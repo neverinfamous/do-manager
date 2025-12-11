@@ -114,7 +114,7 @@ async function exportInstance(
     }
 
     // Fetch storage data from DO
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     const exportResponse = await fetch(
       `${baseUrl}/admin/${encodeURIComponent(instanceName)}/export`,

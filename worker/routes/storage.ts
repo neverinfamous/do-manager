@@ -119,6 +119,16 @@ export async function handleStorageRoutes(
     return importStorage(request, instanceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
+  // POST /api/instances/:id/storage/rename - Rename a storage key
+  const renameMatch = /^\/api\/instances\/([^/]+)\/storage\/rename$/.exec(path)
+  if (method === 'POST' && renameMatch) {
+    const instanceId = renameMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return renameStorageKey(request, instanceId, env, corsHeaders, isLocalDev, userEmail)
+  }
+
   return errorResponse('Not Found', corsHeaders, 404)
 }
 
@@ -187,7 +197,7 @@ async function listStorage(
     // Normalize endpoint URL (remove trailing slash)
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
     // Use the instance name or object_id to route to the correct DO
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/list`
 
     logInfo(`Calling admin hook: ${adminUrl}`, {
@@ -281,7 +291,7 @@ async function getStorageValue(
     }
 
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/get?key=${encodeURIComponent(key)}`
 
     const response = await fetch(adminUrl, {
@@ -354,7 +364,7 @@ async function setStorageValue(
     const jobId = await createJob(env.METADATA, 'create_key', userEmail, instance.namespace_id, instanceId)
 
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/put`
 
     const response = await fetch(adminUrl, {
@@ -429,7 +439,7 @@ async function deleteStorageValue(
     const jobId = await createJob(env.METADATA, 'delete_key', userEmail, instance.namespace_id, instanceId)
 
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/delete`
 
     const response = await fetch(adminUrl, {
@@ -475,7 +485,7 @@ async function executeSql(
     // Check for mock results
     const normalizedQuery = body.query.trim()
     const mockResult = MOCK_SQL_RESULTS[normalizedQuery]
-    
+
     if (mockResult) {
       return jsonResponse({
         results: mockResult,
@@ -510,7 +520,7 @@ async function executeSql(
     }
 
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/sql`
 
     const response = await fetch(adminUrl, {
@@ -561,7 +571,7 @@ async function importStorage(
   userEmail: string | null
 ): Promise<Response> {
   const body = await parseJsonBody<ImportStorageRequest>(request)
-  
+
   // Validate request body
   if (!body?.data) {
     return errorResponse('data object is required', corsHeaders, 400)
@@ -615,7 +625,7 @@ async function importStorage(
     const jobId = await createJob(env.METADATA, 'import_keys', userEmail, instance.namespace_id, instanceId)
 
     const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
-    const instanceName = instance.name ?? instance.object_id
+    const instanceName = instance.object_id
     const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/import`
 
     logInfo(`Calling admin hook import: ${adminUrl} keys: ${String(keyCount)}`, {
@@ -646,7 +656,7 @@ async function importStorage(
     }
 
     const result = await response.json() as { success?: boolean; imported?: number }
-    
+
     await completeJob(env.METADATA, jobId, {
       key_count: keyCount,
       instance_name: instanceName,
@@ -670,3 +680,142 @@ async function importStorage(
   }
 }
 
+/**
+ * Rename a storage key (non-atomic: GET → PUT → DELETE)
+ */
+async function renameStorageKey(
+  request: Request,
+  instanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean,
+  userEmail: string | null
+): Promise<Response> {
+  interface RenameKeyBody {
+    oldKey: string
+    newKey: string
+  }
+
+  const body = await parseJsonBody<RenameKeyBody>(request)
+  if (!body?.oldKey?.trim() || !body?.newKey?.trim()) {
+    return errorResponse('oldKey and newKey are required', corsHeaders, 400)
+  }
+
+  const oldKey = body.oldKey.trim()
+  const newKey = body.newKey.trim()
+
+  if (oldKey === newKey) {
+    return errorResponse('newKey must be different from oldKey', corsHeaders, 400)
+  }
+
+  if (isLocalDev) {
+    // Mock rename for local development
+    const storage = MOCK_STORAGE[instanceId]
+    if (!storage) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    const value = storage.keys[oldKey]
+    if (value === undefined) {
+      return errorResponse('Old key not found', corsHeaders, 404)
+    }
+
+    // Check if new key already exists
+    if (storage.keys[newKey] !== undefined) {
+      return errorResponse('New key already exists', corsHeaders, 409)
+    }
+
+    // Perform rename: add new key and remove old key using object filtering
+    storage.keys[newKey] = value
+    const newKeys: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(storage.keys)) {
+      if (k !== oldKey) {
+        newKeys[k] = v
+      }
+    }
+    storage.keys = newKeys
+
+    return jsonResponse({ success: true, oldKey, newKey }, corsHeaders)
+  }
+
+  // Production: call admin hook (GET → PUT → DELETE)
+  try {
+    const instance = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    const namespace = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(instance.namespace_id).first<Namespace>()
+
+    if (!namespace?.endpoint_url || namespace.admin_hook_enabled !== 1) {
+      return errorResponse('Admin hook not configured or enabled', corsHeaders, 400)
+    }
+
+    const jobId = await createJob(env.METADATA, 'rename_key', userEmail, instance.namespace_id, instanceId)
+
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.object_id
+
+    // Step 1: GET the old key value
+    const getUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/get?key=${encodeURIComponent(oldKey)}`
+    const getResponse = await fetch(getUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    if (!getResponse.ok) {
+      await failJob(env.METADATA, jobId, `Failed to get old key: ${String(getResponse.status)}`)
+      return errorResponse(`Failed to get old key: ${String(getResponse.status)}`, corsHeaders, getResponse.status)
+    }
+
+    const getData = await getResponse.json() as { value?: unknown }
+    const value: unknown = getData.value ?? getData
+
+    // Step 2: PUT the value under the new key
+    const putUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/put`
+    const putResponse = await fetch(putUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: newKey, value }),
+    })
+
+    if (!putResponse.ok) {
+      await failJob(env.METADATA, jobId, `Failed to create new key: ${String(putResponse.status)}`)
+      return errorResponse(`Failed to create new key: ${String(putResponse.status)}`, corsHeaders, putResponse.status)
+    }
+
+    // Step 3: DELETE the old key
+    const deleteUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/delete`
+    const deleteResponse = await fetch(deleteUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: oldKey }),
+    })
+
+    if (!deleteResponse.ok) {
+      // Log warning but don't fail - new key was created successfully
+      logWarning(`Failed to delete old key during rename: ${String(deleteResponse.status)}`, {
+        module: 'storage',
+        operation: 'rename_key',
+        instanceId,
+        metadata: { oldKey, newKey, deleteStatus: deleteResponse.status }
+      })
+    }
+
+    await completeJob(env.METADATA, jobId, { oldKey, newKey })
+    return jsonResponse({ success: true, oldKey, newKey }, corsHeaders)
+  } catch (error) {
+    logWarning(`Rename key error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'storage',
+      operation: 'rename_key',
+      instanceId,
+      metadata: { oldKey, newKey, error: error instanceof Error ? error.message : String(error) }
+    })
+    return errorResponse(`Failed to rename key: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
+  }
+}

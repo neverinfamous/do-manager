@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useLayoutEffect } from 'react'
 import { Palette, X, Loader2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import type { InstanceColor } from '../../types'
@@ -15,8 +15,15 @@ interface InstanceColorPickerProps {
   variant?: 'dropdown' | 'inline'
 }
 
+interface DropdownPosition {
+  top?: number
+  bottom?: number
+  right: number
+}
+
 /**
- * Color picker for instance visual organization
+ * Color picker for instance/namespace visual organization
+ * Displays 27 colors in a 6x5 grid organized by hue family
  */
 export function InstanceColorPicker({
   value,
@@ -26,6 +33,37 @@ export function InstanceColorPicker({
 }: InstanceColorPickerProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [position, setPosition] = useState<DropdownPosition | null>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  // Calculate fixed position for dropdown based on button position and available space
+  useLayoutEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const viewportWidth = window.innerWidth
+      const spaceBelow = viewportHeight - rect.bottom
+      const dropdownHeight = 200 // Approximate height including "Remove color" button
+
+      // Calculate right position (align right edge of dropdown with right edge of button)
+      const rightPos = viewportWidth - rect.right
+
+      // Open above if not enough space below (with some margin)
+      if (spaceBelow < dropdownHeight + 10) {
+        setPosition({
+          bottom: viewportHeight - rect.top + 4,
+          right: rightPos
+        })
+      } else {
+        setPosition({
+          top: rect.bottom + 4,
+          right: rightPos
+        })
+      }
+    } else {
+      setPosition(null)
+    }
+  }, [isOpen])
 
   const handleColorSelect = async (color: InstanceColor): Promise<void> => {
     setLoading(true)
@@ -41,15 +79,14 @@ export function InstanceColorPicker({
 
   if (variant === 'inline') {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap">
         {INSTANCE_COLORS.map((color) => (
           <button
-            key={color.value ?? 'none'}
+            key={color.value}
             onClick={() => void handleColorSelect(color.value)}
             disabled={disabled || loading}
-            className={`w-5 h-5 rounded-full transition-all ${color.bgClass} ${
-              value === color.value ? 'ring-2 ring-offset-2 ring-offset-background ring-primary scale-110' : 'hover:scale-110'
-            } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            className={`w-5 h-5 rounded-full transition-all ${color.bgClass} ${value === color.value ? 'ring-2 ring-offset-2 ring-offset-background ring-primary scale-110' : 'hover:scale-110'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             title={color.label}
             aria-label={`Set color to ${color.label}`}
           />
@@ -58,9 +95,8 @@ export function InstanceColorPicker({
           <button
             onClick={() => void handleColorSelect(null)}
             disabled={disabled || loading}
-            className={`w-5 h-5 rounded-full border-2 border-dashed border-muted-foreground/50 flex items-center justify-center hover:border-destructive hover:text-destructive transition-colors ${
-              disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-            }`}
+            className={`w-5 h-5 rounded-full border-2 border-dashed border-muted-foreground/50 flex items-center justify-center hover:border-destructive hover:text-destructive transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              }`}
             title="Remove color"
             aria-label="Remove color"
           >
@@ -75,9 +111,13 @@ export function InstanceColorPicker({
   return (
     <div className="relative">
       <Button
+        ref={buttonRef}
         variant="ghost"
         size="sm"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(e) => {
+          e.stopPropagation()
+          setIsOpen(!isOpen)
+        }}
         disabled={disabled || loading}
         className="h-8 w-8 p-0"
         title={currentColor ? `Color: ${currentColor.label}` : 'Set color'}
@@ -97,36 +137,50 @@ export function InstanceColorPicker({
           {/* Backdrop */}
           <div
             className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsOpen(false)
+            }}
           />
-          
-          {/* Dropdown */}
-          <div className="absolute right-0 top-full mt-1 z-50 bg-popover border rounded-lg shadow-lg p-2">
-            <div className="grid grid-cols-5 gap-1.5">
-              {INSTANCE_COLORS.map((color) => (
+
+          {/* Dropdown - uses fixed positioning to escape overflow containers */}
+          {position && (
+            <div
+              className="fixed z-50 bg-popover border rounded-lg shadow-lg p-3"
+              style={{
+                top: position.top !== undefined ? `${String(position.top)}px` : undefined,
+                bottom: position.bottom !== undefined ? `${String(position.bottom)}px` : undefined,
+                right: `${String(position.right)}px`,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="grid grid-cols-6 gap-1.5">
+                {INSTANCE_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    onClick={() => void handleColorSelect(color.value)}
+                    disabled={loading}
+                    className={`w-6 h-6 rounded-full transition-all ${color.bgClass} ${value === color.value ? 'ring-2 ring-offset-1 ring-offset-background ring-primary' : 'hover:scale-110'
+                      }`}
+                    title={color.label}
+                    aria-label={`Set color to ${color.label}`}
+                  />
+                ))}
+              </div>
+              {value && (
                 <button
-                  key={color.value ?? 'none'}
-                  onClick={() => void handleColorSelect(color.value)}
+                  type="button"
+                  onClick={() => void handleColorSelect(null)}
                   disabled={loading}
-                  className={`w-6 h-6 rounded-full transition-all ${color.bgClass} ${
-                    value === color.value ? 'ring-2 ring-offset-1 ring-offset-background ring-primary' : 'hover:scale-110'
-                  }`}
-                  title={color.label}
-                  aria-label={`Set color to ${color.label}`}
-                />
-              ))}
+                  className="w-full mt-2 pt-2 border-t text-xs text-muted-foreground hover:text-destructive flex items-center justify-center gap-1 py-1"
+                >
+                  <X className="h-3 w-3" />
+                  Remove color
+                </button>
+              )}
             </div>
-            {value && (
-              <button
-                onClick={() => void handleColorSelect(null)}
-                disabled={loading}
-                className="w-full mt-2 text-xs text-muted-foreground hover:text-destructive flex items-center justify-center gap-1 py-1"
-              >
-                <X className="h-3 w-3" />
-                Remove color
-              </button>
-            )}
-          </div>
+          )}
         </>
       )}
     </div>

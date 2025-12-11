@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
 import { RefreshCw, Loader2, Key, Table, Trash2, Edit, Plus, Bell, Archive, Search, X, Copy, Check, Download, CheckSquare, Upload } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -11,7 +11,15 @@ import {
   CardTitle,
 } from '../ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
-import { SqlConsole } from './SqlConsole'
+// Lazy load SQL Console (includes SqlEditor, prismjs, sql-formatter, sql-validator)
+const SqlConsole = lazy(() => import('./SqlConsole').then(m => ({ default: m.SqlConsole })))
+
+// Loading fallback for SQL Console
+const SqlConsoleFallback = (): React.ReactElement => (
+  <div className="flex items-center justify-center py-16">
+    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  </div>
+)
 import { StorageEditor } from './StorageEditor'
 import { AlarmManager } from './AlarmManager'
 import { BackupManager } from './BackupManager'
@@ -62,7 +70,7 @@ export function StorageViewer({
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [keySearch, setKeySearch] = useState('')
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
-  
+
   // Multi-select state for keys
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   const [batchDeleting, setBatchDeleting] = useState(false)
@@ -474,11 +482,10 @@ export function StorageViewer({
             ) : (
               <div className="space-y-2">
                 {filteredKeys.map((key) => (
-                  <Card 
-                    key={key} 
-                    className={`cursor-pointer hover:bg-muted/50 transition-colors ${
-                      selectedKeys.has(key) ? 'ring-2 ring-primary bg-primary/5' : ''
-                    }`}
+                  <Card
+                    key={key}
+                    className={`cursor-pointer hover:bg-muted/50 transition-colors ${selectedKeys.has(key) ? 'ring-2 ring-primary bg-primary/5' : ''
+                      }`}
                     onClick={() => setEditingKey(key)}
                   >
                     <CardHeader className="py-3">
@@ -559,11 +566,12 @@ export function StorageViewer({
 
           {namespace.storage_backend === 'sqlite' && (
             <TabsContent value="sql" className="mt-6">
-              <SqlConsole
-                instanceId={instance.id}
-                namespaceId={namespace.id}
-                tables={storage.tables ?? []}
-              />
+              <Suspense fallback={<SqlConsoleFallback />}>
+                <SqlConsole
+                  instanceId={instance.id}
+                  namespaceId={namespace.id}
+                />
+              </Suspense>
             </TabsContent>
           )}
 

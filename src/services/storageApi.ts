@@ -1,32 +1,4 @@
-const API_BASE = '/api'
-
-/**
- * Generic fetch wrapper with error handling
- */
-async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  if (options.headers) {
-    const optHeaders = options.headers instanceof Headers
-      ? options.headers
-      : new Headers(options.headers as Record<string, string>)
-    optHeaders.forEach((value, key) => headers.set(key, value))
-  }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: string }
-    throw new Error(errorData.error ?? `Request failed: ${String(response.status)}`)
-  }
-
-  return response.json() as Promise<T>
-}
+import { apiFetch } from '../lib/apiFetch'
 
 export interface StorageListResponse {
   keys?: string[]
@@ -50,6 +22,8 @@ export interface SqlResponse {
 
 /**
  * Storage API functions
+ * Note: Storage operations are not cached as they interact with
+ * live Durable Object storage that may change frequently
  */
 export const storageApi = {
   /**
@@ -88,6 +62,16 @@ export const storageApi = {
   },
 
   /**
+   * Rename a storage key
+   */
+  async renameKey(instanceId: string, oldKey: string, newKey: string): Promise<void> {
+    await apiFetch(`/instances/${instanceId}/storage/rename`, {
+      method: 'POST',
+      body: JSON.stringify({ oldKey, newKey }),
+    })
+  },
+
+  /**
    * Execute SQL query
    */
   async sql(instanceId: string, query: string): Promise<SqlResponse> {
@@ -97,4 +81,3 @@ export const storageApi = {
     })
   },
 }
-

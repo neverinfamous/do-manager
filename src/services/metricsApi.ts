@@ -1,32 +1,5 @@
-const API_BASE = '/api'
-
-/**
- * Generic fetch wrapper with error handling
- */
-async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  if (options.headers) {
-    const optHeaders = options.headers instanceof Headers
-      ? options.headers
-      : new Headers(options.headers as Record<string, string>)
-    optHeaders.forEach((value, key) => headers.set(key, value))
-  }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: string }
-    throw new Error(errorData.error ?? `Request failed: ${String(response.status)}`)
-  }
-
-  return response.json() as Promise<T>
-}
+import { apiFetch } from '../lib/apiFetch'
+import { getCached, setCache, CACHE_KEYS, CACHE_TTL } from '../lib/cache'
 
 export interface MetricsData {
   invocations: {
@@ -49,21 +22,49 @@ export interface MetricsData {
 }
 
 /**
- * Metrics API functions
+ * Metrics API functions with caching support
  */
 export const metricsApi = {
   /**
    * Get account-level metrics
+   * Uses 2-minute TTL for metrics data
+   * @param days Number of days to fetch (default: 7)
+   * @param skipCache Set true to bypass cache (e.g., on refresh)
    */
-  async getAccountMetrics(days = 7): Promise<MetricsData> {
-    return apiFetch<MetricsData>(`/metrics?days=${String(days)}`)
+  async getAccountMetrics(days = 7, skipCache = false): Promise<MetricsData> {
+    const cacheKey = `${CACHE_KEYS.METRICS}:${String(days)}`
+
+    if (!skipCache) {
+      const cached = getCached(cacheKey, CACHE_TTL.METRICS) as MetricsData | undefined
+      if (cached) {
+        return cached
+      }
+    }
+
+    const data = await apiFetch<MetricsData>(`/metrics?days=${String(days)}`)
+    setCache(cacheKey, data)
+    return data
   },
 
   /**
    * Get namespace-level metrics
+   * Uses 2-minute TTL for metrics data
+   * @param namespaceId Namespace ID
+   * @param days Number of days to fetch (default: 7)
+   * @param skipCache Set true to bypass cache (e.g., on refresh)
    */
-  async getNamespaceMetrics(namespaceId: string, days = 7): Promise<MetricsData> {
-    return apiFetch<MetricsData>(`/namespaces/${namespaceId}/metrics?days=${String(days)}`)
+  async getNamespaceMetrics(namespaceId: string, days = 7, skipCache = false): Promise<MetricsData> {
+    const cacheKey = `${CACHE_KEYS.METRICS_NS}${namespaceId}:${String(days)}`
+
+    if (!skipCache) {
+      const cached = getCached(cacheKey, CACHE_TTL.METRICS) as MetricsData | undefined
+      if (cached) {
+        return cached
+      }
+    }
+
+    const data = await apiFetch<MetricsData>(`/namespaces/${namespaceId}/metrics?days=${String(days)}`)
+    setCache(cacheKey, data)
+    return data
   },
 }
-

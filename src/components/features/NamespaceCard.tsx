@@ -9,8 +9,10 @@ import {
   CardTitle,
 } from '../ui/card'
 import { Checkbox } from '../ui/checkbox'
+import { InstanceColorPicker } from './InstanceColorPicker'
 import { exportApi } from '../../services/exportApi'
-import type { Namespace } from '../../types'
+import { getColorConfig } from '../../lib/instanceColors'
+import type { Namespace, NamespaceColor, InstanceColor } from '../../types'
 
 interface NamespaceCardProps {
   namespace: Namespace
@@ -22,6 +24,8 @@ interface NamespaceCardProps {
   isSelected?: boolean
   /** Callback when selection changes */
   onSelectionChange?: (namespace: Namespace) => void
+  /** Callback when color changes */
+  onColorChange?: (namespaceId: string, color: NamespaceColor) => void
 }
 
 export function NamespaceCard({
@@ -32,6 +36,7 @@ export function NamespaceCard({
   onDelete,
   isSelected = false,
   onSelectionChange,
+  onColorChange,
 }: NamespaceCardProps): React.ReactElement {
   const [downloading, setDownloading] = useState(false)
 
@@ -61,13 +66,21 @@ export function NamespaceCard({
     }
   }
 
+  // Cast NamespaceColor to InstanceColor since they're the same type
+  const colorConfig = getColorConfig(namespace.color as InstanceColor)
+
   return (
     <Card
-      className={`hover:shadow-lg transition-shadow ${
-        isSelected ? 'ring-2 ring-primary bg-primary/5' : ''
-      }`}
+      className={`relative hover:shadow-lg transition-shadow ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}
     >
-      <CardHeader>
+      {/* Color indicator bar */}
+      {colorConfig && (
+        <div
+          className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${colorConfig.bgClass}`}
+          aria-hidden="true"
+        />
+      )}
+      <CardHeader className={colorConfig ? 'pl-5' : ''}>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <Checkbox
@@ -79,11 +92,10 @@ export function NamespaceCard({
           </div>
           <div className="flex items-center gap-2">
             <span
-              className={`text-xs px-2 py-1 rounded-full ${
-                namespace.storage_backend === 'sqlite'
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                  : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-              }`}
+              className={`text-xs px-2 py-1 rounded-full ${namespace.storage_backend === 'sqlite'
+                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                }`}
             >
               {namespace.storage_backend.toUpperCase()}
             </span>
@@ -94,17 +106,35 @@ export function NamespaceCard({
             )}
           </div>
         </div>
-        <CardTitle className="mt-4">{namespace.name}</CardTitle>
-        <CardDescription className="font-mono text-xs">
-          {namespace.class_name}
-        </CardDescription>
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex-1 min-w-0">
+            <CardTitle>{namespace.name}</CardTitle>
+            <CardDescription className="font-mono text-xs">
+              {namespace.class_name}
+            </CardDescription>
+          </div>
+          {onColorChange && (
+            <InstanceColorPicker
+              value={namespace.color as InstanceColor}
+              onChange={(color) => onColorChange(namespace.id, color as NamespaceColor)}
+            />
+          )}
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className={colorConfig ? 'pl-5' : ''}>
         <div className="space-y-2 text-sm mb-4">
           {namespace.script_name && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Script:</span>
               <span className="font-medium">{namespace.script_name}</span>
+            </div>
+          )}
+          {namespace.instance_count !== undefined && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Instances:</span>
+              <span className="font-medium" aria-label={`${namespace.instance_count} instance${namespace.instance_count === 1 ? '' : 's'}`}>
+                {namespace.instance_count}
+              </span>
             </div>
           )}
           <div className="flex justify-between">

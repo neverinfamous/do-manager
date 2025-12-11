@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS namespaces (
   storage_backend TEXT DEFAULT 'sqlite' CHECK (storage_backend IN ('sqlite', 'kv')),
   endpoint_url TEXT,
   admin_hook_enabled INTEGER DEFAULT 0,
+  color TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now')),
   metadata TEXT

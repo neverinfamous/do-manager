@@ -116,6 +116,7 @@ export function StorageEditor({
   onSave,
 }: StorageEditorProps): React.ReactElement {
   const [key, setKey] = useState(keyName ?? '')
+  const [originalKey] = useState(keyName) // Track original key for rename detection
   const [value, setValue] = useState('')
   const [valueType, setValueType] = useState<ValueType>('json')
   const [loading, setLoading] = useState(keyName !== null)
@@ -167,12 +168,12 @@ export function StorageEditor({
 
   const loadValue = useCallback(async (): Promise<void> => {
     if (!keyName) return
-    
+
     try {
       setLoading(true)
       setError('')
       const data = await storageApi.get(instanceId, keyName)
-      
+
       // Detect and set type based on value
       const detectedType = detectValueType(data.value)
       setValueType(detectedType)
@@ -225,7 +226,17 @@ export function StorageEditor({
     try {
       setSaving(true)
       setError('')
-      await storageApi.set(instanceId, key, validation.parsedValue)
+
+      const trimmedKey = key.trim()
+      const isRename = originalKey !== null && trimmedKey !== originalKey
+
+      if (isRename) {
+        // Rename the key first, then update the value
+        await storageApi.renameKey(instanceId, originalKey, trimmedKey)
+      }
+
+      // Save the value (under new key if renamed, or existing key)
+      await storageApi.set(instanceId, trimmedKey, validation.parsedValue)
       onSave()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save value')
@@ -239,7 +250,7 @@ export function StorageEditor({
   // Format preview value
   const previewContent = useMemo(() => {
     if (!validation.isValid) return null
-    
+
     const parsed = validation.parsedValue
     if (typeof parsed === 'object' && parsed !== null) {
       return JSON.stringify(parsed, null, 2)
@@ -280,10 +291,14 @@ export function StorageEditor({
                 name="storage-key"
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
-                disabled={!isNewKey}
                 placeholder="my-key"
-                className={!isNewKey ? 'font-mono bg-muted' : 'font-mono'}
+                className="font-mono"
               />
+              {!isNewKey && key.trim() !== originalKey && (
+                <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                  The key will be renamed from &quot;{originalKey}&quot; to &quot;{key.trim()}&quot;
+                </p>
+              )}
             </div>
 
             {/* Type Selector */}
@@ -328,9 +343,8 @@ export function StorageEditor({
                     </Button>
                   )}
                   {value && (
-                    <span className={`text-xs flex items-center gap-1 ${
-                      validation.isValid ? 'text-green-600 dark:text-green-400' : 'text-destructive'
-                    }`}>
+                    <span className={`text-xs flex items-center gap-1 ${validation.isValid ? 'text-green-600 dark:text-green-400' : 'text-destructive'
+                      }`}>
                       {validation.isValid ? (
                         <>
                           <CheckCircle2 className="h-3 w-3" />
@@ -355,15 +369,14 @@ export function StorageEditor({
                 onKeyDown={handleKeyDown}
                 placeholder={
                   valueType === 'json' ? '{ "key": "value" }' :
-                  valueType === 'number' ? '42' :
-                  valueType === 'boolean' ? 'true' :
-                  'Enter value...'
+                    valueType === 'number' ? '42' :
+                      valueType === 'boolean' ? 'true' :
+                        'Enter value...'
                 }
-                className={`flex min-h-[160px] w-full rounded-md border px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                  value && !validation.isValid 
-                    ? 'border-destructive bg-destructive/5' 
-                    : 'border-input bg-background'
-                }`}
+                className={`flex min-h-[160px] w-full rounded-md border px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${value && !validation.isValid
+                  ? 'border-destructive bg-destructive/5'
+                  : 'border-input bg-background'
+                  }`}
               />
               {valueType === 'json' && (
                 <p className="text-xs text-muted-foreground">
@@ -416,8 +429,8 @@ export function StorageEditor({
           <Button variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button 
-            onClick={() => void handleSave()} 
+          <Button
+            onClick={() => void handleSave()}
             disabled={loading || saving || !validation.isValid}
           >
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

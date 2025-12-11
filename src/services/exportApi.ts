@@ -1,4 +1,5 @@
 import { downloadJson, generateTimestampedFilename } from '../lib/downloadUtils'
+import { fetchWithRetry } from '../lib/retry'
 
 const API_BASE = '/api'
 
@@ -38,7 +39,7 @@ export const exportApi = {
    * Export instance storage data
    */
   async exportInstance(instanceId: string): Promise<ExportResponse> {
-    const response = await fetch(`${API_BASE}/instances/${instanceId}/export`, {
+    const response = await fetchWithRetry(`${API_BASE}/instances/${instanceId}/export`, {
       headers: { 'Content-Type': 'application/json' },
     })
 
@@ -63,7 +64,7 @@ export const exportApi = {
    * Export namespace configuration
    */
   async exportNamespace(namespaceId: string): Promise<NamespaceExportResponse> {
-    const response = await fetch(`${API_BASE}/namespaces/${namespaceId}/export`, {
+    const response = await fetchWithRetry(`${API_BASE}/namespaces/${namespaceId}/export`, {
       headers: { 'Content-Type': 'application/json' },
     })
 

@@ -7,8 +7,9 @@ export interface SearchResult {
   instanceId: string
   instanceName: string
   key: string
-  matchType: 'key' | 'value'
+  matchType: 'key' | 'value' | 'tag'
   valuePreview?: string
+  tags?: string[]
 }
 
 /**
@@ -43,6 +44,14 @@ export interface KeySearchOptions {
 export interface ValueSearchOptions {
   namespaceIds?: string[]
   instanceIds?: string[]
+  limit?: number
+}
+
+/**
+ * Options for tag search
+ */
+export interface TagSearchOptions {
+  namespaceIds?: string[]
   limit?: number
 }
 

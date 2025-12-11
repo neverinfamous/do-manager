@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2, CheckSquare, Archive, Search, X, AlertTriangle, HardDrive, ArrowLeftRight } from 'lucide-react'
+import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2, CheckSquare, Archive, Search, X, AlertTriangle, HardDrive, ArrowLeftRight, Pencil, LayoutGrid, LayoutList } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import {
@@ -17,6 +17,9 @@ import { BatchDeleteDialog } from './BatchDeleteDialog'
 import { BatchBackupDialog } from './BatchBackupDialog'
 import { BatchDownloadDialog } from './BatchDownloadDialog'
 import { InstanceDiffDialog } from './InstanceDiffDialog'
+import { RenameInstanceDialog } from './RenameInstanceDialog'
+import { EditTagsDialog } from './EditTagsDialog'
+import { InstanceListView } from './InstanceListView'
 import { instanceApi } from '../../services/instanceApi'
 import { exportApi } from '../../services/exportApi'
 import { useSelection } from '../../hooks/useSelection'
@@ -28,6 +31,21 @@ import type { Namespace, Instance, InstanceColor } from '../../types'
 interface InstanceListProps {
   namespace: Namespace
   onSelectInstance: (instance: Instance) => void
+}
+
+type InstanceViewMode = 'grid' | 'list'
+
+// Helper to get view mode from localStorage
+const getStoredViewMode = (): InstanceViewMode => {
+  try {
+    const stored = localStorage.getItem('do-manager-instance-view-mode')
+    if (stored === 'grid' || stored === 'list') {
+      return stored
+    }
+  } catch {
+    // localStorage not available
+  }
+  return 'list' // Default to list view
 }
 
 export function InstanceList({
@@ -46,18 +64,39 @@ export function InstanceList({
   const [showBatchDownloadDialog, setShowBatchDownloadDialog] = useState(false)
   const [showDiffDialog, setShowDiffDialog] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [renameInstance, setRenameInstance] = useState<Instance | null>(null)
+  const [editTagsInstance, setEditTagsInstance] = useState<Instance | null>(null)
+  const [viewMode, setViewMode] = useState<InstanceViewMode>(getStoredViewMode)
+
+  // Toggle view mode with localStorage persistence
+  const toggleViewMode = (): void => {
+    setViewMode((prev) => {
+      const newMode = prev === 'grid' ? 'list' : 'grid'
+      try {
+        localStorage.setItem('do-manager-instance-view-mode', newMode)
+      } catch {
+        // localStorage not available
+      }
+      return newMode
+    })
+  }
 
   // Selection state
   const selection = useSelection<Instance>()
 
-  // Filter instances based on search
+  // Filter instances based on search (includes name, object_id, and tags)
   const filteredInstances = useMemo(() => {
     if (!searchTerm.trim()) return instances
     const searchLower = searchTerm.toLowerCase()
     return instances.filter(
-      (inst) =>
-        (inst.name?.toLowerCase().includes(searchLower) ?? false) ||
-        inst.object_id.toLowerCase().includes(searchLower)
+      (inst) => {
+        // Search name and object_id
+        if (inst.name?.toLowerCase().includes(searchLower)) return true
+        if (inst.object_id.toLowerCase().includes(searchLower)) return true
+        // Search tags
+        const tags = Array.isArray(inst.tags) ? inst.tags : []
+        return tags.some(tag => tag.toLowerCase().includes(searchLower))
+      }
     )
   }, [instances, searchTerm])
 
@@ -65,7 +104,8 @@ export function InstanceList({
     try {
       setLoading(true)
       setError('')
-      const data = await instanceApi.list(namespace.id)
+      // Always skip cache to ensure fresh has_alarm data after returning from StorageViewer
+      const data = await instanceApi.list(namespace.id, undefined, true)
       setInstances(data.instances)
       setTotal(data.total)
     } catch (err) {
@@ -110,6 +150,20 @@ export function InstanceList({
     setInstances((prev) => [instance, ...prev])
     setTotal((prev) => prev + 1)
     setCloneInstance(null)
+  }
+
+  const handleRenameComplete = (updated: Instance): void => {
+    setInstances((prev) =>
+      prev.map((inst) => (inst.id === updated.id ? updated : inst))
+    )
+    setRenameInstance(null)
+  }
+
+  const handleTagsComplete = (updated: Instance): void => {
+    setInstances((prev) =>
+      prev.map((inst) => (inst.id === updated.id ? updated : inst))
+    )
+    setEditTagsInstance(null)
   }
 
   const handleColorChange = async (instanceId: string, color: InstanceColor): Promise<void> => {
@@ -259,29 +313,51 @@ export function InstanceList({
         </SelectionToolbar>
       )}
 
-      {/* Search filter */}
+      {/* Search filter and View Toggle */}
       {instances.length > 0 && (
-        <div className="relative mb-4">
-          <label htmlFor="instance-filter" className="sr-only">Filter instances</label>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            id="instance-filter"
-            placeholder="Filter instances by name or ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-10"
-          />
-          {searchTerm && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-              onClick={() => setSearchTerm('')}
-              aria-label="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="relative flex-1">
+            <label htmlFor="instance-filter" className="sr-only">Filter instances</label>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="instance-filter"
+              placeholder="Filter instances by name or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                onClick={() => setSearchTerm('')}
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleViewMode}
+            aria-label={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+            title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+            className="flex items-center gap-2"
+          >
+            {viewMode === 'grid' ? (
+              <>
+                <LayoutList className="h-4 w-4" />
+                <span className="hidden sm:inline">List</span>
+              </>
+            ) : (
+              <>
+                <LayoutGrid className="h-4 w-4" />
+                <span className="hidden sm:inline">Grid</span>
+              </>
+            )}
+          </Button>
         </div>
       )}
 
@@ -362,137 +438,163 @@ export function InstanceList({
         </div>
       )}
 
-      {/* Instance Grid */}
+      {/* Instance List or Grid */}
       {!loading && filteredInstances.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredInstances.map((instance) => {
-            const colorConfig = getColorConfig(instance.color)
-            return (
-            <Card
-              key={instance.id}
-              className={`hover:shadow-md transition-shadow relative overflow-hidden ${
-                selection.isSelected(instance.id) ? 'ring-2 ring-primary bg-primary/5' : ''
-              }`}
-            >
-              {/* Color indicator bar */}
-              {colorConfig && (
-                <div 
-                  className={`absolute left-0 top-0 bottom-0 w-1 ${colorConfig.bgClass}`}
-                  aria-hidden="true"
-                />
-              )}
-              <CardHeader className={`pb-2 ${colorConfig ? 'pl-5' : ''}`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={selection.isSelected(instance.id)}
-                      onCheckedChange={() => handleSelectionChange(instance)}
-                      aria-label={`Select ${instance.name ?? instance.object_id}`}
-                    />
-                    <div>
-                      <CardTitle className="text-base">
-                        {instance.name ?? 'Unnamed Instance'}
-                      </CardTitle>
-                      <CardDescription className="font-mono text-xs truncate max-w-[200px]">
-                        {instance.object_id}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <InstanceColorPicker
-                      value={instance.color}
-                      onChange={(color) => handleColorChange(instance.id, color)}
-                    />
-                    {instance.has_alarm === 1 && (
-                      <span title="Has alarm">
-                        <Bell className="h-4 w-4 text-yellow-500" />
-                      </span>
+        <>
+          {viewMode === 'list' ? (
+            <InstanceListView
+              instances={filteredInstances}
+              selectedIds={selection.selectedIds}
+              onToggleSelection={handleSelectionChange}
+              onSelectAll={() => selection.selectAll(filteredInstances)}
+              onClearSelection={selection.clear}
+              onSelect={onSelectInstance}
+              onClone={setCloneInstance}
+              onRename={setRenameInstance}
+              onEditTags={setEditTagsInstance}
+              onDelete={(inst) => void handleDelete(inst)}
+              onColorChange={handleColorChange}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredInstances.map((instance) => {
+                const colorConfig = getColorConfig(instance.color)
+                return (
+                  <Card
+                    key={instance.id}
+                    className={`hover:shadow-md transition-shadow relative overflow-hidden ${selection.isSelected(instance.id) ? 'ring-2 ring-primary bg-primary/5' : ''
+                      }`}
+                  >
+                    {/* Color indicator bar */}
+                    {colorConfig && (
+                      <div
+                        className={`absolute left-0 top-0 bottom-0 w-1 ${colorConfig.bgClass}`}
+                        aria-hidden="true"
+                      />
                     )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className={colorConfig ? 'pl-5' : ''}>
-                <div className="flex items-center gap-4 text-sm mb-3">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{formatDate(instance.last_accessed)}</span>
-                  </div>
-                  {instance.storage_size_bytes !== null && ((): React.ReactElement => {
-                    const storageStatus = getStorageQuotaStatus(instance.storage_size_bytes)
-                    const isHighStorage = storageStatus.level !== 'normal'
-                    const isCritical = storageStatus.level === 'critical'
-                    
-                    return (
-                      <div className={`flex items-center gap-1 ${
-                        isCritical 
-                          ? 'text-red-500' 
-                          : isHighStorage 
-                            ? 'text-yellow-500' 
-                            : 'text-muted-foreground'
-                      }`}>
-                        {isCritical ? (
-                          <AlertTriangle className="h-3.5 w-3.5" />
-                        ) : isHighStorage ? (
-                          <HardDrive className="h-3.5 w-3.5" />
-                        ) : (
-                          <Database className="h-3.5 w-3.5" />
-                        )}
-                        <span>{formatSize(instance.storage_size_bytes)}</span>
-                        {isHighStorage && (
-                          <span 
-                            className="text-xs font-medium"
-                            title={`${storageStatus.percentUsed.toFixed(1)}% of 10GB DO limit`}
-                          >
-                            ({storageStatus.percentUsed.toFixed(0)}%)
-                          </span>
-                        )}
+                    <CardHeader className={`pb-2 ${colorConfig ? 'pl-5' : ''}`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={selection.isSelected(instance.id)}
+                            onCheckedChange={() => handleSelectionChange(instance)}
+                            aria-label={`Select ${instance.name ?? instance.object_id}`}
+                          />
+                          <div>
+                            <CardTitle className="text-base">
+                              {instance.name ?? 'Unnamed Instance'}
+                            </CardTitle>
+                            <CardDescription className="font-mono text-xs truncate max-w-[200px]">
+                              {instance.object_id}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <InstanceColorPicker
+                            value={instance.color}
+                            onChange={(color) => handleColorChange(instance.id, color)}
+                          />
+                          {instance.has_alarm === 1 && (
+                            <span title="Has alarm">
+                              <Bell className="h-4 w-4 text-yellow-500" />
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )
-                  })()}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => onSelectInstance(instance)}
-                  >
-                    <Database className="h-3.5 w-3.5 mr-1.5" />
-                    View Storage
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void handleExport(instance)}
-                    disabled={exportingId === instance.id}
-                    title="Download instance data"
-                  >
-                    {exportingId === instance.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCloneInstance(instance)}
-                    title="Clone instance"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void handleDelete(instance)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )})}
-        </div>
+                    </CardHeader>
+                    <CardContent className={colorConfig ? 'pl-5' : ''}>
+                      <div className="flex items-center gap-4 text-sm mb-3">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>{formatDate(instance.last_accessed)}</span>
+                        </div>
+                        {instance.storage_size_bytes !== null && ((): React.ReactElement => {
+                          const storageStatus = getStorageQuotaStatus(instance.storage_size_bytes)
+                          const isHighStorage = storageStatus.level !== 'normal'
+                          const isCritical = storageStatus.level === 'critical'
+
+                          return (
+                            <div className={`flex items-center gap-1 ${isCritical
+                              ? 'text-red-500'
+                              : isHighStorage
+                                ? 'text-yellow-500'
+                                : 'text-muted-foreground'
+                              }`}>
+                              {isCritical ? (
+                                <AlertTriangle className="h-3.5 w-3.5" />
+                              ) : isHighStorage ? (
+                                <HardDrive className="h-3.5 w-3.5" />
+                              ) : (
+                                <Database className="h-3.5 w-3.5" />
+                              )}
+                              <span>{formatSize(instance.storage_size_bytes)}</span>
+                              {isHighStorage && (
+                                <span
+                                  className="text-xs font-medium"
+                                  title={`${storageStatus.percentUsed.toFixed(1)}% of 10GB DO limit`}
+                                >
+                                  ({storageStatus.percentUsed.toFixed(0)}%)
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })()}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => onSelectInstance(instance)}
+                        >
+                          <Database className="h-3.5 w-3.5 mr-1.5" />
+                          View Storage
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void handleExport(instance)}
+                          disabled={exportingId === instance.id}
+                          title="Download instance data"
+                        >
+                          {exportingId === instance.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Download className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCloneInstance(instance)}
+                          title="Clone instance"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setRenameInstance(instance)}
+                          title="Rename instance"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void handleDelete(instance)}
+                          title="Delete instance"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* Create Instance Dialog */}
@@ -509,6 +611,14 @@ export function InstanceList({
         onOpenChange={(open) => !open && setCloneInstance(null)}
         sourceInstance={cloneInstance}
         onComplete={handleCloneComplete}
+      />
+
+      {/* Rename Instance Dialog */}
+      <RenameInstanceDialog
+        open={renameInstance !== null}
+        onOpenChange={(open) => !open && setRenameInstance(null)}
+        instance={renameInstance}
+        onComplete={handleRenameComplete}
       />
 
       {/* Batch Delete Dialog */}
@@ -545,6 +655,15 @@ export function InstanceList({
         instanceA={selectedInstances[0] ?? null}
         instanceB={selectedInstances[1] ?? null}
         namespaceName={namespace.name}
+      />
+
+      {/* Edit Tags Dialog */}
+      <EditTagsDialog
+        open={editTagsInstance !== null}
+        onOpenChange={(open) => !open && setEditTagsInstance(null)}
+        instance={editTagsInstance}
+        namespaceId={namespace.id}
+        onComplete={handleTagsComplete}
       />
     </div>
   )

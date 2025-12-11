@@ -1,32 +1,5 @@
-const API_BASE = '/api'
-
-/**
- * Generic fetch wrapper with error handling
- */
-async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  if (options.headers) {
-    const optHeaders = options.headers instanceof Headers
-      ? options.headers
-      : new Headers(options.headers as Record<string, string>)
-    optHeaders.forEach((value, key) => headers.set(key, value))
-  }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})) as { error?: string }
-    throw new Error(errorData.error ?? `Request failed: ${String(response.status)}`)
-  }
-
-  return response.json() as Promise<T>
-}
+import { apiFetch } from '../lib/apiFetch'
+import { getCached, setCache, invalidatePrefix, CACHE_KEYS, CACHE_TTL } from '../lib/cache'
 
 export interface Backup {
   id: string
@@ -54,58 +27,91 @@ export interface RestoreResponse {
 }
 
 /**
- * Backup API functions
+ * Backup API functions with caching support
  */
 export const backupApi = {
   /**
    * List all backups
+   * @param options Filter options
+   * @param skipCache Set true to bypass cache
    */
   async list(options?: {
     namespace_id?: string
     limit?: number
-  }): Promise<Backup[]> {
+  }, skipCache = false): Promise<Backup[]> {
     const params = new URLSearchParams()
     if (options?.namespace_id) params.set('namespace_id', options.namespace_id)
     if (options?.limit) params.set('limit', String(options.limit))
-    
+
     const query = params.toString()
     const endpoint = `/backups${query ? `?${query}` : ''}`
+    const cacheKey = `${CACHE_KEYS.BACKUPS}list:${query}`
+
+    if (!skipCache) {
+      const cached = getCached(cacheKey, CACHE_TTL.DEFAULT) as Backup[] | undefined
+      if (cached) {
+        return cached
+      }
+    }
+
     const data = await apiFetch<BackupsResponse>(endpoint)
+    setCache(cacheKey, data.backups)
     return data.backups
   },
 
   /**
    * List backups for an instance
+   * @param instanceId Instance ID
+   * @param skipCache Set true to bypass cache
    */
-  async listForInstance(instanceId: string): Promise<Backup[]> {
+  async listForInstance(instanceId: string, skipCache = false): Promise<Backup[]> {
+    const cacheKey = `${CACHE_KEYS.BACKUPS}instance:${instanceId}`
+
+    if (!skipCache) {
+      const cached = getCached(cacheKey, CACHE_TTL.DEFAULT) as Backup[] | undefined
+      if (cached) {
+        return cached
+      }
+    }
+
     const data = await apiFetch<BackupsResponse>(`/instances/${instanceId}/backups`)
+    setCache(cacheKey, data.backups)
     return data.backups
   },
 
   /**
    * Create a backup
+   * Invalidates backup caches
    */
   async create(instanceId: string): Promise<Backup> {
     const data = await apiFetch<BackupResponse>(`/instances/${instanceId}/backups`, {
       method: 'POST',
     })
+    // Invalidate backup caches
+    invalidatePrefix(CACHE_KEYS.BACKUPS)
     return data.backup
   },
 
   /**
    * Restore from a backup
+   * Invalidates backup caches
    */
   async restore(instanceId: string, backupId: string): Promise<RestoreResponse> {
-    return apiFetch<RestoreResponse>(`/instances/${instanceId}/restore/${backupId}`, {
+    const result = await apiFetch<RestoreResponse>(`/instances/${instanceId}/restore/${backupId}`, {
       method: 'POST',
     })
+    // Invalidate backup caches
+    invalidatePrefix(CACHE_KEYS.BACKUPS)
+    return result
   },
 
   /**
    * Delete a backup
+   * Invalidates backup caches
    */
   async delete(backupId: string): Promise<void> {
     await apiFetch(`/backups/${backupId}`, { method: 'DELETE' })
+    // Invalidate backup caches
+    invalidatePrefix(CACHE_KEYS.BACKUPS)
   },
 }
-

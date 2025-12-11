@@ -4,22 +4,38 @@
 export interface Env {
   // D1 database for metadata
   METADATA: D1Database
-  
+
   // R2 bucket for backups
   BACKUP_BUCKET: R2Bucket
-  
+
   // Static assets
   ASSETS: Fetcher
-  
+
   // Secrets
   ACCOUNT_ID: string
   API_KEY: string
   TEAM_DOMAIN: string
   POLICY_AUD: string
-  
+
   // Optional vars
   ENVIRONMENT?: string
 }
+
+/**
+ * Namespace color options for visual organization
+ * Organized in rows by hue family for intuitive selection
+ */
+export type NamespaceColor =
+  | 'red' | 'red-light' | 'red-dark'
+  | 'orange' | 'orange-light' | 'amber'
+  | 'yellow' | 'yellow-light' | 'lime'
+  | 'green' | 'green-light' | 'emerald'
+  | 'teal' | 'cyan' | 'sky'
+  | 'blue' | 'blue-light' | 'indigo'
+  | 'purple' | 'violet' | 'fuchsia'
+  | 'pink' | 'rose' | 'pink-light'
+  | 'gray' | 'slate' | 'zinc'
+  | null
 
 /**
  * Namespace record from D1
@@ -32,6 +48,7 @@ export interface Namespace {
   storage_backend: 'sqlite' | 'kv'
   endpoint_url: string | null
   admin_hook_enabled: number
+  color: NamespaceColor
   created_at: string
   updated_at: string
   metadata: string | null
@@ -39,8 +56,19 @@ export interface Namespace {
 
 /**
  * Instance color options for visual organization
+ * Organized in rows by hue family for intuitive selection
  */
-export type InstanceColor = 'red' | 'orange' | 'yellow' | 'green' | 'teal' | 'blue' | 'purple' | 'pink' | 'gray' | null
+export type InstanceColor =
+  | 'red' | 'red-light' | 'red-dark'
+  | 'orange' | 'orange-light' | 'amber'
+  | 'yellow' | 'yellow-light' | 'lime'
+  | 'green' | 'green-light' | 'emerald'
+  | 'teal' | 'cyan' | 'sky'
+  | 'blue' | 'blue-light' | 'indigo'
+  | 'purple' | 'violet' | 'fuchsia'
+  | 'pink' | 'rose' | 'pink-light'
+  | 'gray' | 'slate' | 'zinc'
+  | null
 
 /**
  * Instance record from D1
@@ -57,6 +85,7 @@ export interface Instance {
   created_at: string
   updated_at: string
   metadata: string | null
+  tags: string[]
 }
 
 /**
@@ -226,3 +255,25 @@ export interface StructuredError {
   stack?: string
 }
 
+// Migration Types (for API responses)
+export interface MigrationStatusResponse {
+  currentVersion: number
+  latestVersion: number
+  pendingMigrations: { version: number; name: string; description: string }[]
+  appliedMigrations: { version: number; migration_name: string; applied_at: string }[]
+  isUpToDate: boolean
+  legacy?: LegacyInstallationInfoResponse
+}
+
+export interface LegacyInstallationInfoResponse {
+  isLegacy: boolean
+  existingTables: string[]
+  suggestedVersion: number
+}
+
+export interface MigrationResultResponse {
+  success: boolean
+  migrationsApplied: number
+  currentVersion: number
+  errors: string[]
+}
