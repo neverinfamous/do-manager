@@ -1,6 +1,6 @@
 # Cloudflare Durable Object Manager
 
-Last Updated December 10, 2025 - v1.1.0
+Last Updated December 17, 2025 - v1.1.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -16,7 +16,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 
 ## Tech Stack
 
-**Frontend**: React 19.2.1 | TypeScript 5.9.3 | Vite 7.2.7 | Tailwind CSS | shadcn/ui
+**Frontend**: React 19.2.3 | Vite 7.3.0 | TypeScript 5.9.3 | Tailwind CSS 4.1.17 | shadcn/ui
 
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
