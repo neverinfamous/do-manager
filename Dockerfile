@@ -13,7 +13,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Upgrade Alpine packages to fix CVE-2025-46394 & CVE-2024-58251 (busybox 1.37.0-r19 -> 1.37.0-r20)
-RUN apk upgrade --no-cache
+# Also upgrade c-ares to fix CVE-2025-62408 (1.34.5-r0 -> 1.34.6-r0)
+RUN apk upgrade --no-cache && \
+    apk add --no-cache --upgrade c-ares
 
 # Upgrade npm to latest version to fix CVE-2024-21538 (cross-spawn vulnerability)
 RUN npm install -g npm@latest
@@ -61,7 +63,9 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 
 # Upgrade Alpine packages to fix CVE-2025-46394 & CVE-2024-58251 (busybox 1.37.0-r19 -> 1.37.0-r20)
-RUN apk upgrade --no-cache
+# Also upgrade c-ares to fix CVE-2025-62408 (1.34.5-r0 -> 1.34.6-r0)
+RUN apk upgrade --no-cache && \
+    apk add --no-cache --upgrade c-ares
 
 # Upgrade npm to latest version to fix CVE-2024-21538 (cross-spawn vulnerability)
 RUN npm install -g npm@latest
@@ -89,6 +93,7 @@ RUN cd /tmp && \
 # - npm CLI dependencies: glob@11.1.0, tar@7.5.2 (manually patched in npm's installation)
 # - curl 8.14.1-r2 has CVE-2025-10966 (MEDIUM) with no fix available yet (Alpine base package)
 # - busybox CVE-2025-46394 & CVE-2024-58251 fixed via apk upgrade (1.37.0-r19 -> 1.37.0-r20)
+# - c-ares CVE-2025-62408 fixed via explicit upgrade (1.34.5-r0 -> 1.34.6-r0)
 RUN apk add --no-cache \
     curl \
     ca-certificates
