@@ -10,6 +10,25 @@ updates:
       - "npm"
     commit-message:
       prefix: "chore"
+    groups:
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+      eslint:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@eslint/*"
+          - "typescript-eslint"
+          - "globals"
+      types:
+        patterns:
+          - "@types/*"
+      cloudflare:
+        patterns:
+          - "wrangler"
+          - "@cloudflare/*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -21,4 +40,9 @@ updates:
       - "github-actions"
     commit-message:
       prefix: "chore"
+    groups:
+      actions:
+        patterns:
+          - "actions/*"
+          - "github/*"
 

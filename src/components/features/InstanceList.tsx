@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2, CheckSquare, Archive, Search, X, AlertTriangle, HardDrive, ArrowLeftRight, Pencil, LayoutGrid, LayoutList } from 'lucide-react'
+import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2, CheckSquare, Archive, Search, X, AlertTriangle, HardDrive, ArrowLeftRight, Pencil, LayoutGrid, LayoutList, ArrowRightLeft, Snowflake } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import {
@@ -20,6 +20,8 @@ import { InstanceDiffDialog } from './InstanceDiffDialog'
 import { RenameInstanceDialog } from './RenameInstanceDialog'
 import { EditTagsDialog } from './EditTagsDialog'
 import { InstanceListView } from './InstanceListView'
+import { MigrateInstanceDialog } from './MigrateInstanceDialog'
+import { UnfreezeInstanceDialog } from './UnfreezeInstanceDialog'
 import { instanceApi } from '../../services/instanceApi'
 import { exportApi } from '../../services/exportApi'
 import { useSelection } from '../../hooks/useSelection'
@@ -66,6 +68,8 @@ export function InstanceList({
   const [searchTerm, setSearchTerm] = useState('')
   const [renameInstance, setRenameInstance] = useState<Instance | null>(null)
   const [editTagsInstance, setEditTagsInstance] = useState<Instance | null>(null)
+  const [migrateInstance, setMigrateInstance] = useState<Instance | null>(null)
+  const [unfreezeInstance, setUnfreezeInstance] = useState<Instance | null>(null)
   const [viewMode, setViewMode] = useState<InstanceViewMode>(getStoredViewMode)
 
   // Toggle view mode with localStorage persistence
@@ -164,6 +168,12 @@ export function InstanceList({
       prev.map((inst) => (inst.id === updated.id ? updated : inst))
     )
     setEditTagsInstance(null)
+  }
+
+  const handleMigrateComplete = (): void => {
+    // Refresh instances list after migration
+    void loadInstances()
+    setMigrateInstance(null)
   }
 
   const handleColorChange = async (instanceId: string, color: InstanceColor): Promise<void> => {
@@ -452,6 +462,8 @@ export function InstanceList({
               onClone={setCloneInstance}
               onRename={setRenameInstance}
               onEditTags={setEditTagsInstance}
+              onMigrate={setMigrateInstance}
+              onUnfreeze={setUnfreezeInstance}
               onDelete={(inst) => void handleDelete(inst)}
               onColorChange={handleColorChange}
             />
@@ -574,6 +586,22 @@ export function InstanceList({
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => setMigrateInstance(instance)}
+                          title="Migrate to namespace"
+                        >
+                          <ArrowRightLeft className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setUnfreezeInstance(instance)}
+                          title="Check freeze status"
+                        >
+                          <Snowflake className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => setRenameInstance(instance)}
                           title="Rename instance"
                         >
@@ -664,6 +692,23 @@ export function InstanceList({
         instance={editTagsInstance}
         namespaceId={namespace.id}
         onComplete={handleTagsComplete}
+      />
+
+      {/* Migrate Instance Dialog */}
+      <MigrateInstanceDialog
+        open={migrateInstance !== null}
+        onOpenChange={(open) => !open && setMigrateInstance(null)}
+        sourceInstance={migrateInstance}
+        sourceNamespace={namespace}
+        onComplete={handleMigrateComplete}
+      />
+
+      {/* Unfreeze Instance Dialog */}
+      <UnfreezeInstanceDialog
+        instance={unfreezeInstance}
+        open={unfreezeInstance !== null}
+        onOpenChange={(open) => !open && setUnfreezeInstance(null)}
+        onUnfreezeComplete={() => setUnfreezeInstance(null)}
       />
     </div>
   )

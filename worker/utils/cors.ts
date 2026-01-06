@@ -15,7 +15,7 @@ const ALLOWED_ORIGINS = [
  */
 export function getCorsHeaders(request: Request): CorsHeaders {
   const origin = request.headers.get('Origin')
-  
+
   // Check if origin is allowed or if it's a production deployment
   const allowedOrigin = origin && (
     ALLOWED_ORIGINS.includes(origin) ||
@@ -43,13 +43,48 @@ export function handleCorsPreflightRequest(corsHeaders: CorsHeaders): Response {
 
 /**
  * Check if request is from localhost (development)
+ * Note: When running `wrangler dev` with custom routes, the hostname/origin 
+ * will show the production domain. We detect this by checking for the 
+ * production domain without CF-Access headers (which would be present in real production).
  */
 export function isLocalDevelopment(request: Request): boolean {
   const url = new URL(request.url)
-  return (
+  const origin = request.headers.get('Origin')
+
+  // Check request URL hostname
+  if (
     url.hostname === 'localhost' ||
     url.hostname === '127.0.0.1' ||
     url.hostname.endsWith('.local')
-  )
-}
+  ) {
+    return true
+  }
 
+  // Check Origin header (for proxied requests from Vite)
+  if (origin) {
+    try {
+      const originUrl = new URL(origin)
+      if (
+        originUrl.hostname === 'localhost' ||
+        originUrl.hostname === '127.0.0.1'
+      ) {
+        return true
+      }
+    } catch {
+      // Invalid origin URL, ignore
+    }
+  }
+
+  // Special case: wrangler dev with custom routes uses production hostname
+  // but without CF-Access headers. Real production always has these headers.
+  const hasCfAccessToken = request.headers.has('CF-Access-JWT-Assertion') ||
+    request.headers.has('Cf-Access-Jwt-Assertion')
+  const isProductionDomain = url.hostname === 'do.adamic.tech' ||
+    (origin?.includes('do.adamic.tech') ?? false)
+
+  if (isProductionDomain && !hasCfAccessToken) {
+    return true
+  }
+
+  return false
+}

@@ -1,11 +1,11 @@
 # Cloudflare Durable Object Manager - Docker
 
-Last Updated December 29, 2025 - Production/Stable v1.1.0
+Last Updated January 5, 2026 - Production/Stable v1.2.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-![Version](https://img.shields.io/badge/version-v1.1.0-green)
+![Version](https://img.shields.io/badge/version-v1.2.0-green)
 ![Status](https://img.shields.io/badge/status-Production%2FStable-brightgreen)
 [![Security](https://img.shields.io/badge/Security-Enhanced-green.svg)](https://github.com/neverinfamous/do-manager/blob/main/SECURITY.md)
 [![CodeQL](https://img.shields.io/badge/CodeQL-Passing-brightgreen.svg)](https://github.com/neverinfamous/do-manager/security/code-scanning)
@@ -45,6 +45,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Search & filter** - Real-time filtering by instance name or object ID
 - **Color tags** - Color-code instances for visual organization (9 preset colors)
 - **Instance diff** - Compare storage between two instances to see differences
+- **Instance migration** - Migrate instances between namespaces with 3 cutover modes (Copy Only, Copy + Freeze, Copy + Delete)
 - View storage contents (keys/values)
 
 ### SQL Console (SQLite-backed DOs)
@@ -323,7 +324,7 @@ docker-compose pull && docker-compose up -d
 | Tag | Description |
 |-----|-------------|
 | `latest` | Latest stable release |
-| `v1.1.0` | Specific version (recommended for production) |
+| `v1.2.0` | Specific version (recommended for production) |
 | `sha-XXXXXX` | Commit SHA for reproducible builds |
 
 ---

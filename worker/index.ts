@@ -17,6 +17,7 @@ import { handleHealthRoutes } from './routes/health'
 import { handleQueriesRoutes } from './routes/queries'
 import { handleDiffRoutes } from './routes/diff'
 import { handleMigrationRoutes } from './routes/migrations'
+import { handleMigrateRoutes } from './routes/migrate'
 
 /**
  * Main request handler
@@ -85,8 +86,8 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
     if (url.pathname === '/api/instances/diff') {
       return handleDiffRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
     }
-    // Check for storage, sql, or import sub-routes
-    if (url.pathname.includes('/storage') || url.pathname.includes('/sql') || url.pathname.includes('/import')) {
+    // Check for storage, sql, import, or freeze sub-routes
+    if (url.pathname.includes('/storage') || url.pathname.includes('/sql') || url.pathname.includes('/import') || url.pathname.includes('/freeze')) {
       return handleStorageRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
     }
     // Check for alarm sub-routes
@@ -100,6 +101,10 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
     // Check for export sub-routes
     if (url.pathname.includes('/export')) {
       return handleExportRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
+    }
+    // Check for migrate sub-routes
+    if (url.pathname.includes('/migrate')) {
+      return handleMigrateRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)
     }
     // Clone and other instance routes handled by instanceRoutes
     return handleInstanceRoutes(request, env, url, corsHeaders, isLocalDev, userEmail)

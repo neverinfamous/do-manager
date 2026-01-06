@@ -107,9 +107,11 @@ export type JobType =
   | 'batch_export_keys'
   | 'batch_backup'
   | 'clone_instance'
+  | 'migrate_instance'
   | 'search_keys'
   | 'search_values'
   | 'search_tags'
+  | 'unfreeze_instance'
 
 
 /**

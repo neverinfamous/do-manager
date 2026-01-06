@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Box, Database, Bell, Download, Copy, Trash2, Loader2, ChevronUp, ChevronDown, Clock, AlertTriangle, HardDrive, Pencil, Tag } from 'lucide-react'
+import { Box, Database, Bell, Download, Copy, Trash2, Loader2, ChevronUp, ChevronDown, Clock, AlertTriangle, HardDrive, Pencil, Tag, ArrowRightLeft, Snowflake } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
 import { exportApi } from '../../services/exportApi'
@@ -69,6 +69,8 @@ interface InstanceListViewProps {
     onClone: (instance: Instance) => void
     onRename: (instance: Instance) => void
     onEditTags: (instance: Instance) => void
+    onMigrate: (instance: Instance) => void
+    onUnfreeze: (instance: Instance) => void
     onDelete: (instance: Instance) => void
     onColorChange: (instanceId: string, color: InstanceColor) => void
 }
@@ -83,6 +85,8 @@ export function InstanceListView({
     onClone,
     onRename,
     onEditTags,
+    onMigrate,
+    onUnfreeze,
     onDelete,
     onColorChange,
 }: InstanceListViewProps): React.JSX.Element {
@@ -359,6 +363,24 @@ export function InstanceListView({
                                             className="h-7 w-7 p-0"
                                         >
                                             <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => onMigrate(instance)}
+                                            title="Migrate to namespace"
+                                            className="h-7 w-7 p-0"
+                                        >
+                                            <ArrowRightLeft className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => onUnfreeze(instance)}
+                                            title="Check freeze status"
+                                            className="h-7 w-7 p-0"
+                                        >
+                                            <Snowflake className="h-3.5 w-3.5" />
                                         </Button>
                                         <Button
                                             variant="ghost"

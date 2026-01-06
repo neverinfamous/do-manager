@@ -129,6 +129,25 @@ export async function handleStorageRoutes(
     return renameStorageKey(request, instanceId, env, corsHeaders, isLocalDev, userEmail)
   }
 
+  // GET /api/instances/:id/freeze - Get freeze status
+  const freezeMatch = /^\/api\/instances\/([^/]+)\/freeze$/.exec(path)
+  if (method === 'GET' && freezeMatch) {
+    const instanceId = freezeMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return getFreezeStatus(instanceId, env, corsHeaders, isLocalDev)
+  }
+
+  // DELETE /api/instances/:id/freeze - Unfreeze instance
+  if (method === 'DELETE' && freezeMatch) {
+    const instanceId = freezeMatch[1]
+    if (!instanceId) {
+      return errorResponse('Instance ID required', corsHeaders, 400)
+    }
+    return unfreezeInstance(instanceId, env, corsHeaders, isLocalDev, userEmail)
+  }
+
   return errorResponse('Not Found', corsHeaders, 404)
 }
 
@@ -374,6 +393,10 @@ async function setStorageValue(
     })
 
     if (!response.ok) {
+      if (response.status === 423) {
+        await failJob(env.METADATA, jobId, 'Instance is frozen')
+        return errorResponse('Instance is frozen. Unfreeze before making changes.', corsHeaders, 423)
+      }
       await failJob(env.METADATA, jobId, `Admin hook error: ${String(response.status)}`)
       return errorResponse(`Admin hook error: ${String(response.status)}`, corsHeaders, response.status)
     }
@@ -449,6 +472,10 @@ async function deleteStorageValue(
     })
 
     if (!response.ok) {
+      if (response.status === 423) {
+        await failJob(env.METADATA, jobId, 'Instance is frozen')
+        return errorResponse('Instance is frozen. Unfreeze before making changes.', corsHeaders, 423)
+      }
       await failJob(env.METADATA, jobId, `Admin hook error: ${String(response.status)}`)
       return errorResponse(`Admin hook error: ${String(response.status)}`, corsHeaders, response.status)
     }
@@ -817,5 +844,129 @@ async function renameStorageKey(
       metadata: { oldKey, newKey, error: error instanceof Error ? error.message : String(error) }
     })
     return errorResponse(`Failed to rename key: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
+  }
+}
+
+/**
+ * Get freeze status of an instance
+ */
+async function getFreezeStatus(
+  instanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean
+): Promise<Response> {
+  if (isLocalDev) {
+    return jsonResponse({ frozen: false }, corsHeaders)
+  }
+
+  try {
+    const instance = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    const namespace = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(instance.namespace_id).first<Namespace>()
+
+    if (!namespace?.endpoint_url || namespace.admin_hook_enabled !== 1) {
+      return jsonResponse({ frozen: false, warning: 'Admin hook not configured' }, corsHeaders)
+    }
+
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/freeze`
+
+    const response = await fetch(adminUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    if (!response.ok) {
+      return jsonResponse({ frozen: false }, corsHeaders)
+    }
+
+    const data = await response.json() as { frozen?: boolean; frozenAt?: string }
+    return jsonResponse(data, corsHeaders)
+  } catch (error) {
+    logWarning(`Get freeze status error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'storage',
+      operation: 'freeze_status',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
+    return jsonResponse({ frozen: false }, corsHeaders)
+  }
+}
+
+/**
+ * Unfreeze an instance
+ */
+async function unfreezeInstance(
+  instanceId: string,
+  env: Env,
+  corsHeaders: CorsHeaders,
+  isLocalDev: boolean,
+  userEmail: string | null
+): Promise<Response> {
+  if (isLocalDev) {
+    return jsonResponse({ success: true, frozen: false }, corsHeaders)
+  }
+
+  try {
+    const instance = await env.METADATA.prepare(
+      'SELECT * FROM instances WHERE id = ?'
+    ).bind(instanceId).first<Instance>()
+
+    if (!instance) {
+      return errorResponse('Instance not found', corsHeaders, 404)
+    }
+
+    const namespace = await env.METADATA.prepare(
+      'SELECT * FROM namespaces WHERE id = ?'
+    ).bind(instance.namespace_id).first<Namespace>()
+
+    if (!namespace?.endpoint_url || namespace.admin_hook_enabled !== 1) {
+      return errorResponse('Admin hook not configured or enabled', corsHeaders, 400)
+    }
+
+    const jobId = await createJob(env.METADATA, 'unfreeze_instance', userEmail, instance.namespace_id, instanceId)
+
+    const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+    const instanceName = instance.object_id
+    const adminUrl = `${baseUrl}/admin/${encodeURIComponent(instanceName)}/freeze`
+
+    logInfo(`Unfreezing instance: ${adminUrl}`, {
+      module: 'storage',
+      operation: 'unfreeze',
+      instanceId,
+      ...(userEmail ? { userId: userEmail } : {}),
+    })
+
+    const response = await fetch(adminUrl, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error')
+      await failJob(env.METADATA, jobId, `Unfreeze failed: ${response.status}`)
+      return errorResponse(`Failed to unfreeze: ${errorText.slice(0, 100)}`, corsHeaders, response.status)
+    }
+
+    await completeJob(env.METADATA, jobId, { instanceName })
+    return jsonResponse({ success: true, frozen: false }, corsHeaders)
+  } catch (error) {
+    logWarning(`Unfreeze error: ${error instanceof Error ? error.message : String(error)}`, {
+      module: 'storage',
+      operation: 'unfreeze',
+      instanceId,
+      metadata: { error: error instanceof Error ? error.message : String(error) }
+    })
+    return errorResponse(`Failed to unfreeze: ${error instanceof Error ? error.message : 'Unknown error'}`, corsHeaders, 500)
   }
 }
