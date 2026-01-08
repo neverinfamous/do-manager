@@ -8,6 +8,13 @@ export type WebhookEventType =
   | 'alarm_deleted'
   | 'job_failed'
   | 'batch_complete'
+  | 'storage_create'
+  | 'storage_update'
+  | 'storage_delete'
+  | 'instance_create'
+  | 'instance_delete'
+  | 'import_complete'
+  | 'export_complete'
 
 /**
  * Webhook from API
@@ -65,12 +72,26 @@ export const WEBHOOK_EVENT_LABELS: Record<WebhookEventType, string> = {
   alarm_deleted: 'Alarm Deleted',
   job_failed: 'Job Failed',
   batch_complete: 'Batch Operation Complete',
+  storage_create: 'Storage Key Created',
+  storage_update: 'Storage Key Updated',
+  storage_delete: 'Storage Key Deleted',
+  instance_create: 'Instance Created',
+  instance_delete: 'Instance Deleted',
+  import_complete: 'Import Complete',
+  export_complete: 'Export Complete',
 }
 
 /**
  * All available webhook event types
  */
 export const ALL_WEBHOOK_EVENTS: WebhookEventType[] = [
+  'storage_create',
+  'storage_update',
+  'storage_delete',
+  'instance_create',
+  'instance_delete',
+  'import_complete',
+  'export_complete',
   'backup_complete',
   'restore_complete',
   'alarm_set',

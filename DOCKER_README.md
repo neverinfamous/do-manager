@@ -1,11 +1,11 @@
 # Cloudflare Durable Object Manager - Docker
 
-Last Updated January 5, 2026 - Production/Stable v1.2.0
+Last Updated January 8, 2026 - Production/Stable v1.3.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-![Version](https://img.shields.io/badge/version-v1.2.0-green)
+![Version](https://img.shields.io/badge/version-v1.3.0-green)
 ![Status](https://img.shields.io/badge/status-Production%2FStable-brightgreen)
 [![Security](https://img.shields.io/badge/Security-Enhanced-green.svg)](https://github.com/neverinfamous/do-manager/blob/main/SECURITY.md)
 [![CodeQL](https://img.shields.io/badge/CodeQL-Passing-brightgreen.svg)](https://github.com/neverinfamous/do-manager/security/code-scanning)
@@ -99,9 +99,15 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - Restore from any backup with auto-refresh
 
 ### Metrics Dashboard
-- Request volume over time
-- Storage usage
-- CPU time metrics (average and total)
+- **Tabbed interface** - Invocations | Storage | Subrequests views
+- **Namespace filtering** - Filter metrics to specific Durable Object namespaces
+- **Latency percentiles** - P50/P90/P99 wall time metrics
+- **Storage trends** - Track storage bytes over time per namespace
+- **Request volume** - Daily request counts with error breakdown
+- **CPU time tracking** - Total and average CPU time metrics
+- **Subrequest monitoring** - Track external API calls from DOs
+- **Time range selection** - Switch between 24h/7d/30d views
+- **2-minute caching** - Fast metrics with skip-cache refresh option
 
 ### Global Search
 - **Cross-namespace key search** - Search for storage keys by name across all instances
@@ -127,7 +133,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 
 ### Webhook Notifications
 - **Event-driven webhooks** - Send HTTP notifications on key events
-- **Configurable events** - backup_complete, restore_complete, alarm_set, alarm_deleted, job_failed, batch_complete
+- **Configurable events** - storage_create, storage_update, storage_delete, instance_create, instance_delete, import_complete, export_complete, backup_complete, restore_complete, alarm_set, alarm_deleted, job_failed, batch_complete
 - **HMAC signatures** - Optional secret-based request signing for security
 - **Test webhooks** - Verify endpoint connectivity before going live
 
@@ -324,7 +330,7 @@ docker-compose pull && docker-compose up -d
 | Tag | Description |
 |-----|-------------|
 | `latest` | Latest stable release |
-| `v1.2.0` | Specific version (recommended for production) |
+| `v1.3.0` | Specific version (recommended for production) |
 | `sha-XXXXXX` | Commit SHA for reproducible builds |
 
 ---

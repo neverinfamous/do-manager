@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Loader2, BarChart3, Database, Clock, TrendingUp } from 'lucide-react'
+import {
+  RefreshCw,
+  Loader2,
+  BarChart3,
+  TrendingUp,
+  Clock,
+  AlertTriangle,
+  Database,
+  Globe,
+} from 'lucide-react'
 import { Button } from '../ui/button'
 import {
   Card,
@@ -8,94 +17,147 @@ import {
   CardHeader,
   CardTitle,
 } from '../ui/card'
-import { metricsApi, type MetricsData } from '../../services/metricsApi'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
+import {
+  metricsApi,
+  type DOMetricsResponse,
+  type DOMetricsTimeRange,
+  type DOInvocationDataPoint,
+} from '../../services/metricsApi'
+import { DOStorageTab } from './DOStorageTab'
+import { DOSubrequestsTab } from './DOSubrequestsTab'
 
 interface MetricsDashboardProps {
   namespaceId?: string
 }
 
+const TIME_RANGE_OPTIONS: { value: DOMetricsTimeRange; label: string }[] = [
+  { value: '24h', label: 'Last 24 hours' },
+  { value: '7d', label: 'Last 7 days' },
+  { value: '30d', label: 'Last 30 days' },
+]
+
+/**
+ * Format large numbers with K, M, B suffixes
+ */
+function formatNumber(num: number): string {
+  if (num >= 1000000000) return `${(num / 1000000000).toFixed(1)}B`
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
+  return num.toString()
+}
+
+
+
+
+/**
+ * Format milliseconds to readable latency
+ */
+function formatLatency(ms: number | undefined): string {
+  if (ms === undefined || ms === null) return 'N/A'
+  if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`
+  return `${ms.toFixed(1)}ms`
+}
+
+/**
+ * Aggregate invocations by date for chart
+ */
+function aggregateByDate(
+  data: DOInvocationDataPoint[]
+): { date: string; requests: number; errors: number }[] {
+  const byDate = new Map<string, { requests: number; errors: number }>()
+
+  for (const point of data) {
+    const existing = byDate.get(point.date)
+    if (existing) {
+      existing.requests += point.requests
+      existing.errors += point.errors
+    } else {
+      byDate.set(point.date, { requests: point.requests, errors: point.errors })
+    }
+  }
+
+  return Array.from(byDate.entries())
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+}
+
+/**
+ * Enhanced Metrics Dashboard with tabbed interface
+ */
 export function MetricsDashboard({
-  namespaceId,
+  namespaceId: _namespaceId,
 }: MetricsDashboardProps): React.ReactElement {
-  const [metrics, setMetrics] = useState<MetricsData | null>(null)
+  const [metrics, setMetrics] = useState<DOMetricsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
-  const [days, setDays] = useState(7)
+  const [timeRange, setTimeRange] = useState<DOMetricsTimeRange>('7d')
+  const [activeTab, setActiveTab] = useState('invocations')
 
-  const loadMetrics = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true)
-      setError('')
-      const data = namespaceId
-        ? await metricsApi.getNamespaceMetrics(namespaceId, days)
-        : await metricsApi.getAccountMetrics(days)
-      setMetrics(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load metrics')
-    } finally {
-      setLoading(false)
-    }
-  }, [namespaceId, days])
+  const loadMetrics = useCallback(
+    async (skipCache?: boolean): Promise<void> => {
+      try {
+        setLoading(true)
+        setError('')
+        const data = await metricsApi.getMetrics(timeRange, undefined, skipCache ?? false)
+        setMetrics(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load metrics')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [timeRange]
+  )
+
 
   useEffect(() => {
     void loadMetrics()
   }, [loadMetrics])
 
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
-    return num.toString()
+  const handleRefresh = (): void => {
+    void loadMetrics(true) // skipCache on refresh
   }
 
-  const formatBytes = (bytes: number): string => {
-    if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(2)} GB`
-    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(2)} MB`
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`
-    return `${String(bytes)} B`
+  const handleTimeRangeChange = (value: string): void => {
+    setTimeRange(value as DOMetricsTimeRange)
   }
 
-  const formatDuration = (ms: number): string => {
-    if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`
-    return `${ms.toFixed(0)}ms`
-  }
-
-  const getStoragePercentage = (): number => {
-    if (!metrics) return 0
-    return (metrics.storage.totalBytes / metrics.storage.maxBytes) * 100
-  }
-
-  const maxRequests = metrics?.invocations.byDay.reduce(
-    (max, day) => Math.max(max, day.requests),
-    1
-  ) ?? 1
+  // Prepare chart data
+  const chartData = metrics ? aggregateByDate(metrics.invocationsSeries) : []
+  const maxRequests = chartData.reduce((max, d) => Math.max(max, d.requests), 1)
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Metrics</h2>
+          <h2 className="text-2xl font-bold">Metrics Dashboard</h2>
           <p className="text-sm text-muted-foreground">
-            Durable Objects performance and usage
+            Durable Objects performance and usage analytics
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="metrics-date-range" className="sr-only">Date range</label>
-          <select
-            id="metrics-date-range"
-            value={days}
-            onChange={(e) => setDays(parseInt(e.target.value, 10))}
-            className="px-3 py-2 text-sm border rounded-md bg-background"
-          >
-            <option value={7}>Last 7 days</option>
-            <option value={14}>Last 14 days</option>
-            <option value={30}>Last 30 days</option>
-          </select>
-          <Button
-            variant="outline"
-            onClick={() => void loadMetrics()}
-            disabled={loading}
-          >
+          <Select value={timeRange} onValueChange={handleTimeRangeChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time range" />
+            </SelectTrigger>
+            <SelectContent>
+              {TIME_RANGE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -124,9 +186,10 @@ export function MetricsDashboard({
         </div>
       )}
 
-      {/* Metrics Cards */}
+      {/* Metrics Content */}
       {metrics && (
         <>
+          {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Requests */}
             <Card>
@@ -138,59 +201,54 @@ export function MetricsDashboard({
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {formatNumber(metrics.invocations.total)}
+                  {formatNumber(metrics.summary.totalRequests)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Last {days} days
+                  {metrics.summary.startDate} - {metrics.summary.endDate}
                 </p>
               </CardContent>
             </Card>
 
-            {/* Storage Used */}
+            {/* Errors */}
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
-                  <Database className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm">Storage Used</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  <CardTitle className="text-sm">Errors</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">
-                  {formatBytes(metrics.storage.totalBytes)}
+                <div className="text-3xl font-bold text-destructive">
+                  {formatNumber(metrics.summary.totalErrors)}
                 </div>
-                <div className="mt-2">
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all"
-                      style={{ width: `${String(Math.min(getStoragePercentage(), 100))}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {getStoragePercentage().toFixed(2)}% of {formatBytes(metrics.storage.maxBytes)}
-                  </p>
-                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {metrics.summary.totalRequests > 0
+                    ? `${((metrics.summary.totalErrors / metrics.summary.totalRequests) * 100).toFixed(2)}% error rate`
+                    : 'No requests'}
+                </p>
               </CardContent>
             </Card>
 
-            {/* Avg CPU Time */}
+            {/* P90 Latency */}
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm">Avg CPU Time</CardTitle>
+                  <CardTitle className="text-sm">P90 Latency</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {formatDuration(metrics.duration.p50)}
+                  {formatLatency(metrics.summary.avgLatencyMs?.p90)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Per request average
+                  P50: {formatLatency(metrics.summary.avgLatencyMs?.p50)} |
+                  P99: {formatLatency(metrics.summary.avgLatencyMs?.p99)}
                 </p>
               </CardContent>
             </Card>
 
-            {/* Total CPU Time */}
+            {/* CPU Time */}
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
@@ -200,83 +258,154 @@ export function MetricsDashboard({
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {formatDuration(metrics.duration.totalMs ?? 0)}
+                  {formatLatency(metrics.summary.totalCpuTimeMs)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Last {days} days
+                  Compute time consumed
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Requests Chart */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                <CardTitle>Requests Over Time</CardTitle>
-              </div>
-              <CardDescription>Daily request volume</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48 flex items-end gap-1">
-                {metrics.invocations.byDay.map((day, index) => (
-                  <div
-                    key={index}
-                    className="flex-1 flex flex-col items-center gap-1"
-                  >
-                    <div
-                      className="w-full bg-primary/80 hover:bg-primary rounded-t transition-all"
-                      style={{
-                        height: `${String((day.requests / maxRequests) * 100)}%`,
-                        minHeight: day.requests > 0 ? '4px' : '0',
-                      }}
-                      title={`${day.requests.toLocaleString()} requests`}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(day.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="invocations" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Invocations
+              </TabsTrigger>
+              <TabsTrigger value="storage" className="flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Storage
+              </TabsTrigger>
+              <TabsTrigger value="subrequests" className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Subrequests
+              </TabsTrigger>
+            </TabsList>
 
-          {/* CPU Time Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>CPU Time Summary</CardTitle>
-              <CardDescription>Compute usage over the period</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatDuration(metrics.duration.totalMs ?? 0)}
+            {/* Invocations Tab */}
+            <TabsContent value="invocations" className="space-y-6 mt-6">
+              {/* Requests Chart */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                    <CardTitle>Requests Over Time</CardTitle>
                   </div>
-                  <p className="text-sm text-muted-foreground">Total CPU Time</p>
-                </div>
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {formatDuration(metrics.duration.p50)}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Avg per Request</p>
-                </div>
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-2xl font-bold text-primary">
-                    {metrics.invocations.total.toLocaleString()}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Total Requests</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  <CardDescription>Daily request volume</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {chartData.length > 0 ? (
+                    <div className="h-48 flex items-end gap-1">
+                      {chartData.map((day, index) => (
+                        <div
+                          key={index}
+                          className="flex-1 flex flex-col items-center gap-1"
+                        >
+                          <div
+                            className="w-full bg-primary/80 hover:bg-primary rounded-t transition-all"
+                            style={{
+                              height: `${(day.requests / maxRequests) * 100}%`,
+                              minHeight: day.requests > 0 ? '4px' : '0',
+                            }}
+                            title={`${day.requests.toLocaleString()} requests`}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(day.date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-48 flex items-center justify-center text-muted-foreground">
+                      No invocation data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Per-Namespace Performance */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Performance by Namespace</CardTitle>
+                  <CardDescription>Request volume and latency per DO namespace</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {metrics.byNamespace.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-2 px-3">Namespace</th>
+                            <th className="text-right py-2 px-3">Requests</th>
+                            <th className="text-right py-2 px-3">Errors</th>
+                            <th className="text-right py-2 px-3">P50</th>
+                            <th className="text-right py-2 px-3">P90</th>
+                            <th className="text-right py-2 px-3">P99</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {metrics.byNamespace
+                            .sort((a, b) => b.totalRequests - a.totalRequests)
+                            .map((ns) => (
+                              <tr key={ns.scriptName} className="border-b hover:bg-muted/50">
+                                <td className="py-2 px-3 font-medium">
+                                  {ns.namespaceName ?? ns.scriptName}
+                                </td>
+                                <td className="text-right py-2 px-3">
+                                  {formatNumber(ns.totalRequests)}
+                                </td>
+                                <td className="text-right py-2 px-3 text-destructive">
+                                  {formatNumber(ns.totalErrors)}
+                                </td>
+                                <td className="text-right py-2 px-3">
+                                  {formatLatency(ns.p50LatencyMs)}
+                                </td>
+                                <td className="text-right py-2 px-3">
+                                  {formatLatency(ns.p90LatencyMs)}
+                                </td>
+                                <td className="text-right py-2 px-3">
+                                  {formatLatency(ns.p99LatencyMs)}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-muted-foreground">
+                      No namespace data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Storage Tab */}
+            <TabsContent value="storage" className="mt-6">
+              <DOStorageTab
+                storageSeries={metrics.storageSeries}
+                byNamespace={metrics.byNamespace}
+                totalStorageBytes={metrics.summary.totalStorageBytes}
+                totalStorageKeys={metrics.summary.totalStorageKeys}
+              />
+            </TabsContent>
+
+            {/* Subrequests Tab */}
+            <TabsContent value="subrequests" className="mt-6">
+              <DOSubrequestsTab
+                subrequestsSeries={metrics.subrequestsSeries}
+                byNamespace={metrics.byNamespace}
+                totalSubrequests={metrics.summary.totalSubrequests}
+              />
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </div>
   )
 }
-

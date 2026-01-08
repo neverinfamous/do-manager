@@ -1,6 +1,7 @@
 import type { Env, CorsHeaders, Instance, Namespace } from '../types'
 import { jsonResponse, errorResponse, createJob, completeJob, failJob } from '../utils/helpers'
 import { logWarning } from '../utils/error-logger'
+import { triggerWebhooks, createImportExportWebhookData } from '../utils/webhooks'
 
 /**
  * Handle export routes
@@ -148,6 +149,21 @@ async function exportInstance(
       namespace_name: namespace.name,
       key_count: exportData.keyCount,
     })
+
+    // Trigger export_complete webhook
+    void triggerWebhooks(
+      env,
+      'export_complete',
+      createImportExportWebhookData(
+        instanceId,
+        instanceName,
+        instance.namespace_id,
+        namespace.name,
+        exportData.keyCount,
+        userEmail
+      ),
+      isLocalDev
+    )
 
     // Add instance metadata to export
     return jsonResponse({

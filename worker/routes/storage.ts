@@ -1,6 +1,7 @@
 import type { Env, CorsHeaders, Namespace, Instance } from '../types'
 import { jsonResponse, errorResponse, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 import { logInfo, logWarning } from '../utils/error-logger'
+import { triggerWebhooks, createStorageWebhookData, createImportExportWebhookData } from '../utils/webhooks'
 
 /**
  * Mock storage data for local development
@@ -402,6 +403,22 @@ async function setStorageValue(
     }
 
     await completeJob(env.METADATA, jobId, { key })
+
+    // Trigger storage_update webhook
+    void triggerWebhooks(
+      env,
+      'storage_update',
+      createStorageWebhookData(
+        instanceId,
+        instance.name ?? instance.object_id,
+        instance.namespace_id,
+        namespace.name,
+        key,
+        userEmail
+      ),
+      isLocalDev
+    )
+
     return jsonResponse({ success: true, key, value: body.value }, corsHeaders)
   } catch (error) {
     logWarning(`Set error: ${error instanceof Error ? error.message : String(error)}`, {
@@ -481,6 +498,22 @@ async function deleteStorageValue(
     }
 
     await completeJob(env.METADATA, jobId, { key })
+
+    // Trigger storage_delete webhook
+    void triggerWebhooks(
+      env,
+      'storage_delete',
+      createStorageWebhookData(
+        instanceId,
+        instance.name ?? instance.object_id,
+        instance.namespace_id,
+        namespace.name,
+        key,
+        userEmail
+      ),
+      isLocalDev
+    )
+
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
     logWarning(`Delete error: ${error instanceof Error ? error.message : String(error)}`, {
@@ -690,6 +723,21 @@ async function importStorage(
       namespace_name: namespace.name,
       merge_mode: body.mergeMode ?? 'merge',
     })
+
+    // Trigger import_complete webhook
+    void triggerWebhooks(
+      env,
+      'import_complete',
+      createImportExportWebhookData(
+        instanceId,
+        instanceName,
+        instance.namespace_id,
+        namespace.name,
+        result.imported ?? keyCount,
+        userEmail
+      ),
+      isLocalDev
+    )
 
     return jsonResponse({
       success: true,

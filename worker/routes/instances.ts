@@ -1,6 +1,7 @@
 import type { Env, CorsHeaders, Instance, InstanceColor, Namespace } from '../types'
 import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
 import { logWarning } from '../utils/error-logger'
+import { triggerWebhooks, createInstanceWebhookData } from '../utils/webhooks'
 import { detectCompletedAlarms } from './health'
 
 /**
@@ -316,6 +317,26 @@ async function createInstance(
       await env.METADATA.prepare('UPDATE jobs SET instance_id = ? WHERE id = ?').bind(id, jobId).run()
     }
     await completeJob(env.METADATA, jobId, { instance_id: id, name: body.name ?? body.object_id })
+
+    // Trigger instance_create webhook for newly created instances
+    // Get namespace name for webhook payload
+    const namespace = await env.METADATA.prepare(
+      'SELECT name FROM namespaces WHERE id = ?'
+    ).bind(namespaceId).first<{ name: string }>()
+
+    void triggerWebhooks(
+      env,
+      'instance_create',
+      createInstanceWebhookData(
+        id,
+        body.name ?? body.object_id,
+        namespaceId,
+        namespace?.name ?? namespaceId,
+        userEmail
+      ),
+      isLocalDev
+    )
+
     return jsonResponse({ instance: result, created: true }, corsHeaders, 201)
   } catch (error) {
     logWarning(`Create error: ${error instanceof Error ? error.message : String(error)}`, {
@@ -391,6 +412,28 @@ async function deleteInstance(
     ).bind(instanceId).run()
 
     await completeJob(env.METADATA, jobId, { instance_id: instanceId, name: inst?.name ?? inst?.object_id })
+
+    // Trigger instance_delete webhook
+    if (inst) {
+      // Get namespace name for webhook payload
+      const namespace = await env.METADATA.prepare(
+        'SELECT name FROM namespaces WHERE id = ?'
+      ).bind(inst.namespace_id).first<{ name: string }>()
+
+      void triggerWebhooks(
+        env,
+        'instance_delete',
+        createInstanceWebhookData(
+          instanceId,
+          inst.name ?? inst.object_id,
+          inst.namespace_id,
+          namespace?.name ?? inst.namespace_id,
+          userEmail
+        ),
+        isLocalDev
+      )
+    }
+
     return jsonResponse({ success: true }, corsHeaders)
   } catch (error) {
     logWarning(`Delete error: ${error instanceof Error ? error.message : String(error)}`, {

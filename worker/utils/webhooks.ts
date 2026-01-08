@@ -129,7 +129,7 @@ export async function triggerWebhooks(
 
   try {
     const webhooks = await getWebhooksForEvent(env.METADATA, event)
-    
+
     if (webhooks.length === 0) {
       return
     }
@@ -243,4 +243,68 @@ export function createBatchCompleteWebhookData(
     user_email: userEmail,
   }
 }
+
+/**
+ * Helper to create standard webhook data for storage events
+ */
+export function createStorageWebhookData(
+  instanceId: string,
+  instanceName: string,
+  namespaceId: string,
+  namespaceName: string,
+  keyName: string,
+  userEmail: string | null,
+  additionalData?: Record<string, unknown>
+): Record<string, unknown> {
+  return {
+    instance_id: instanceId,
+    instance_name: instanceName,
+    namespace_id: namespaceId,
+    namespace_name: namespaceName,
+    key_name: keyName,
+    user_email: userEmail,
+    ...additionalData,
+  }
+}
+
+/**
+ * Helper to create standard webhook data for instance events
+ */
+export function createInstanceWebhookData(
+  instanceId: string,
+  instanceName: string,
+  namespaceId: string,
+  namespaceName: string,
+  userEmail: string | null
+): Record<string, unknown> {
+  return {
+    instance_id: instanceId,
+    instance_name: instanceName,
+    namespace_id: namespaceId,
+    namespace_name: namespaceName,
+    user_email: userEmail,
+  }
+}
+
+/**
+ * Helper to create standard webhook data for import/export events
+ */
+export function createImportExportWebhookData(
+  instanceId: string,
+  instanceName: string,
+  namespaceId: string,
+  namespaceName: string,
+  keyCount: number,
+  userEmail: string | null
+): Record<string, unknown> {
+  return {
+    instance_id: instanceId,
+    instance_name: instanceName,
+    namespace_id: namespaceId,
+    namespace_name: namespaceName,
+    key_count: keyCount,
+    user_email: userEmail,
+  }
+}
+
 

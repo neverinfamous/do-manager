@@ -145,6 +145,13 @@ export type WebhookEventType =
   | 'alarm_deleted'
   | 'job_failed'
   | 'batch_complete'
+  | 'storage_create'
+  | 'storage_update'
+  | 'storage_delete'
+  | 'instance_create'
+  | 'instance_delete'
+  | 'import_complete'
+  | 'export_complete'
 
 /**
  * Webhook record from D1
@@ -276,4 +283,186 @@ export interface MigrationResultResponse {
   migrationsApplied: number
   currentVersion: number
   errors: string[]
+}
+
+// ============================================================================
+// METRICS TYPES
+// ============================================================================
+
+/**
+ * Time range options for metrics queries
+ */
+export type DOMetricsTimeRange = '24h' | '7d' | '30d'
+
+/**
+ * GraphQL Analytics API response wrapper
+ */
+export interface GraphQLAnalyticsResponse<T> {
+  data?: T
+  errors?: { message: string; path?: string[] }[]
+}
+
+/**
+ * Root GraphQL analytics result
+ */
+export interface DOAnalyticsResult {
+  viewer: {
+    accounts: DOAccountMetrics[]
+  }
+}
+
+/**
+ * Account-level metrics from all 4 DO datasets
+ */
+export interface DOAccountMetrics {
+  durableObjectsInvocationsAdaptiveGroups?: DOInvocationGroup[]
+  durableObjectsPeriodicGroups?: DOPeriodicGroup[]
+  durableObjectsStorageGroups?: DOStorageGroup[]
+  durableObjectsSubrequestsAdaptiveGroups?: DOSubrequestGroup[]
+}
+
+/**
+ * Invocation metrics from durableObjectsInvocationsAdaptiveGroups
+ */
+export interface DOInvocationGroup {
+  sum: {
+    requests: number
+    responseBodySize: number
+    errors: number
+    wallTime: number
+  }
+  quantiles?: {
+    wallTimeP50?: number
+    wallTimeP90?: number
+    wallTimeP99?: number
+  }
+  dimensions: {
+    date: string
+    scriptName?: string
+  }
+}
+
+/**
+ * Periodic metrics from durableObjectsPeriodicGroups (CPU time, WebSocket messages)
+ */
+export interface DOPeriodicGroup {
+  sum: {
+    cpuTime: number
+    activeTime?: number
+    subrequests?: number
+  }
+  dimensions: {
+    date: string
+    scriptName?: string
+  }
+}
+
+/**
+ * Storage metrics from durableObjectsStorageGroups
+ */
+export interface DOStorageGroup {
+  max: {
+    storedBytes: number
+    storedKeys?: number
+  }
+  dimensions: {
+    date: string
+    scriptName?: string
+  }
+}
+
+/**
+ * Subrequest metrics from durableObjectsSubrequestsAdaptiveGroups
+ */
+export interface DOSubrequestGroup {
+  sum: {
+    requests: number
+    responseBodySize: number
+  }
+  dimensions: {
+    date: string
+    scriptName?: string
+  }
+}
+
+/**
+ * Processed metrics response returned to frontend
+ */
+export interface DOMetricsResponse {
+  summary: DOMetricsSummary
+  byNamespace: DONamespaceMetrics[]
+  invocationsSeries: DOInvocationDataPoint[]
+  storageSeries: DOStorageDataPoint[]
+  subrequestsSeries: DOSubrequestDataPoint[]
+}
+
+/**
+ * Overall metrics summary
+ */
+export interface DOMetricsSummary {
+  timeRange: DOMetricsTimeRange
+  startDate: string
+  endDate: string
+  totalRequests: number
+  totalErrors: number
+  totalCpuTimeMs: number
+  totalStorageBytes: number
+  totalStorageKeys?: number | undefined
+  totalSubrequests: number
+  avgLatencyMs?: {
+    p50: number
+    p90: number
+    p99: number
+  } | undefined
+  namespaceCount: number
+}
+
+/**
+ * Per-namespace metrics breakdown
+ */
+export interface DONamespaceMetrics {
+  scriptName: string
+  namespaceName?: string
+  totalRequests: number
+  totalErrors: number
+  totalCpuTimeMs: number
+  currentStorageBytes: number
+  currentStorageKeys?: number | undefined
+  p50LatencyMs?: number | undefined
+  p90LatencyMs?: number | undefined
+  p99LatencyMs?: number | undefined
+}
+
+/**
+ * Time series data point for invocations
+ */
+export interface DOInvocationDataPoint {
+  date: string
+  scriptName?: string | undefined
+  requests: number
+  errors: number
+  responseBodySize: number
+  wallTimeP50?: number | undefined
+  wallTimeP90?: number | undefined
+  wallTimeP99?: number | undefined
+}
+
+/**
+ * Time series data point for storage
+ */
+export interface DOStorageDataPoint {
+  date: string
+  scriptName?: string | undefined
+  storedBytes: number
+  storedKeys?: number | undefined
+}
+
+/**
+ * Time series data point for subrequests
+ */
+export interface DOSubrequestDataPoint {
+  date: string
+  scriptName?: string | undefined
+  requests: number
+  responseBodySize: number
 }
