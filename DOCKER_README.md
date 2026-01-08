@@ -1,11 +1,11 @@
 # Cloudflare Durable Object Manager - Docker
 
-Last Updated January 5, 2026 - Production/Stable v1.2.0
+Last Updated January 8, 2026 - Production/Stable v1.3.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-![Version](https://img.shields.io/badge/version-v1.2.0-green)
+![Version](https://img.shields.io/badge/version-v1.3.0-green)
 ![Status](https://img.shields.io/badge/status-Production%2FStable-brightgreen)
 [![Security](https://img.shields.io/badge/Security-Enhanced-green.svg)](https://github.com/neverinfamous/do-manager/blob/main/SECURITY.md)
 [![CodeQL](https://img.shields.io/badge/CodeQL-Passing-brightgreen.svg)](https://github.com/neverinfamous/do-manager/security/code-scanning)
@@ -17,7 +17,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 
 ## Tech Stack
 
-**Frontend**: React 19.2.3 | Vite 7.3.0 | TypeScript 5.9.3 | Tailwind CSS 4.1.17 | shadcn/ui
+**Frontend**: React 19.2.3 | Vite 7.3.1 | TypeScript 5.9.3 | Tailwind CSS 4.1.17 | shadcn/ui
 
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
@@ -324,7 +324,7 @@ docker-compose pull && docker-compose up -d
 | Tag | Description |
 |-----|-------------|
 | `latest` | Latest stable release |
-| `v1.2.0` | Specific version (recommended for production) |
+| `v1.3.0` | Specific version (recommended for production) |
 | `sha-XXXXXX` | Commit SHA for reproducible builds |
 
 ---
