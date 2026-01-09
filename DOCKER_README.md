@@ -164,25 +164,18 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 
 ### 1. Set Up Metadata Database
 
-The DO Manager requires a metadata database for namespace configs, instance tracking, and job history.
+DO Manager requires a D1 database for namespace configs, instance tracking, and job history.
 
 ```bash
+# Authenticate with Cloudflare
 npx wrangler login
-```
 
-```bash
+# Create the metadata database
 npx wrangler d1 create do-manager-metadata
-```
 
-```bash
+# Clone repo and initialize schema
 git clone https://github.com/neverinfamous/do-manager.git
-```
-
-```bash
 cd do-manager
-```
-
-```bash
 npx wrangler d1 execute do-manager-metadata --remote --file=worker/schema.sql
 ```
 
@@ -199,9 +192,7 @@ npx wrangler d1 execute do-manager-metadata --remote --file=worker/schema.sql
 
 ```bash
 docker pull writenotenow/do-manager:latest
-```
 
-```bash
 docker run -d \
   -p 8787:8787 \
   -e ACCOUNT_ID=your_cloudflare_account_id \
@@ -209,6 +200,7 @@ docker run -d \
   -e TEAM_DOMAIN=https://yourteam.cloudflareaccess.com \
   -e POLICY_AUD=your_cloudflare_access_aud_tag \
   --name do-manager \
+  --restart unless-stopped \
   writenotenow/do-manager:latest
 ```
 
@@ -230,13 +222,8 @@ npx wrangler d1 execute do-manager-metadata --remote --file=worker/schema.sql
 
 ```bash
 docker pull writenotenow/do-manager:latest
-```
-
-```bash
 docker stop do-manager && docker rm do-manager
-```
 
-```bash
 docker run -d \
   -p 8787:8787 \
   -e ACCOUNT_ID=your_account_id \
@@ -255,8 +242,6 @@ docker run -d \
 Create `docker-compose.yml`:
 
 ```yaml
-version: '3.8'
-
 services:
   do-manager:
     image: writenotenow/do-manager:latest
@@ -285,16 +270,14 @@ TEAM_DOMAIN=https://yourteam.cloudflareaccess.com
 POLICY_AUD=your_cloudflare_access_aud_tag
 ```
 
-Run:
+Run and upgrade:
 
 ```bash
-docker-compose up -d
-```
+# Start container
+docker compose up -d
 
-Upgrade:
-
-```bash
-docker-compose pull && docker-compose up -d
+# Upgrade to latest
+docker compose pull && docker compose up -d
 ```
 
 ---
@@ -339,17 +322,10 @@ docker-compose pull && docker-compose up -d
 
 ```bash
 git clone https://github.com/neverinfamous/do-manager.git
-```
-
-```bash
 cd do-manager
-```
 
-```bash
 docker build -t do-manager:local .
-```
 
-```bash
 docker run -d -p 8787:8787 \
   -e ACCOUNT_ID=your_account_id \
   -e API_KEY=your_api_token \
