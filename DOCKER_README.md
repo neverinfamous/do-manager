@@ -11,13 +11,13 @@ Last Updated January 8, 2026 - Production/Stable v1.3.0
 [![CodeQL](https://img.shields.io/badge/CodeQL-Passing-brightgreen.svg)](https://github.com/neverinfamous/do-manager/security/code-scanning)
 [![Type Safety](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://github.com/neverinfamous/do-manager)
 
-Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage Durable Object namespaces, instances, and storage. Supports automatic namespace discovery, instance inspection, key/value editing, SQL for SQLite-backed DOs, batch operations, rich SQL Console,alarms, R2 backups, analytics, global search, and job history, with optional GitHub SSO.
+Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage Durable Object namespaces, instances, and storage. Supports automatic namespace discovery, instance inspection, key/value editing, SQL for SQLite-backed DOs, batch operations, rich SQL Console, alarms, R2 backups, analytics, global search, and job history, with optional GitHub SSO.
 
 **[Live Demo](https://do.adamic.tech/)** • **[GitHub](https://github.com/neverinfamous/do-manager)** • **[Wiki](https://github.com/neverinfamous/do-manager/wiki)** • **[Changelog](https://github.com/neverinfamous/do-manager/wiki/Changelog)** • **[Release Article](https://adamic.tech/articles/do-manager)**
 
 ## Tech Stack
 
-**Frontend**: React 19.2.3 | Vite 7.3.1 | TypeScript 5.9.3 | Tailwind CSS 4.1.17 | shadcn/ui
+**Frontend**: React 19.2.3 | Vite 7.3.0 | TypeScript 5.9.3 | Tailwind CSS 4.1.17 | shadcn/ui
 
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
@@ -126,8 +126,14 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - Filter by status or namespace
 
 ### Webhook Notifications
-- **Event-driven webhooks** - Send HTTP notifications on key events
-- **Configurable events** - backup_complete, restore_complete, alarm_set, alarm_deleted, job_failed, batch_complete
+- **Event-driven webhooks** - Send HTTP notifications on key events (13 event types)
+- **Configurable events**:
+  - Storage: `storage_create`, `storage_update`, `storage_delete`
+  - Instance: `instance_create`, `instance_delete`
+  - Backup/Restore: `backup_complete`, `restore_complete`
+  - Alarms: `alarm_set`, `alarm_deleted`
+  - Import/Export: `import_complete`, `export_complete`
+  - System: `job_failed`, `batch_complete`
 - **HMAC signatures** - Optional secret-based request signing for security
 - **Test webhooks** - Verify endpoint connectivity before going live
 
