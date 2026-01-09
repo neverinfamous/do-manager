@@ -166,14 +166,21 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 
 DO Manager requires a D1 database for namespace configs, instance tracking, and job history.
 
+Authenticate with Cloudflare:
+
 ```bash
-# Authenticate with Cloudflare
 npx wrangler login
+```
 
-# Create the metadata database
+Create the metadata database:
+
+```bash
 npx wrangler d1 create do-manager-metadata
+```
 
-# Clone repo and initialize schema
+Clone repo and initialize schema:
+
+```bash
 git clone https://github.com/neverinfamous/do-manager.git
 cd do-manager
 npx wrangler d1 execute do-manager-metadata --remote --file=worker/schema.sql
@@ -270,13 +277,15 @@ TEAM_DOMAIN=https://yourteam.cloudflareaccess.com
 POLICY_AUD=your_cloudflare_access_aud_tag
 ```
 
-Run and upgrade:
+Start:
 
 ```bash
-# Start container
 docker compose up -d
+```
 
-# Upgrade to latest
+Upgrade:
+
+```bash
 docker compose pull && docker compose up -d
 ```
 

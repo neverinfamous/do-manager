@@ -301,27 +301,36 @@ const SYSTEM_DO_PATTERNS = [
 
 ### Local Development
 
+Clone the repository:
+
 ```bash
-# Clone the repository
 git clone https://github.com/neverinfamous/do-manager.git
 cd do-manager
+```
 
-# Install dependencies
+Install dependencies:
+
+```bash
 npm install
+```
 
-# Initialize local D1 database
+Initialize local D1 database:
+
+```bash
 npx wrangler d1 execute do-manager-metadata-dev --local --file=worker/schema.sql
 ```
 
 Start both servers in separate terminals:
 
+**Terminal 1** — Frontend (Vite):
+
 ```bash
-# Terminal 1: Frontend (Vite)
 npm run dev
 ```
 
+**Terminal 2** — Worker (Wrangler):
+
 ```bash
-# Terminal 2: Worker (Wrangler)
 npx wrangler dev --config wrangler.dev.toml --local
 ```
 
