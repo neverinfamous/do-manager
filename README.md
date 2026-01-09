@@ -296,7 +296,7 @@ const SYSTEM_DO_PATTERNS = [
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 18+
+- [Node.js](https://nodejs.org/) 20+
 - [Cloudflare account](https://dash.cloudflare.com/sign-up)
 
 ### Local Development
@@ -311,13 +311,21 @@ npm install
 
 # Initialize local D1 database
 npx wrangler d1 execute do-manager-metadata-dev --local --file=worker/schema.sql
-
-# Start dev servers (2 terminals)
-npm run dev                                          # Terminal 1: Frontend (http://localhost:5173)
-npx wrangler dev --config wrangler.dev.toml --local  # Terminal 2: Worker (http://localhost:8787)
 ```
 
-Open **http://localhost:5173** - no auth required, mock data included.
+Start both servers in separate terminals:
+
+```bash
+# Terminal 1: Frontend (Vite)
+npm run dev
+```
+
+```bash
+# Terminal 2: Worker (Wrangler)
+npx wrangler dev --config wrangler.dev.toml --local
+```
+
+Open **http://localhost:5173** — no auth required, mock data included.
 
 ---
 
