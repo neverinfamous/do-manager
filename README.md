@@ -1,6 +1,6 @@
 # Cloudflare Durable Object Manager
 
-Last Updated January 9, 2026 - v1.3.0
+Last Updated January 12, 2026 - v1.3.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
