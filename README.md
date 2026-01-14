@@ -296,7 +296,7 @@ const SYSTEM_DO_PATTERNS = [
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 20+
+- [Node.js](https://nodejs.org/) 24+ (LTS)
 - [Cloudflare account](https://dash.cloudflare.com/sign-up)
 
 ### Local Development

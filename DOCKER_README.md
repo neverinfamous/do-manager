@@ -308,7 +308,7 @@ docker compose pull && docker compose up -d
 
 | Property | Value |
 |----------|-------|
-| Base Image | `node:20-alpine` |
+| Base Image | `node:24-alpine` |
 | Size | ~150MB |
 | Architectures | `linux/amd64`, `linux/arm64` |
 | Port | `8787` |
