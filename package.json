@@ -30,7 +30,7 @@
     "prismjs": "^1.30.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "sql-formatter": "^15.6.12"
+    "sql-formatter": "^15.7.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260114.0",
