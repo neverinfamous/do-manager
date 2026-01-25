@@ -1,103 +1,122 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Search, X, CheckSquare, Trash2, Download, LayoutGrid, LayoutList } from 'lucide-react'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Checkbox } from '../ui/checkbox'
-import { NamespaceCard } from './NamespaceCard'
-import { NamespaceListView } from './NamespaceListView'
-import { AddNamespaceDialog } from './AddNamespaceDialog'
-import { CloneNamespaceDialog } from './CloneNamespaceDialog'
-import { NamespaceSettingsDialog } from './NamespaceSettingsDialog'
-import { SelectionToolbar } from './SelectionToolbar'
-import { BatchDeleteDialog } from './BatchDeleteDialog'
-import { namespaceApi } from '../../services/api'
-import { useSelection } from '../../hooks/useSelection'
-import { batchExportNamespaces } from '../../services/batchApi'
-import type { Namespace, NamespaceColor } from '../../types'
+import { useState, useEffect, useMemo } from "react";
+import {
+  Plus,
+  RefreshCw,
+  Loader2,
+  Box,
+  Search,
+  X,
+  CheckSquare,
+  Trash2,
+  Download,
+  LayoutGrid,
+  LayoutList,
+} from "lucide-react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Checkbox } from "../ui/checkbox";
+import { NamespaceCard } from "./NamespaceCard";
+import { NamespaceListView } from "./NamespaceListView";
+import { AddNamespaceDialog } from "./AddNamespaceDialog";
+import { CloneNamespaceDialog } from "./CloneNamespaceDialog";
+import { NamespaceSettingsDialog } from "./NamespaceSettingsDialog";
+import { SelectionToolbar } from "./SelectionToolbar";
+import { BatchDeleteDialog } from "./BatchDeleteDialog";
+import { namespaceApi } from "../../services/api";
+import { useSelection } from "../../hooks/useSelection";
+import { batchExportNamespaces } from "../../services/batchApi";
+import type { Namespace, NamespaceColor } from "../../types";
 
-type NamespaceViewMode = 'grid' | 'list'
+type NamespaceViewMode = "grid" | "list";
 
 // Helper to get view mode from localStorage
 const getStoredViewMode = (): NamespaceViewMode => {
   try {
-    const stored = localStorage.getItem('do-manager-namespace-view-mode')
-    if (stored === 'grid' || stored === 'list') {
-      return stored
+    const stored = localStorage.getItem("do-manager-namespace-view-mode");
+    if (stored === "grid" || stored === "list") {
+      return stored;
     }
   } catch {
     // localStorage not available
   }
-  return 'list' // Default to list view
-}
+  return "list"; // Default to list view
+};
 
 interface NamespaceListProps {
-  onSelectNamespace: (namespace: Namespace) => void
+  onSelectNamespace: (namespace: Namespace) => void;
 }
 
-export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.ReactElement {
-  const [namespaces, setNamespaces] = useState<Namespace[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
-  const [discovering, setDiscovering] = useState(false)
-  const [showAddDialog, setShowAddDialog] = useState(false)
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-  const [selectedNamespace, setSelectedNamespace] = useState<Namespace | null>(null)
-  const [cloneNamespace, setCloneNamespace] = useState<Namespace | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false)
-  const [viewMode, setViewMode] = useState<NamespaceViewMode>(getStoredViewMode)
+export function NamespaceList({
+  onSelectNamespace,
+}: NamespaceListProps): React.ReactElement {
+  const [namespaces, setNamespaces] = useState<Namespace[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+  const [discovering, setDiscovering] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [selectedNamespace, setSelectedNamespace] = useState<Namespace | null>(
+    null,
+  );
+  const [cloneNamespace, setCloneNamespace] = useState<Namespace | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
+  const [viewMode, setViewMode] =
+    useState<NamespaceViewMode>(getStoredViewMode);
 
   // Toggle view mode with localStorage persistence
   const toggleViewMode = (): void => {
     setViewMode((prev) => {
-      const newMode = prev === 'grid' ? 'list' : 'grid'
+      const newMode = prev === "grid" ? "list" : "grid";
       try {
-        localStorage.setItem('do-manager-namespace-view-mode', newMode)
+        localStorage.setItem("do-manager-namespace-view-mode", newMode);
       } catch {
         // localStorage not available
       }
-      return newMode
-    })
-  }
+      return newMode;
+    });
+  };
 
   // Selection state
-  const selection = useSelection<Namespace>()
+  const selection = useSelection<Namespace>();
 
   // Filter namespaces based on search
   const filteredNamespaces = useMemo(() => {
-    if (!searchTerm.trim()) return namespaces
-    const searchLower = searchTerm.toLowerCase()
+    if (!searchTerm.trim()) return namespaces;
+    const searchLower = searchTerm.toLowerCase();
     return namespaces.filter(
       (ns) =>
         ns.name.toLowerCase().includes(searchLower) ||
         ns.class_name.toLowerCase().includes(searchLower) ||
-        (ns.script_name?.toLowerCase().includes(searchLower) ?? false)
-    )
-  }, [namespaces, searchTerm])
+        (ns.script_name?.toLowerCase().includes(searchLower) ?? false),
+    );
+  }, [namespaces, searchTerm]);
 
   const loadNamespaces = async (): Promise<void> => {
     try {
-      setLoading(true)
-      setError('')
-      const data = await namespaceApi.list()
-      setNamespaces(data)
+      setLoading(true);
+      setError("");
+      const data = await namespaceApi.list();
+      setNamespaces(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load namespaces')
+      setError(
+        err instanceof Error ? err.message : "Failed to load namespaces",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDiscover = async (): Promise<void> => {
     try {
-      setDiscovering(true)
-      setError('')
-      const discovered = await namespaceApi.discover()
+      setDiscovering(true);
+      setError("");
+      const discovered = await namespaceApi.discover();
       // Merge discovered with existing (avoiding duplicates by class_name)
-      const existingClasses = new Set(namespaces.map((n) => n.class_name))
+      const existingClasses = new Set(namespaces.map((n) => n.class_name));
       const newNamespaces = discovered.filter(
-        (n) => !existingClasses.has(n.class_name)
-      )
+        (n) => !existingClasses.has(n.class_name),
+      );
       if (newNamespaces.length > 0) {
         // Add new namespaces
         for (const ns of newNamespaces) {
@@ -106,94 +125,103 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
             class_name: ns.class_name,
             ...(ns.script_name && { script_name: ns.script_name }),
             storage_backend: ns.storage_backend,
-          })
+          });
         }
-        await loadNamespaces()
+        await loadNamespaces();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to discover namespaces')
+      setError(
+        err instanceof Error ? err.message : "Failed to discover namespaces",
+      );
     } finally {
-      setDiscovering(false)
+      setDiscovering(false);
     }
-  }
+  };
 
   const handleDelete = async (namespace: Namespace): Promise<void> => {
     if (!confirm(`Delete namespace "${namespace.name}"?`)) {
-      return
+      return;
     }
     try {
-      await namespaceApi.delete(namespace.id)
-      setNamespaces((prev) => prev.filter((n) => n.id !== namespace.id))
+      await namespaceApi.delete(namespace.id);
+      setNamespaces((prev) => prev.filter((n) => n.id !== namespace.id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete namespace')
+      setError(
+        err instanceof Error ? err.message : "Failed to delete namespace",
+      );
     }
-  }
+  };
 
   const handleAddComplete = (namespace: Namespace): void => {
-    setNamespaces((prev) => [namespace, ...prev])
-    setShowAddDialog(false)
-  }
+    setNamespaces((prev) => [namespace, ...prev]);
+    setShowAddDialog(false);
+  };
 
   const handleSettings = (namespace: Namespace): void => {
-    setSelectedNamespace(namespace)
-    setShowSettingsDialog(true)
-  }
+    setSelectedNamespace(namespace);
+    setShowSettingsDialog(true);
+  };
 
   const handleSettingsUpdate = (updatedNamespace: Namespace): void => {
     setNamespaces((prev) =>
-      prev.map((n) => (n.id === updatedNamespace.id ? updatedNamespace : n))
-    )
-  }
+      prev.map((n) => (n.id === updatedNamespace.id ? updatedNamespace : n)),
+    );
+  };
 
   const handleCloneComplete = (namespace: Namespace): void => {
-    setNamespaces((prev) => [namespace, ...prev])
-    setCloneNamespace(null)
-  }
+    setNamespaces((prev) => [namespace, ...prev]);
+    setCloneNamespace(null);
+  };
 
-  const handleColorChange = async (namespaceId: string, color: NamespaceColor): Promise<void> => {
+  const handleColorChange = async (
+    namespaceId: string,
+    color: NamespaceColor,
+  ): Promise<void> => {
     try {
-      const updated = await namespaceApi.updateColor(namespaceId, color)
+      const updated = await namespaceApi.updateColor(namespaceId, color);
       setNamespaces((prev) =>
-        prev.map((n) => (n.id === namespaceId ? updated : n))
-      )
+        prev.map((n) => (n.id === namespaceId ? updated : n)),
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update color')
+      setError(err instanceof Error ? err.message : "Failed to update color");
     }
-  }
+  };
 
   const handleSelectionChange = (namespace: Namespace): void => {
-    selection.toggle(namespace.id)
-  }
+    selection.toggle(namespace.id);
+  };
 
   const handleSelectAll = (): void => {
-    selection.selectAll(filteredNamespaces)
-  }
+    selection.selectAll(filteredNamespaces);
+  };
 
   const handleBatchDeleteComplete = (): void => {
     // Remove deleted namespaces from state
-    const deletedIds = selection.selectedIds
-    setNamespaces((prev) => prev.filter((n) => !deletedIds.has(n.id)))
-    selection.clear()
-    setShowBatchDeleteDialog(false)
-  }
+    const deletedIds = selection.selectedIds;
+    setNamespaces((prev) => prev.filter((n) => !deletedIds.has(n.id)));
+    selection.clear();
+    setShowBatchDeleteDialog(false);
+  };
 
   const handleBatchDownload = async (): Promise<void> => {
-    const selectedItems = selection.getSelectedItems(filteredNamespaces)
-    if (selectedItems.length === 0) return
+    const selectedItems = selection.getSelectedItems(filteredNamespaces);
+    if (selectedItems.length === 0) return;
 
     try {
-      await batchExportNamespaces(selectedItems)
-      selection.clear()
+      await batchExportNamespaces(selectedItems);
+      selection.clear();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to download namespaces')
+      setError(
+        err instanceof Error ? err.message : "Failed to download namespaces",
+      );
     }
-  }
+  };
 
   useEffect(() => {
-    void loadNamespaces()
-  }, [])
+    void loadNamespaces();
+  }, []);
 
-  const selectedNamespaces = selection.getSelectedItems(filteredNamespaces)
+  const selectedNamespaces = selection.getSelectedItems(filteredNamespaces);
 
   return (
     <div>
@@ -202,7 +230,8 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
         <div>
           <h2 className="text-3xl font-bold">Namespaces</h2>
           <p className="text-muted-foreground mt-1">
-            {namespaces.length} {namespaces.length === 1 ? 'namespace' : 'namespaces'}
+            {namespaces.length}{" "}
+            {namespaces.length === 1 ? "namespace" : "namespaces"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -231,7 +260,9 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
             onClick={() => void loadNamespaces()}
             disabled={loading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button onClick={() => setShowAddDialog(true)}>
@@ -282,7 +313,9 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
           {/* Search and View Toggle */}
           <div className="flex items-center gap-2 mb-4">
             <div className="relative flex-1">
-              <label htmlFor="namespace-filter" className="sr-only">Filter namespaces</label>
+              <label htmlFor="namespace-filter" className="sr-only">
+                Filter namespaces
+              </label>
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="namespace-filter"
@@ -296,7 +329,7 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
                   variant="ghost"
                   size="sm"
                   className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => setSearchTerm('')}
+                  onClick={() => setSearchTerm("")}
                   aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
@@ -307,11 +340,19 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
               variant="outline"
               size="sm"
               onClick={toggleViewMode}
-              aria-label={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
-              title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+              aria-label={
+                viewMode === "grid"
+                  ? "Switch to list view"
+                  : "Switch to grid view"
+              }
+              title={
+                viewMode === "grid"
+                  ? "Switch to list view"
+                  : "Switch to grid view"
+              }
               className="flex items-center gap-2"
             >
-              {viewMode === 'grid' ? (
+              {viewMode === "grid" ? (
                 <>
                   <LayoutList className="h-4 w-4" />
                   <span className="hidden sm:inline">List</span>
@@ -364,9 +405,9 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
                 checked={selection.isAllSelected(filteredNamespaces)}
                 onCheckedChange={(checked) => {
                   if (checked === true) {
-                    selection.selectAll(filteredNamespaces)
+                    selection.selectAll(filteredNamespaces);
                   } else {
-                    selection.deselectAll()
+                    selection.deselectAll();
                   }
                 }}
                 aria-label="Select all namespaces"
@@ -383,7 +424,8 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
           {/* Search info */}
           {searchTerm && (
             <p className="text-sm text-muted-foreground mb-4">
-              Showing {filteredNamespaces.length} of {namespaces.length} namespaces
+              Showing {filteredNamespaces.length} of {namespaces.length}{" "}
+              namespaces
               {filteredNamespaces.length === 0 && (
                 <span className="ml-1">— no matches for "{searchTerm}"</span>
               )}
@@ -398,7 +440,7 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
               <p className="text-muted-foreground mb-4">
                 No namespaces match "{searchTerm}"
               </p>
-              <Button variant="outline" onClick={() => setSearchTerm('')}>
+              <Button variant="outline" onClick={() => setSearchTerm("")}>
                 Clear filter
               </Button>
             </div>
@@ -407,7 +449,7 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
           {/* Namespace List or Grid */}
           {filteredNamespaces.length > 0 && (
             <>
-              {viewMode === 'list' ? (
+              {viewMode === "list" ? (
                 <NamespaceListView
                   namespaces={filteredNamespaces}
                   selectedIds={selection.selectedIds}
@@ -474,5 +516,5 @@ export function NamespaceList({ onSelectNamespace }: NamespaceListProps): React.
         onComplete={handleBatchDeleteComplete}
       />
     </div>
-  )
+  );
 }

@@ -1,30 +1,30 @@
-import { Box, Moon, Sun, Monitor, LogOut, ExternalLink } from 'lucide-react'
-import { Button } from '../ui/button'
-import { useTheme } from '../../hooks/useTheme'
-import { authApi } from '../../services/api'
+import { Box, Moon, Sun, Monitor, LogOut, ExternalLink } from "lucide-react";
+import { Button } from "../ui/button";
+import { useTheme } from "../../hooks/useTheme";
+import { authApi } from "../../services/api";
 
 export function Header(): React.ReactElement {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
 
   const cycleTheme = (): void => {
-    const modes: (typeof theme)[] = ['system', 'light', 'dark']
-    const currentIndex = modes.indexOf(theme)
-    const nextIndex = (currentIndex + 1) % modes.length
-    const nextTheme = modes[nextIndex]
+    const modes: (typeof theme)[] = ["system", "light", "dark"];
+    const currentIndex = modes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    const nextTheme = modes[nextIndex];
     if (nextTheme) {
-      setTheme(nextTheme)
+      setTheme(nextTheme);
     }
-  }
+  };
 
   const getThemeIcon = (): React.ReactElement => {
-    if (theme === 'system') return <Monitor className="h-5 w-5" />
-    if (theme === 'light') return <Sun className="h-5 w-5" />
-    return <Moon className="h-5 w-5" />
-  }
+    if (theme === "system") return <Monitor className="h-5 w-5" />;
+    if (theme === "light") return <Sun className="h-5 w-5" />;
+    return <Moon className="h-5 w-5" />;
+  };
 
   const handleHomeClick = (): void => {
-    window.location.href = '/'
-  }
+    window.location.href = "/";
+  };
 
   return (
     <header className="border-b">
@@ -45,7 +45,12 @@ export function Header(): React.ReactElement {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => window.open('https://dash.cloudflare.com/?to=/:account/workers/durable-objects', '_blank')}
+            onClick={() =>
+              window.open(
+                "https://dash.cloudflare.com/?to=/:account/workers/durable-objects",
+                "_blank",
+              )
+            }
             title="Open Cloudflare Dashboard"
             aria-label="Open Cloudflare Dashboard"
           >
@@ -66,6 +71,5 @@ export function Header(): React.ReactElement {
         </div>
       </div>
     </header>
-  )
+  );
 }
-

@@ -1,6 +1,12 @@
-import { useState } from 'react'
-import { Archive, Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState } from "react";
+import {
+  Archive,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+} from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,21 +14,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { Progress } from '../ui/progress'
+} from "../ui/dialog";
+import { Progress } from "../ui/progress";
 import {
   batchBackupInstances,
   type BatchProgress,
   type BatchBackupResult,
-} from '../../services/batchApi'
-import type { Instance, Namespace } from '../../types'
+} from "../../services/batchApi";
+import type { Instance, Namespace } from "../../types";
 
 interface BatchBackupDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  instances: Instance[]
-  namespace: Namespace
-  onComplete: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  instances: Instance[];
+  namespace: Namespace;
+  onComplete: () => void;
 }
 
 export function BatchBackupDialog({
@@ -32,46 +38,46 @@ export function BatchBackupDialog({
   namespace,
   onComplete,
 }: BatchBackupDialogProps): React.ReactElement {
-  const [isBackingUp, setIsBackingUp] = useState(false)
-  const [progress, setProgress] = useState<BatchProgress | null>(null)
-  const [results, setResults] = useState<BatchBackupResult[] | null>(null)
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [progress, setProgress] = useState<BatchProgress | null>(null);
+  const [results, setResults] = useState<BatchBackupResult[] | null>(null);
 
   const handleBackup = async (): Promise<void> => {
-    setIsBackingUp(true)
-    setProgress(null)
-    setResults(null)
+    setIsBackingUp(true);
+    setProgress(null);
+    setResults(null);
 
     try {
-      const backupResults = await batchBackupInstances(instances, setProgress)
-      setResults(backupResults)
+      const backupResults = await batchBackupInstances(instances, setProgress);
+      setResults(backupResults);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('Batch backup error:', err)
+      console.error("Batch backup error:", err);
     } finally {
-      setIsBackingUp(false)
+      setIsBackingUp(false);
     }
-  }
+  };
 
   const handleClose = (): void => {
-    if (isBackingUp) return
+    if (isBackingUp) return;
     if (results) {
-      onComplete()
+      onComplete();
     }
-    setProgress(null)
-    setResults(null)
-    onOpenChange(false)
-  }
+    setProgress(null);
+    setResults(null);
+    onOpenChange(false);
+  };
 
-  const pluralLabel = instances.length === 1 ? 'instance' : 'instances'
-  const successCount = results?.filter((r) => r.success).length ?? 0
-  const failureCount = results?.filter((r) => !r.success).length ?? 0
+  const pluralLabel = instances.length === 1 ? "instance" : "instances";
+  const successCount = results?.filter((r) => r.success).length ?? 0;
+  const failureCount = results?.filter((r) => !r.success).length ?? 0;
 
   const formatSize = (bytes: number | null | undefined): string => {
-    if (bytes === null || bytes === undefined) return 'Unknown'
-    if (bytes < 1024) return `${String(bytes)} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
+    if (bytes === null || bytes === undefined) return "Unknown";
+    if (bytes < 1024) return `${String(bytes)} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -97,12 +103,13 @@ export function BatchBackupDialog({
           <DialogDescription>
             {!results ? (
               <>
-                Create R2 backups for {instances.length} {pluralLabel} in{' '}
+                Create R2 backups for {instances.length} {pluralLabel} in{" "}
                 <span className="font-medium">{namespace.name}</span>.
               </>
             ) : (
               <>
-                {successCount} of {instances.length} {pluralLabel} backed up successfully.
+                {successCount} of {instances.length} {pluralLabel} backed up
+                successfully.
                 {failureCount > 0 && ` ${String(failureCount)} failed.`}
               </>
             )}
@@ -161,7 +168,10 @@ export function BatchBackupDialog({
                   </span>
                 )}
                 {result.error && (
-                  <span className="text-xs text-destructive truncate max-w-[150px]" title={result.error}>
+                  <span
+                    className="text-xs text-destructive truncate max-w-[150px]"
+                    title={result.error}
+                  >
                     {result.error}
                   </span>
                 )}
@@ -173,7 +183,11 @@ export function BatchBackupDialog({
         <DialogFooter>
           {!results ? (
             <>
-              <Button variant="outline" onClick={handleClose} disabled={isBackingUp}>
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                disabled={isBackingUp}
+              >
                 Cancel
               </Button>
               <Button
@@ -194,13 +208,10 @@ export function BatchBackupDialog({
               </Button>
             </>
           ) : (
-            <Button onClick={handleClose}>
-              Done
-            </Button>
+            <Button onClick={handleClose}>Done</Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

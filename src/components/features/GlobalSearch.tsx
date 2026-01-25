@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Search,
   Key,
@@ -10,34 +10,38 @@ import {
   X,
   Filter,
   CheckSquare,
-} from 'lucide-react'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Checkbox } from '../ui/checkbox'
+} from "lucide-react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Checkbox } from "../ui/checkbox";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
-import { searchApi } from '../../services/searchApi'
-import { namespaceApi } from '../../services/api'
-import type { SearchResult, SearchSummary } from '../../types/search'
-import type { Namespace } from '../../types'
+} from "../ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { searchApi } from "../../services/searchApi";
+import { namespaceApi } from "../../services/api";
+import type { SearchResult, SearchSummary } from "../../types/search";
+import type { Namespace } from "../../types";
 
 interface GlobalSearchProps {
-  onNavigateToInstance?: (namespaceId: string, instanceId: string, key: string) => void
+  onNavigateToInstance?: (
+    namespaceId: string,
+    instanceId: string,
+    key: string,
+  ) => void;
 }
 
 /**
  * Highlight matching text in a string
  */
 function highlightMatch(text: string, search: string): React.ReactNode {
-  if (!search) return text
-  const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const parts = text.split(new RegExp(`(${escapedSearch})`, 'gi'))
+  if (!search) return text;
+  const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escapedSearch})`, "gi"));
   return parts.map((part, i) =>
     part.toLowerCase() === search.toLowerCase() ? (
       <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 rounded px-0.5">
@@ -45,161 +49,172 @@ function highlightMatch(text: string, search: string): React.ReactNode {
       </mark>
     ) : (
       part
-    )
-  )
+    ),
+  );
 }
 
 export function GlobalSearch({
   onNavigateToInstance,
 }: GlobalSearchProps): React.ReactElement {
   // Search state
-  const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState<'keys' | 'values' | 'tags'>('keys')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string>('')
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"keys" | "values" | "tags">(
+    "keys",
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
 
   // Results state
-  const [results, setResults] = useState<SearchResult[]>([])
-  const [summary, setSummary] = useState<SearchSummary | null>(null)
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [summary, setSummary] = useState<SearchSummary | null>(null);
 
   // Filter state
-  const [showFilters, setShowFilters] = useState(false)
-  const [namespaces, setNamespaces] = useState<Namespace[]>([])
-  const [selectedNamespaces, setSelectedNamespaces] = useState<Set<string>>(new Set())
-  const [loadingNamespaces, setLoadingNamespaces] = useState(false)
+  const [showFilters, setShowFilters] = useState(false);
+  const [namespaces, setNamespaces] = useState<Namespace[]>([]);
+  const [selectedNamespaces, setSelectedNamespaces] = useState<Set<string>>(
+    new Set(),
+  );
+  const [loadingNamespaces, setLoadingNamespaces] = useState(false);
 
   // Load namespaces for filtering
   // For tag search, load ALL namespaces; for key/value search, only admin-hooked ones
   useEffect(() => {
     const loadNamespaces = async (): Promise<void> => {
       try {
-        setLoadingNamespaces(true)
-        const data = await namespaceApi.list()
+        setLoadingNamespaces(true);
+        const data = await namespaceApi.list();
         // For tags tab, show all namespaces; for keys/values, only admin-hooked
-        if (activeTab === 'tags') {
-          setNamespaces(data)
+        if (activeTab === "tags") {
+          setNamespaces(data);
         } else {
-          setNamespaces(data.filter((ns) => ns.admin_hook_enabled === 1))
+          setNamespaces(data.filter((ns) => ns.admin_hook_enabled === 1));
         }
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.error('Failed to load namespaces:', err)
+        console.error("Failed to load namespaces:", err);
       } finally {
-        setLoadingNamespaces(false)
+        setLoadingNamespaces(false);
       }
-    }
-    void loadNamespaces()
-  }, [activeTab])
+    };
+    void loadNamespaces();
+  }, [activeTab]);
 
   // Perform search
-  const performSearch = useCallback(async (query: string): Promise<void> => {
-    if (!query.trim()) {
-      setResults([])
-      setSummary(null)
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      const namespaceIds = selectedNamespaces.size > 0
-        ? Array.from(selectedNamespaces)
-        : undefined
-
-      const searchOptions = {
-        ...(namespaceIds && { namespaceIds }),
-        limit: 100,
+  const performSearch = useCallback(
+    async (query: string): Promise<void> => {
+      if (!query.trim()) {
+        setResults([]);
+        setSummary(null);
+        return;
       }
 
-      let response
-      if (activeTab === 'keys') {
-        response = await searchApi.searchKeys(query, searchOptions)
-      } else if (activeTab === 'values') {
-        response = await searchApi.searchValues(query, searchOptions)
-      } else {
-        response = await searchApi.searchTags(query, searchOptions)
-      }
+      setLoading(true);
+      setError("");
 
-      setResults(response.results)
-      setSummary(response.summary)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed')
-      setResults([])
-      setSummary(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [activeTab, selectedNamespaces])
+      try {
+        const namespaceIds =
+          selectedNamespaces.size > 0
+            ? Array.from(selectedNamespaces)
+            : undefined;
+
+        const searchOptions = {
+          ...(namespaceIds && { namespaceIds }),
+          limit: 100,
+        };
+
+        let response;
+        if (activeTab === "keys") {
+          response = await searchApi.searchKeys(query, searchOptions);
+        } else if (activeTab === "values") {
+          response = await searchApi.searchValues(query, searchOptions);
+        } else {
+          response = await searchApi.searchTags(query, searchOptions);
+        }
+
+        setResults(response.results);
+        setSummary(response.summary);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Search failed");
+        setResults([]);
+        setSummary(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [activeTab, selectedNamespaces],
+  );
 
   // Handle search submission
   const handleSearch = (): void => {
-    void performSearch(searchQuery)
-  }
+    void performSearch(searchQuery);
+  };
 
   // Handle Enter key press
   const handleKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key === 'Enter' && !loading) {
-      handleSearch()
+    if (e.key === "Enter" && !loading) {
+      handleSearch();
     }
-  }
+  };
 
   // Clear search
   const clearSearch = (): void => {
-    setSearchQuery('')
-    setResults([])
-    setSummary(null)
-    setError('')
-  }
+    setSearchQuery("");
+    setResults([]);
+    setSummary(null);
+    setError("");
+  };
 
   // Toggle namespace filter
   const toggleNamespace = (namespaceId: string): void => {
     setSelectedNamespaces((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(namespaceId)) {
-        next.delete(namespaceId)
+        next.delete(namespaceId);
       } else {
-        next.add(namespaceId)
+        next.add(namespaceId);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   // Select/deselect all namespaces
   const selectAllNamespaces = (): void => {
-    setSelectedNamespaces(new Set(namespaces.map((ns) => ns.id)))
-  }
+    setSelectedNamespaces(new Set(namespaces.map((ns) => ns.id)));
+  };
 
   const clearNamespaceSelection = (): void => {
-    setSelectedNamespaces(new Set())
-  }
+    setSelectedNamespaces(new Set());
+  };
 
   // Handle result click - navigate to instance and open key edit dialog
   const handleResultClick = (result: SearchResult): void => {
     if (onNavigateToInstance) {
-      onNavigateToInstance(result.namespaceId, result.instanceId, result.key)
+      onNavigateToInstance(result.namespaceId, result.instanceId, result.key);
     }
-  }
+  };
 
   // Group results by namespace for better organization
   const groupedResults = useMemo(() => {
-    const groups = new Map<string, { namespace: { id: string; name: string }; results: SearchResult[] }>()
+    const groups = new Map<
+      string,
+      { namespace: { id: string; name: string }; results: SearchResult[] }
+    >();
 
     for (const result of results) {
-      const key = result.namespaceId
+      const key = result.namespaceId;
       if (!groups.has(key)) {
         groups.set(key, {
           namespace: { id: result.namespaceId, name: result.namespaceName },
           results: [],
-        })
+        });
       }
-      groups.get(key)?.results.push(result)
+      groups.get(key)?.results.push(result);
     }
 
-    return Array.from(groups.values())
-  }, [results])
+    return Array.from(groups.values());
+  }, [results]);
 
-  const hasSearch = searchQuery.trim().length > 0
+  const hasSearch = searchQuery.trim().length > 0;
 
   return (
     <div className="space-y-6">
@@ -212,7 +227,10 @@ export function GlobalSearch({
       </div>
 
       {/* Search Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'keys' | 'values')}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "keys" | "values")}
+      >
         <TabsList>
           <TabsTrigger value="keys" className="flex items-center gap-2">
             <Key className="h-4 w-4" />
@@ -230,19 +248,22 @@ export function GlobalSearch({
 
         <TabsContent value="keys" className="mt-4">
           <p className="text-sm text-muted-foreground mb-4">
-            Search for storage keys by name across all instances. Matches keys containing your search term.
+            Search for storage keys by name across all instances. Matches keys
+            containing your search term.
           </p>
         </TabsContent>
 
         <TabsContent value="values" className="mt-4">
           <p className="text-sm text-muted-foreground mb-4">
-            Search within storage values. Finds keys where the JSON value contains your search term.
+            Search within storage values. Finds keys where the JSON value
+            contains your search term.
           </p>
         </TabsContent>
 
         <TabsContent value="tags" className="mt-4">
           <p className="text-sm text-muted-foreground mb-4">
-            Search for instances by tag. Works for all namespaces (no admin hooks required).
+            Search for instances by tag. Works for all namespaces (no admin
+            hooks required).
           </p>
         </TabsContent>
       </Tabs>
@@ -252,17 +273,17 @@ export function GlobalSearch({
         <div className="flex gap-2">
           <div className="relative flex-1">
             <label htmlFor="global-search-input" className="sr-only">
-              Search {activeTab === 'keys' ? 'keys' : 'values'}
+              Search {activeTab === "keys" ? "keys" : "values"}
             </label>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="global-search-input"
               placeholder={
-                activeTab === 'keys'
-                  ? 'Search for keys (e.g., user:, config)...'
-                  : activeTab === 'values'
-                    ? 'Search within values...'
-                    : 'Search for tags (e.g., production, team:backend)...'
+                activeTab === "keys"
+                  ? "Search for keys (e.g., user:, config)..."
+                  : activeTab === "values"
+                    ? "Search within values..."
+                    : "Search for tags (e.g., production, team:backend)..."
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -296,7 +317,7 @@ export function GlobalSearch({
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
-            className={showFilters ? 'bg-accent' : ''}
+            className={showFilters ? "bg-accent" : ""}
           >
             <Filter className="h-4 w-4 mr-2" />
             Filters
@@ -364,7 +385,8 @@ export function GlobalSearch({
               )}
               {selectedNamespaces.size === 0 && namespaces.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  No filters selected - searching all namespaces with admin hooks enabled
+                  No filters selected - searching all namespaces with admin
+                  hooks enabled
                 </p>
               )}
             </CardContent>
@@ -385,13 +407,17 @@ export function GlobalSearch({
         <div className="bg-muted/50 rounded-lg px-4 py-3">
           <div className="flex items-center justify-between">
             <p className="text-sm">
-              Found <strong>{summary.totalMatches}</strong> match{summary.totalMatches !== 1 ? 'es' : ''}
-              {' '}across <strong>{summary.instancesSearched}</strong> instance{summary.instancesSearched !== 1 ? 's' : ''}
-              {' '}in <strong>{summary.namespacesSearched}</strong> namespace{summary.namespacesSearched !== 1 ? 's' : ''}
+              Found <strong>{summary.totalMatches}</strong> match
+              {summary.totalMatches !== 1 ? "es" : ""} across{" "}
+              <strong>{summary.instancesSearched}</strong> instance
+              {summary.instancesSearched !== 1 ? "s" : ""} in{" "}
+              <strong>{summary.namespacesSearched}</strong> namespace
+              {summary.namespacesSearched !== 1 ? "s" : ""}
             </p>
             {summary.errors > 0 && (
               <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                {summary.errors} instance{summary.errors !== 1 ? 's' : ''} could not be searched
+                {summary.errors} instance{summary.errors !== 1 ? "s" : ""} could
+                not be searched
               </p>
             )}
           </div>
@@ -405,7 +431,8 @@ export function GlobalSearch({
             <Search className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
             <h3 className="font-semibold mb-1">No results found</h3>
             <p className="text-sm text-muted-foreground">
-              No {activeTab === 'keys' ? 'keys' : 'values'} match "{searchQuery}"
+              No {activeTab === "keys" ? "keys" : "values"} match "{searchQuery}
+              "
             </p>
           </CardContent>
         </Card>
@@ -417,7 +444,8 @@ export function GlobalSearch({
             <Search className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
             <h3 className="font-semibold mb-1">Enter a search term</h3>
             <p className="text-sm text-muted-foreground">
-              Search for {activeTab === 'keys' ? 'key names' : 'values'} across all your Durable Object instances
+              Search for {activeTab === "keys" ? "key names" : "values"} across
+              all your Durable Object instances
             </p>
           </CardContent>
         </Card>
@@ -431,7 +459,9 @@ export function GlobalSearch({
                 <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
                   {namespace.name}
                 </span>
-                <span>({nsResults.length} result{nsResults.length !== 1 ? 's' : ''})</span>
+                <span>
+                  ({nsResults.length} result{nsResults.length !== 1 ? "s" : ""})
+                </span>
               </h3>
               <div className="space-y-2">
                 {nsResults.map((result, idx) => (
@@ -447,26 +477,37 @@ export function GlobalSearch({
                             {highlightMatch(result.key, searchQuery)}
                           </CardTitle>
                           <CardDescription className="text-xs mt-1">
-                            Instance: <span className="font-medium">{result.instanceName}</span>
+                            Instance:{" "}
+                            <span className="font-medium">
+                              {result.instanceName}
+                            </span>
                           </CardDescription>
-                          {result.matchType === 'value' && result.valuePreview && (
-                            <div className="mt-2 p-2 bg-muted rounded text-xs font-mono overflow-hidden">
-                              <span className="text-muted-foreground">Value: </span>
-                              {highlightMatch(result.valuePreview, searchQuery)}
-                            </div>
-                          )}
-                          {result.matchType === 'tag' && result.tags && result.tags.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {result.tags.map((tag, tagIdx) => (
-                                <span
-                                  key={`${tag}-${tagIdx}`}
-                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary"
-                                >
-                                  {highlightMatch(tag, searchQuery)}
+                          {result.matchType === "value" &&
+                            result.valuePreview && (
+                              <div className="mt-2 p-2 bg-muted rounded text-xs font-mono overflow-hidden">
+                                <span className="text-muted-foreground">
+                                  Value:{" "}
                                 </span>
-                              ))}
-                            </div>
-                          )}
+                                {highlightMatch(
+                                  result.valuePreview,
+                                  searchQuery,
+                                )}
+                              </div>
+                            )}
+                          {result.matchType === "tag" &&
+                            result.tags &&
+                            result.tags.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {result.tags.map((tag, tagIdx) => (
+                                  <span
+                                    key={`${tag}-${tagIdx}`}
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary"
+                                  >
+                                    {highlightMatch(tag, searchQuery)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                         </div>
                         <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
                       </div>
@@ -486,12 +527,13 @@ export function GlobalSearch({
             <Loader2 className="h-12 w-12 mx-auto text-muted-foreground animate-spin mb-3" />
             <h3 className="font-semibold mb-1">Searching...</h3>
             <p className="text-sm text-muted-foreground">
-              Querying instances across {selectedNamespaces.size > 0 ? selectedNamespaces.size : 'all'} namespace{selectedNamespaces.size !== 1 ? 's' : ''}
+              Querying instances across{" "}
+              {selectedNamespaces.size > 0 ? selectedNamespaces.size : "all"}{" "}
+              namespace{selectedNamespaces.size !== 1 ? "s" : ""}
             </p>
           </CardContent>
         </Card>
       )}
     </div>
-  )
+  );
 }
-

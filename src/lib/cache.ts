@@ -5,8 +5,8 @@
 
 /** Cache entry with data and timestamp */
 interface CacheEntry<T> {
-  data: T
-  timestamp: number
+  data: T;
+  timestamp: number;
 }
 
 /** TTL constants in milliseconds */
@@ -17,27 +17,27 @@ export const CACHE_TTL = {
   METRICS: 2 * 60 * 1000,
   /** TTL for health data (2 minutes) */
   HEALTH: 2 * 60 * 1000,
-} as const
+} as const;
 
 /** Cache key prefixes for organization */
 export const CACHE_KEYS = {
-  NAMESPACES: 'namespaces',
-  NAMESPACE: 'namespace:',
-  INSTANCES: 'instances:',
-  INSTANCE: 'instance:',
-  METRICS: 'metrics',
-  METRICS_NS: 'metrics:ns:',
-  HEALTH: 'health',
-  JOBS: 'jobs',
-  BACKUPS: 'backups:',
-  WEBHOOKS: 'webhooks',
-  SEARCH_KEYS: 'search:keys:',
-  SEARCH_VALUES: 'search:values:',
-  SEARCH_TAGS: 'search:tags:',
-} as const
+  NAMESPACES: "namespaces",
+  NAMESPACE: "namespace:",
+  INSTANCES: "instances:",
+  INSTANCE: "instance:",
+  METRICS: "metrics",
+  METRICS_NS: "metrics:ns:",
+  HEALTH: "health",
+  JOBS: "jobs",
+  BACKUPS: "backups:",
+  WEBHOOKS: "webhooks",
+  SEARCH_KEYS: "search:keys:",
+  SEARCH_VALUES: "search:values:",
+  SEARCH_TAGS: "search:tags:",
+} as const;
 
 /** Internal cache storage */
-const cache = new Map<string, CacheEntry<unknown>>()
+const cache = new Map<string, CacheEntry<unknown>>();
 
 /**
  * Get cached data if it exists and hasn't expired
@@ -45,20 +45,23 @@ const cache = new Map<string, CacheEntry<unknown>>()
  * @param ttl Time-to-live in milliseconds (default: 5 minutes)
  * @returns Cached data or undefined if not found/expired
  */
-export function getCached(key: string, ttl: number = CACHE_TTL.DEFAULT): unknown {
-  const entry = cache.get(key)
+export function getCached(
+  key: string,
+  ttl: number = CACHE_TTL.DEFAULT,
+): unknown {
+  const entry = cache.get(key);
   if (!entry) {
-    return undefined
+    return undefined;
   }
 
-  const now = Date.now()
+  const now = Date.now();
   if (now - entry.timestamp > ttl) {
     // Entry expired, remove it
-    cache.delete(key)
-    return undefined
+    cache.delete(key);
+    return undefined;
   }
 
-  return entry.data
+  return entry.data;
 }
 
 /**
@@ -70,7 +73,7 @@ export function setCache(key: string, data: unknown): void {
   cache.set(key, {
     data,
     timestamp: Date.now(),
-  })
+  });
 }
 
 /**
@@ -78,7 +81,7 @@ export function setCache(key: string, data: unknown): void {
  * @param key Cache key to invalidate
  */
 export function invalidateCache(key: string): void {
-  cache.delete(key)
+  cache.delete(key);
 }
 
 /**
@@ -88,7 +91,7 @@ export function invalidateCache(key: string): void {
 export function invalidatePrefix(prefix: string): void {
   for (const key of cache.keys()) {
     if (key.startsWith(prefix)) {
-      cache.delete(key)
+      cache.delete(key);
     }
   }
 }
@@ -97,7 +100,7 @@ export function invalidatePrefix(prefix: string): void {
  * Clear all cached data
  */
 export function clearAllCache(): void {
-  cache.clear()
+  cache.clear();
 }
 
 /**
@@ -107,5 +110,5 @@ export function getCacheStats(): { size: number; keys: string[] } {
   return {
     size: cache.size,
     keys: Array.from(cache.keys()),
-  }
+  };
 }

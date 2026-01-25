@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
+import React, { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import {
   Dialog,
   DialogContent,
@@ -10,15 +10,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import type { Namespace } from '../../types'
-import { namespaceApi } from '../../services/api'
+} from "../ui/dialog";
+import type { Namespace } from "../../types";
+import { namespaceApi } from "../../services/api";
 
 interface NamespaceSettingsDialogProps {
-  namespace: Namespace | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onUpdate: (namespace: Namespace) => void
+  namespace: Namespace | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdate: (namespace: Namespace) => void;
 }
 
 export function NamespaceSettingsDialog({
@@ -27,47 +27,49 @@ export function NamespaceSettingsDialog({
   onOpenChange,
   onUpdate,
 }: NamespaceSettingsDialogProps): React.ReactNode {
-  const [name, setName] = useState('')
-  const [endpointUrl, setEndpointUrl] = useState('')
-  const [storageBackend, setStorageBackend] = useState<'sqlite' | 'kv'>('sqlite')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [name, setName] = useState("");
+  const [endpointUrl, setEndpointUrl] = useState("");
+  const [storageBackend, setStorageBackend] = useState<"sqlite" | "kv">(
+    "sqlite",
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (namespace) {
-      setName(namespace.name)
-      setEndpointUrl(namespace.endpoint_url ?? '')
-      setStorageBackend(namespace.storage_backend)
+      setName(namespace.name);
+      setEndpointUrl(namespace.endpoint_url ?? "");
+      setStorageBackend(namespace.storage_backend);
     }
-  }, [namespace])
+  }, [namespace]);
 
   const handleSave = async (): Promise<void> => {
-    if (!namespace) return
-    
+    if (!namespace) return;
+
     try {
-      setSaving(true)
-      setError('')
-      
+      setSaving(true);
+      setError("");
+
       // Auto-enable admin hooks when endpoint URL is provided
-      const hasEndpoint = endpointUrl.trim().length > 0
-      
+      const hasEndpoint = endpointUrl.trim().length > 0;
+
       const updated = await namespaceApi.update(namespace.id, {
         name,
         endpoint_url: hasEndpoint ? endpointUrl.trim() : null,
         admin_hook_enabled: hasEndpoint ? 1 : 0,
         storage_backend: storageBackend,
-      })
-      
-      onUpdate(updated)
-      onOpenChange(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
-    } finally {
-      setSaving(false)
-    }
-  }
+      });
 
-  if (!namespace) return null
+      onUpdate(updated);
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!namespace) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,13 +80,13 @@ export function NamespaceSettingsDialog({
             Configure settings for {namespace.class_name}
           </DialogDescription>
         </DialogHeader>
-        
+
         {error && (
           <div className="bg-destructive/10 border border-destructive text-destructive px-3 py-2 rounded text-sm">
             {error}
           </div>
         )}
-        
+
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="settings-name">Display Name</Label>
@@ -95,7 +97,7 @@ export function NamespaceSettingsDialog({
               placeholder="Namespace name"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="endpoint">Admin Hook Endpoint URL</Label>
             <Input
@@ -105,10 +107,11 @@ export function NamespaceSettingsDialog({
               placeholder="https://your-worker.workers.dev"
             />
             <p className="text-xs text-muted-foreground">
-              Your Worker URL with admin hooks installed. Admin hooks are auto-enabled when a URL is set.
+              Your Worker URL with admin hooks installed. Admin hooks are
+              auto-enabled when a URL is set.
             </p>
           </div>
-          
+
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Storage Backend</legend>
             <div className="flex gap-4">
@@ -117,8 +120,8 @@ export function NamespaceSettingsDialog({
                   type="radio"
                   name="storage"
                   id="storage-sqlite"
-                  checked={storageBackend === 'sqlite'}
-                  onChange={() => setStorageBackend('sqlite')}
+                  checked={storageBackend === "sqlite"}
+                  onChange={() => setStorageBackend("sqlite")}
                   className="w-4 h-4"
                 />
                 <span>SQLite</span>
@@ -128,8 +131,8 @@ export function NamespaceSettingsDialog({
                   type="radio"
                   name="storage"
                   id="storage-kv"
-                  checked={storageBackend === 'kv'}
-                  onChange={() => setStorageBackend('kv')}
+                  checked={storageBackend === "kv"}
+                  onChange={() => setStorageBackend("kv")}
                   className="w-4 h-4"
                 />
                 <span>Key-Value</span>
@@ -137,7 +140,7 @@ export function NamespaceSettingsDialog({
             </div>
           </fieldset>
         </div>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
@@ -149,6 +152,5 @@ export function NamespaceSettingsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

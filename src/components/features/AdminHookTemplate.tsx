@@ -1,24 +1,24 @@
-import { useState } from 'react'
-import { Copy, Check, Code } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState } from "react";
+import { Copy, Check, Code } from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card'
+} from "../ui/card";
 
 interface AdminHookTemplateProps {
-  className?: string
-  storageBackend?: 'sqlite' | 'kv'
+  className?: string;
+  storageBackend?: "sqlite" | "kv";
 }
 
 export function AdminHookTemplate({
-  className = 'MyDurableObject',
-  storageBackend = 'sqlite',
+  className = "MyDurableObject",
+  storageBackend = "sqlite",
 }: AdminHookTemplateProps): React.ReactElement {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
 
   const sqliteTemplate = `// Admin Hook Methods for DO Manager
 // Add these methods to your ${className} class
@@ -116,7 +116,7 @@ async adminStats(): Promise<{
     alarmTime: alarm,
     storageBackend: this.ctx.storage.sql ? 'sqlite' : 'kv',
   };
-}`
+}`;
 
   const kvTemplate = `// Admin Hook Methods for DO Manager (KV Backend)
 // Add these methods to your ${className} class
@@ -192,35 +192,35 @@ async adminStats(): Promise<{
     alarmTime: alarm,
     storageBackend: 'kv',
   };
-}`
+}`;
 
-  const template = storageBackend === 'sqlite' ? sqliteTemplate : kvTemplate
+  const template = storageBackend === "sqlite" ? sqliteTemplate : kvTemplate;
 
   const handleCopy = async (): Promise<void> => {
     try {
-      await navigator.clipboard.writeText(template)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(template);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback - create temporary element and use selection API
-      const textArea = document.createElement('textarea')
-      textArea.value = template
-      textArea.style.position = 'fixed'
-      textArea.style.left = '-9999px'
-      document.body.appendChild(textArea)
-      textArea.select()
-      const selection = document.getSelection()
+      const textArea = document.createElement("textarea");
+      textArea.value = template;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      const selection = document.getSelection();
       if (selection) {
-        const range = document.createRange()
-        range.selectNodeContents(textArea)
-        selection.removeAllRanges()
-        selection.addRange(range)
+        const range = document.createRange();
+        range.selectNodeContents(textArea);
+        selection.removeAllRanges();
+        selection.addRange(range);
       }
-      document.body.removeChild(textArea)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
-  }
+  };
 
   return (
     <Card>
@@ -230,11 +230,7 @@ async adminStats(): Promise<{
             <Code className="h-5 w-5 text-primary" />
             <CardTitle>Admin Hook Template</CardTitle>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void handleCopy()}
-          >
+          <Button variant="outline" size="sm" onClick={() => void handleCopy()}>
             {copied ? (
               <>
                 <Check className="h-4 w-4 mr-2 text-green-500" />
@@ -249,7 +245,8 @@ async adminStats(): Promise<{
           </Button>
         </div>
         <CardDescription>
-          Add these methods to your Durable Object class to enable management features
+          Add these methods to your Durable Object class to enable management
+          features
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -266,13 +263,10 @@ async adminStats(): Promise<{
             <li>Copy the code above</li>
             <li>Paste it into your Durable Object class</li>
             <li>Deploy your Worker with the updated code</li>
-            <li>
-              Configure the endpoint URL in your namespace settings
-            </li>
+            <li>Configure the endpoint URL in your namespace settings</li>
           </ol>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
-

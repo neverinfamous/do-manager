@@ -1,6 +1,6 @@
 # Cloudflare Durable Object Manager - Docker
 
-Last Updated January 12, 2026 - Production/Stable v1.3.0
+Last Updated January 26, 2026 - Production/Stable v1.3.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
@@ -26,6 +26,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 ## 🎯 Features
 
 ### Namespace Management
+
 - **Auto-discover** DO namespaces from Cloudflare API
 - **Manual configuration** for custom setups
 - **List/Grid toggle** - Switch between compact List view (default) and card-based Grid view; preference saved to localStorage
@@ -36,6 +37,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - Support for SQLite and KV storage backends
 
 ### Instance Management
+
 - Track DO instances by name or hex ID
 - Create new instances with custom names
 - **List/Grid toggle** - Switch between compact List view (default) and card-based Grid view; preference saved to localStorage
@@ -49,6 +51,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - View storage contents (keys/values)
 
 ### SQL Console (SQLite-backed DOs)
+
 - **Enhanced SQL Editor** with Prism.js syntax highlighting and line numbers
 - **Real-time validation** with inline error indicators
 - **Context-aware autocomplete** for SQL keywords, table names, and columns
@@ -63,6 +66,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - Results displayed in sortable table format
 
 ### Multi-Select & Batch Operations
+
 - **Always-visible checkboxes** - Select namespaces, instances, and storage keys directly from lists
 - **Batch download (namespaces)** - Export multiple namespace configs as a ZIP file with manifest
 - **Batch download (instances)** - Export multiple instance storage as a ZIP file with manifest
@@ -74,6 +78,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Job history integration** - All batch operations are tracked in job history
 
 ### Storage Management
+
 - **Key search & filter** - Real-time filtering to find keys quickly
 - **Rename keys** - Edit key names directly in the Edit Key dialog
 - **Multi-select keys** - Select multiple keys with checkboxes for batch operations
@@ -84,26 +89,31 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - Clickable key rows for easy editing
 
 ### Admin Hook System
+
 - **NPM package** (`do-manager-admin-hooks`) for easy integration
 - Copy-paste template also available for custom setups
 - Support for both SQLite and KV backends
 
 ### Alarms
+
 - View current alarm state
 - Set new alarms with date/time picker
 - Delete existing alarms
 
 ### R2 Backup & Restore
+
 - Snapshot DO storage to R2
 - Browse backup history
 - Restore from any backup with auto-refresh
 
 ### Metrics Dashboard
+
 - Request volume over time
 - Storage usage
 - CPU time metrics (average and total)
 
 ### Global Search
+
 - **Cross-namespace key search** - Search for storage keys by name across all instances
 - **Value search** - Search within JSON values to find data across instances
 - **Namespace filtering** - Filter search to specific namespaces
@@ -113,6 +123,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Job tracking** - All search operations logged to job history
 
 ### Job History
+
 - **Comprehensive tracking** - Records all operations including:
   - Namespace: create, delete, clone, download (single & batch)
   - Instance: create, delete, clone, download (single & batch)
@@ -126,6 +137,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - Filter by status or namespace
 
 ### Webhook Notifications
+
 - **Event-driven webhooks** - Send HTTP notifications on key events (13 event types)
 - **Configurable events**:
   - Storage: `storage_create`, `storage_update`, `storage_delete`
@@ -138,6 +150,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Test webhooks** - Verify endpoint connectivity before going live
 
 ### Centralized Error Logging
+
 - **Structured error payloads** - Consistent format with module, operation, context, and metadata
 - **Module-prefixed error codes** - e.g., `NS_CREATE_FAILED`, `INST_DELETE_FAILED`, `BKP_RESTORE_FAILED`
 - **Severity levels** - error, warning, info
@@ -145,6 +158,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Stack trace capture** - Full stack traces logged for debugging
 
 ### Health Dashboard
+
 - **System overview** - Total namespaces, instances, and alarms at a glance
 - **Stale instance detection** - Identify instances not accessed in 7+ days
 - **Storage quota alerts** - Warn when instances approach 10GB DO storage limit (80% warning, 90% critical)
@@ -153,6 +167,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Recent activity** - Timeline of operations in last 24h/7d
 
 ### User Experience
+
 - Dark/Light/System themes
 - Responsive design
 - Enterprise auth via Cloudflare Access
@@ -188,12 +203,12 @@ npx wrangler d1 execute do-manager-metadata --remote --file=worker/schema.sql
 
 ### 2. Get Cloudflare Credentials
 
-| Credential | Where to Find |
-|------------|---------------|
-| `ACCOUNT_ID` | Dashboard URL: `dash.cloudflare.com/{ACCOUNT_ID}/...` |
-| `API_KEY` | [API Tokens](https://dash.cloudflare.com/profile/api-tokens) → Create Token → **Workers Scripts Read** + **D1 Edit** |
-| `TEAM_DOMAIN` | [Zero Trust](https://one.dash.cloudflare.com/) → Settings → Custom Pages |
-| `POLICY_AUD` | Zero Trust → Access → Applications → Your App → AUD tag |
+| Credential    | Where to Find                                                                                                        |
+| ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `ACCOUNT_ID`  | Dashboard URL: `dash.cloudflare.com/{ACCOUNT_ID}/...`                                                                |
+| `API_KEY`     | [API Tokens](https://dash.cloudflare.com/profile/api-tokens) → Create Token → **Workers Scripts Read** + **D1 Edit** |
+| `TEAM_DOMAIN` | [Zero Trust](https://one.dash.cloudflare.com/) → Settings → Custom Pages                                             |
+| `POLICY_AUD`  | Zero Trust → Access → Applications → Your App → AUD tag                                                              |
 
 ### 3. Run Container
 
@@ -293,37 +308,37 @@ docker compose pull && docker compose up -d
 
 ## 📋 Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ACCOUNT_ID` | ✅ | Cloudflare Account ID |
-| `API_KEY` | ✅ | API Token with Workers Scripts Read + D1 Edit permission |
-| `TEAM_DOMAIN` | ✅ | `https://yourteam.cloudflareaccess.com` |
-| `POLICY_AUD` | ✅ | Cloudflare Access Application AUD tag |
-| `PORT` | ❌ | Port (default: `8787`) |
-| `NODE_ENV` | ❌ | Environment (default: `production`) |
+| Variable      | Required | Description                                              |
+| ------------- | -------- | -------------------------------------------------------- |
+| `ACCOUNT_ID`  | ✅       | Cloudflare Account ID                                    |
+| `API_KEY`     | ✅       | API Token with Workers Scripts Read + D1 Edit permission |
+| `TEAM_DOMAIN` | ✅       | `https://yourteam.cloudflareaccess.com`                  |
+| `POLICY_AUD`  | ✅       | Cloudflare Access Application AUD tag                    |
+| `PORT`        | ❌       | Port (default: `8787`)                                   |
+| `NODE_ENV`    | ❌       | Environment (default: `production`)                      |
 
 ---
 
 ## 📊 Container Info
 
-| Property | Value |
-|----------|-------|
-| Base Image | `node:24-alpine` |
-| Size | ~150MB |
-| Architectures | `linux/amd64`, `linux/arm64` |
-| Port | `8787` |
-| User | Non-root (`app`) |
-| Health Endpoint | `/health` |
+| Property        | Value                        |
+| --------------- | ---------------------------- |
+| Base Image      | `node:24-alpine`             |
+| Size            | ~150MB                       |
+| Architectures   | `linux/amd64`, `linux/arm64` |
+| Port            | `8787`                       |
+| User            | Non-root (`app`)             |
+| Health Endpoint | `/health`                    |
 
 ---
 
 ## 🏷️ Available Tags
 
-| Tag | Description |
-|-----|-------------|
-| `latest` | Latest stable release |
-| `v1.3.0` | Specific version (recommended for production) |
-| `sha-XXXXXX` | Commit SHA for reproducible builds |
+| Tag          | Description                                   |
+| ------------ | --------------------------------------------- |
+| `latest`     | Latest stable release                         |
+| `v1.3.0`     | Specific version (recommended for production) |
+| `sha-XXXXXX` | Commit SHA for reproducible builds            |
 
 ---
 
@@ -354,6 +369,7 @@ docker logs do-manager
 ```
 
 Common causes:
+
 - Missing environment variables
 - Port already in use
 
@@ -406,4 +422,3 @@ MIT License - see [LICENSE](https://github.com/neverinfamous/do-manager/blob/mai
 ---
 
 **Made with ❤️ for the Cloudflare and Docker communities**
-

@@ -1,59 +1,67 @@
 /**
  * Centralized Error Logging System
- * 
+ *
  * Provides structured error logging with consistent format across all modules.
  * Integrates with webhooks to automatically notify external systems of critical errors.
  */
 
-import type { Env, ErrorContext, ErrorSeverity, StructuredError } from '../types'
-import { triggerWebhooks, createJobFailedWebhookData } from './webhooks'
+import type {
+  Env,
+  ErrorContext,
+  ErrorSeverity,
+  StructuredError,
+} from "../types";
+import { triggerWebhooks, createJobFailedWebhookData } from "./webhooks";
 
 /**
  * Generate current ISO timestamp
  */
 function nowISO(): string {
-  return new Date().toISOString()
+  return new Date().toISOString();
 }
 
 /**
  * Error code prefixes by module
  */
 const ERROR_CODE_PREFIXES: Record<string, string> = {
-  namespaces: 'NS',
-  instances: 'INST',
-  storage: 'STG',
-  alarms: 'ALM',
-  backup: 'BKP',
-  batch: 'BCH',
-  search: 'SRC',
-  metrics: 'MTR',
-  jobs: 'JOB',
-  webhooks: 'WHK',
-  auth: 'AUTH',
-  health: 'HLT',
-  queries: 'QRY',
-  diff: 'DIF',
-  export: 'EXP',
-  worker: 'WRK',
-  migrations: 'MIG',
-  tags: 'TAG',
-}
+  namespaces: "NS",
+  instances: "INST",
+  storage: "STG",
+  alarms: "ALM",
+  backup: "BKP",
+  batch: "BCH",
+  search: "SRC",
+  metrics: "MTR",
+  jobs: "JOB",
+  webhooks: "WHK",
+  auth: "AUTH",
+  health: "HLT",
+  queries: "QRY",
+  diff: "DIF",
+  export: "EXP",
+  worker: "WRK",
+  migrations: "MIG",
+  tags: "TAG",
+};
 
 /**
  * Generate an error code from context with appropriate suffix based on severity
  */
-function generateErrorCode(context: ErrorContext, level: ErrorSeverity): string {
-  const prefix = ERROR_CODE_PREFIXES[context.module] ?? 'ERR'
-  const operation = context.operation.toUpperCase().replace(/[^A-Z0-9]/g, '_')
+function generateErrorCode(
+  context: ErrorContext,
+  level: ErrorSeverity,
+): string {
+  const prefix = ERROR_CODE_PREFIXES[context.module] ?? "ERR";
+  const operation = context.operation.toUpperCase().replace(/[^A-Z0-9]/g, "_");
 
   // Use appropriate suffix based on severity level
   switch (level) {
-    case 'error':
-      return `${prefix}_${operation}_FAILED`
-    case 'warning':
-      return `${prefix}_${operation}_WARN`
-    case 'info':
-      return `${prefix}_${operation}`
+    case "error":
+      return `${prefix}_${operation}_FAILED`;
+    case "warning":
+      return `${prefix}_${operation}_WARN`;
+    case "info":
+      return `${prefix}_${operation}`;
   }
 }
 
@@ -66,16 +74,16 @@ function formatForConsole(error: StructuredError): string {
     `[${error.context.module}]`,
     `[${error.code}]`,
     error.message,
-  ]
+  ];
 
   if (error.context.namespaceId) {
-    parts.push(`(ns: ${error.context.namespaceId})`)
+    parts.push(`(ns: ${error.context.namespaceId})`);
   }
   if (error.context.instanceId) {
-    parts.push(`(inst: ${error.context.instanceId})`)
+    parts.push(`(inst: ${error.context.instanceId})`);
   }
 
-  return parts.join(' ')
+  return parts.join(" ");
 }
 
 /**
@@ -84,10 +92,10 @@ function formatForConsole(error: StructuredError): string {
 export function createStructuredError(
   error: Error | string,
   context: ErrorContext,
-  level: ErrorSeverity = 'error'
+  level: ErrorSeverity = "error",
 ): StructuredError {
-  const message = error instanceof Error ? error.message : error
-  const stack = error instanceof Error ? error.stack : undefined
+  const message = error instanceof Error ? error.message : error;
+  const stack = error instanceof Error ? error.stack : undefined;
 
   const result: StructuredError = {
     timestamp: nowISO(),
@@ -95,11 +103,11 @@ export function createStructuredError(
     code: generateErrorCode(context, level),
     message,
     context,
-  }
+  };
   if (stack) {
-    result.stack = stack
+    result.stack = stack;
   }
-  return result
+  return result;
 }
 
 /**
@@ -112,21 +120,21 @@ export async function logError(
   context: ErrorContext,
   isLocalDev: boolean,
   options: {
-    triggerWebhook?: boolean
-    jobId?: string
-  } = {}
+    triggerWebhook?: boolean;
+    jobId?: string;
+  } = {},
 ): Promise<StructuredError> {
-  const structuredError = createStructuredError(error, context, 'error')
+  const structuredError = createStructuredError(error, context, "error");
 
   // Log to console with structured format
-  console.error(formatForConsole(structuredError))
+  console.error(formatForConsole(structuredError));
   if (structuredError.stack) {
-    console.error('[Stack]', structuredError.stack)
+    console.error("[Stack]", structuredError.stack);
   }
 
   // Log metadata if present
   if (context.metadata && Object.keys(context.metadata).length > 0) {
-    console.error('[Metadata]', JSON.stringify(context.metadata))
+    console.error("[Metadata]", JSON.stringify(context.metadata));
   }
 
   // Trigger webhook for job failures
@@ -134,23 +142,23 @@ export async function logError(
     try {
       await triggerWebhooks(
         env,
-        'job_failed',
+        "job_failed",
         createJobFailedWebhookData(
           options.jobId,
           context.operation,
           structuredError.message,
           context.namespaceId ?? null,
           context.instanceId ?? null,
-          context.userId ?? null
+          context.userId ?? null,
         ),
-        isLocalDev
-      )
+        isLocalDev,
+      );
     } catch (webhookError) {
-      console.error('[ErrorLogger] Failed to trigger webhook:', webhookError)
+      console.error("[ErrorLogger] Failed to trigger webhook:", webhookError);
     }
   }
 
-  return structuredError
+  return structuredError;
 }
 
 /**
@@ -158,17 +166,17 @@ export async function logError(
  */
 export function logWarning(
   message: string,
-  context: ErrorContext
+  context: ErrorContext,
 ): StructuredError {
-  const structuredError = createStructuredError(message, context, 'warning')
+  const structuredError = createStructuredError(message, context, "warning");
 
-  console.warn(formatForConsole(structuredError))
+  console.warn(formatForConsole(structuredError));
 
   if (context.metadata && Object.keys(context.metadata).length > 0) {
-    console.warn('[Metadata]', JSON.stringify(context.metadata))
+    console.warn("[Metadata]", JSON.stringify(context.metadata));
   }
 
-  return structuredError
+  return structuredError;
 }
 
 /**
@@ -176,19 +184,21 @@ export function logWarning(
  */
 export function logInfo(
   message: string,
-  context: ErrorContext
+  context: ErrorContext,
 ): StructuredError {
-  const structuredError = createStructuredError(message, context, 'info')
+  const structuredError = createStructuredError(message, context, "info");
 
-  console.log(formatForConsole(structuredError))
+  console.log(formatForConsole(structuredError));
 
-  return structuredError
+  return structuredError;
 }
 
 /**
  * Format error for webhook payload
  */
-export function formatErrorForWebhook(error: StructuredError): Record<string, unknown> {
+export function formatErrorForWebhook(
+  error: StructuredError,
+): Record<string, unknown> {
   return {
     timestamp: error.timestamp,
     level: error.level,
@@ -200,7 +210,7 @@ export function formatErrorForWebhook(error: StructuredError): Record<string, un
     instance_id: error.context.instanceId,
     user_id: error.context.userId,
     metadata: error.context.metadata,
-  }
+  };
 }
 
 /**
@@ -210,17 +220,17 @@ export function createErrorContext(
   module: string,
   operation: string,
   options: {
-    namespaceId?: string
-    instanceId?: string
-    userId?: string
-    metadata?: Record<string, unknown>
-  } = {}
+    namespaceId?: string;
+    instanceId?: string;
+    userId?: string;
+    metadata?: Record<string, unknown>;
+  } = {},
 ): ErrorContext {
   return {
     module,
     operation,
     ...options,
-  }
+  };
 }
 
 /**
@@ -233,20 +243,20 @@ export async function withErrorLogging<T>(
   isLocalDev: boolean,
   operation: () => Promise<T>,
   options: {
-    triggerWebhook?: boolean
-    jobId?: string
-    rethrow?: boolean
-  } = {}
+    triggerWebhook?: boolean;
+    jobId?: string;
+    rethrow?: boolean;
+  } = {},
 ): Promise<T | null> {
   try {
-    return await operation()
+    return await operation();
   } catch (error) {
-    const logOptions: { triggerWebhook?: boolean; jobId?: string } = {}
+    const logOptions: { triggerWebhook?: boolean; jobId?: string } = {};
     if (options.triggerWebhook !== undefined) {
-      logOptions.triggerWebhook = options.triggerWebhook
+      logOptions.triggerWebhook = options.triggerWebhook;
     }
     if (options.jobId !== undefined) {
-      logOptions.jobId = options.jobId
+      logOptions.jobId = options.jobId;
     }
 
     await logError(
@@ -254,14 +264,13 @@ export async function withErrorLogging<T>(
       error instanceof Error ? error : String(error),
       context,
       isLocalDev,
-      logOptions
-    )
+      logOptions,
+    );
 
     if (options.rethrow !== false) {
-      throw error
+      throw error;
     }
 
-    return null
+    return null;
   }
 }
-

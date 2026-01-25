@@ -2,56 +2,55 @@
  * Search result item returned from the API
  */
 export interface SearchResult {
-  namespaceId: string
-  namespaceName: string
-  instanceId: string
-  instanceName: string
-  key: string
-  matchType: 'key' | 'value' | 'tag'
-  valuePreview?: string
-  tags?: string[]
+  namespaceId: string;
+  namespaceName: string;
+  instanceId: string;
+  instanceName: string;
+  key: string;
+  matchType: "key" | "value" | "tag";
+  valuePreview?: string;
+  tags?: string[];
 }
 
 /**
  * Summary of search operation
  */
 export interface SearchSummary {
-  totalMatches: number
-  namespacesSearched: number
-  instancesSearched: number
-  errors: number
+  totalMatches: number;
+  namespacesSearched: number;
+  instancesSearched: number;
+  errors: number;
 }
 
 /**
  * Full search response from API
  */
 export interface SearchResponse {
-  results: SearchResult[]
-  summary: SearchSummary
+  results: SearchResult[];
+  summary: SearchSummary;
 }
 
 /**
  * Options for key search
  */
 export interface KeySearchOptions {
-  namespaceIds?: string[]
-  limit?: number
+  namespaceIds?: string[];
+  limit?: number;
 }
 
 /**
  * Options for value search
  */
 export interface ValueSearchOptions {
-  namespaceIds?: string[]
-  instanceIds?: string[]
-  limit?: number
+  namespaceIds?: string[];
+  instanceIds?: string[];
+  limit?: number;
 }
 
 /**
  * Options for tag search
  */
 export interface TagSearchOptions {
-  namespaceIds?: string[]
-  limit?: number
+  namespaceIds?: string[];
+  limit?: number;
 }
-

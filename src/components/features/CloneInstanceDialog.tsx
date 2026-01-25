@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Loader2, Copy } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState } from "react";
+import { Loader2, Copy } from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,17 +8,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { instanceApi } from '../../services/instanceApi'
-import type { Instance } from '../../types'
+} from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { instanceApi } from "../../services/instanceApi";
+import type { Instance } from "../../types";
 
 interface CloneInstanceDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  sourceInstance: Instance | null
-  onComplete: (instance: Instance) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  sourceInstance: Instance | null;
+  onComplete: (instance: Instance) => void;
 }
 
 export function CloneInstanceDialog({
@@ -27,55 +27,56 @@ export function CloneInstanceDialog({
   sourceInstance,
   onComplete,
 }: CloneInstanceDialogProps): React.ReactElement {
-  const [newName, setNewName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [newName, setNewName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const resetForm = (): void => {
-    setNewName('')
-    setError('')
-  }
+    setNewName("");
+    setError("");
+  };
 
   const handleSubmit = async (): Promise<void> => {
     if (!newName.trim()) {
-      setError('New instance name is required')
-      return
+      setError("New instance name is required");
+      return;
     }
 
     if (!sourceInstance) {
-      setError('No source instance selected')
-      return
+      setError("No source instance selected");
+      return;
     }
 
     // Check if name is same as source
-    const sourceName = sourceInstance.name ?? sourceInstance.object_id
+    const sourceName = sourceInstance.name ?? sourceInstance.object_id;
     if (newName.trim() === sourceName) {
-      setError('New name must be different from the source instance')
-      return
+      setError("New name must be different from the source instance");
+      return;
     }
 
     try {
-      setLoading(true)
-      setError('')
+      setLoading(true);
+      setError("");
 
-      const result = await instanceApi.clone(sourceInstance.id, newName.trim())
-      onComplete(result.instance)
-      resetForm()
+      const result = await instanceApi.clone(sourceInstance.id, newName.trim());
+      onComplete(result.instance);
+      resetForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to clone instance')
+      setError(err instanceof Error ? err.message : "Failed to clone instance");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleOpenChange = (newOpen: boolean): void => {
     if (!newOpen) {
-      resetForm()
+      resetForm();
     }
-    onOpenChange(newOpen)
-  }
+    onOpenChange(newOpen);
+  };
 
-  const sourceName = sourceInstance?.name ?? sourceInstance?.object_id ?? 'Unknown'
+  const sourceName =
+    sourceInstance?.name ?? sourceInstance?.object_id ?? "Unknown";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -86,7 +87,8 @@ export function CloneInstanceDialog({
             Clone Instance
           </DialogTitle>
           <DialogDescription>
-            Create a copy of the instance with a new name. All storage data will be cloned.
+            Create a copy of the instance with a new name. All storage data will
+            be cloned.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -116,7 +118,8 @@ export function CloneInstanceDialog({
               autoFocus
             />
             <p className="text-xs text-muted-foreground">
-              This will create a new Durable Object instance with all the storage data from the source.
+              This will create a new Durable Object instance with all the
+              storage data from the source.
             </p>
           </div>
         </div>
@@ -135,6 +138,5 @@ export function CloneInstanceDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

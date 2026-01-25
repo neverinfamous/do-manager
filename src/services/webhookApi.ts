@@ -4,9 +4,15 @@ import type {
   WebhooksResponse,
   WebhookResponse,
   WebhookTestResult,
-} from '../types/webhook'
-import { apiFetch } from '../lib/apiFetch'
-import { getCached, setCache, invalidateCache, CACHE_KEYS, CACHE_TTL } from '../lib/cache'
+} from "../types/webhook";
+import { apiFetch } from "../lib/apiFetch";
+import {
+  getCached,
+  setCache,
+  invalidateCache,
+  CACHE_KEYS,
+  CACHE_TTL,
+} from "../lib/cache";
 
 /**
  * Webhook API functions with caching support
@@ -17,26 +23,28 @@ export const webhookApi = {
    * @param skipCache Set true to bypass cache
    */
   async list(skipCache = false): Promise<Webhook[]> {
-    const cacheKey = CACHE_KEYS.WEBHOOKS
+    const cacheKey = CACHE_KEYS.WEBHOOKS;
 
     if (!skipCache) {
-      const cached = getCached(cacheKey, CACHE_TTL.DEFAULT) as Webhook[] | undefined
+      const cached = getCached(cacheKey, CACHE_TTL.DEFAULT) as
+        | Webhook[]
+        | undefined;
       if (cached) {
-        return cached
+        return cached;
       }
     }
 
-    const data = await apiFetch<WebhooksResponse>('/webhooks')
-    setCache(cacheKey, data.webhooks)
-    return data.webhooks
+    const data = await apiFetch<WebhooksResponse>("/webhooks");
+    setCache(cacheKey, data.webhooks);
+    return data.webhooks;
   },
 
   /**
    * Get a single webhook by ID
    */
   async get(id: string): Promise<Webhook> {
-    const data = await apiFetch<WebhookResponse>(`/webhooks/${id}`)
-    return data.webhook
+    const data = await apiFetch<WebhookResponse>(`/webhooks/${id}`);
+    return data.webhook;
   },
 
   /**
@@ -44,12 +52,12 @@ export const webhookApi = {
    * Invalidates webhook cache
    */
   async create(input: WebhookInput): Promise<Webhook> {
-    const data = await apiFetch<WebhookResponse>('/webhooks', {
-      method: 'POST',
+    const data = await apiFetch<WebhookResponse>("/webhooks", {
+      method: "POST",
       body: JSON.stringify(input),
-    })
-    invalidateCache(CACHE_KEYS.WEBHOOKS)
-    return data.webhook
+    });
+    invalidateCache(CACHE_KEYS.WEBHOOKS);
+    return data.webhook;
   },
 
   /**
@@ -58,11 +66,11 @@ export const webhookApi = {
    */
   async update(id: string, input: Partial<WebhookInput>): Promise<Webhook> {
     const data = await apiFetch<WebhookResponse>(`/webhooks/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(input),
-    })
-    invalidateCache(CACHE_KEYS.WEBHOOKS)
-    return data.webhook
+    });
+    invalidateCache(CACHE_KEYS.WEBHOOKS);
+    return data.webhook;
   },
 
   /**
@@ -70,8 +78,8 @@ export const webhookApi = {
    * Invalidates webhook cache
    */
   async delete(id: string): Promise<void> {
-    await apiFetch(`/webhooks/${id}`, { method: 'DELETE' })
-    invalidateCache(CACHE_KEYS.WEBHOOKS)
+    await apiFetch(`/webhooks/${id}`, { method: "DELETE" });
+    invalidateCache(CACHE_KEYS.WEBHOOKS);
   },
 
   /**
@@ -79,7 +87,7 @@ export const webhookApi = {
    */
   async test(id: string): Promise<WebhookTestResult> {
     return apiFetch<WebhookTestResult>(`/webhooks/${id}/test`, {
-      method: 'POST',
-    })
+      method: "POST",
+    });
   },
-}
+};

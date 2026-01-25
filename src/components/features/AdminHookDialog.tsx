@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Code, Package, Copy, Check, ExternalLink } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState } from "react";
+import { Code, Package, Copy, Check, ExternalLink } from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,30 +8,30 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
-import { Label } from '../ui/label'
-import { Input } from '../ui/input'
-import { AdminHookTemplate } from './AdminHookTemplate'
+} from "../ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Label } from "../ui/label";
+import { Input } from "../ui/input";
+import { AdminHookTemplate } from "./AdminHookTemplate";
 
 interface AdminHookDialogProps {
-  defaultClassName?: string
-  defaultStorageBackend?: 'sqlite' | 'kv'
+  defaultClassName?: string;
+  defaultStorageBackend?: "sqlite" | "kv";
 }
 
 export function AdminHookDialog({
-  defaultClassName = 'MyDurableObject',
-  defaultStorageBackend = 'sqlite',
+  defaultClassName = "MyDurableObject",
+  defaultStorageBackend = "sqlite",
 }: AdminHookDialogProps): React.ReactElement {
-  const [className, setClassName] = useState(defaultClassName)
-  const [storageBackend, setStorageBackend] = useState<'sqlite' | 'kv'>(
-    defaultStorageBackend
-  )
-  const [copiedNpm, setCopiedNpm] = useState(false)
-  const [copiedCode, setCopiedCode] = useState(false)
+  const [className, setClassName] = useState(defaultClassName);
+  const [storageBackend, setStorageBackend] = useState<"sqlite" | "kv">(
+    defaultStorageBackend,
+  );
+  const [copiedNpm, setCopiedNpm] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
 
-  const npmInstallCommand = 'npm install do-manager-admin-hooks'
-  
+  const npmInstallCommand = "npm install do-manager-admin-hooks";
+
   const npmUsageCode = `import { withAdminHooks } from 'do-manager-admin-hooks';
 
 export class ${className} extends withAdminHooks() {
@@ -43,19 +43,19 @@ export class ${className} extends withAdminHooks() {
     // Your custom logic here
     return new Response('Hello from ${className}!');
   }
-}`
+}`;
 
   const handleCopyNpm = async (): Promise<void> => {
-    await navigator.clipboard.writeText(npmInstallCommand)
-    setCopiedNpm(true)
-    setTimeout(() => setCopiedNpm(false), 2000)
-  }
+    await navigator.clipboard.writeText(npmInstallCommand);
+    setCopiedNpm(true);
+    setTimeout(() => setCopiedNpm(false), 2000);
+  };
 
   const handleCopyCode = async (): Promise<void> => {
-    await navigator.clipboard.writeText(npmUsageCode)
-    setCopiedCode(true)
-    setTimeout(() => setCopiedCode(false), 2000)
-  }
+    await navigator.clipboard.writeText(npmUsageCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
 
   return (
     <Dialog>
@@ -72,7 +72,7 @@ export class ${className} extends withAdminHooks() {
             Enable DO Manager to access your Durable Object&apos;s storage
           </DialogDescription>
         </DialogHeader>
-        
+
         <Tabs defaultValue="npm" className="mt-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="npm" className="flex items-center gap-2">
@@ -84,17 +84,18 @@ export class ${className} extends withAdminHooks() {
               Manual Copy-Paste
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="npm" className="space-y-4 mt-4">
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">
                 ✨ Easiest Setup
               </h4>
               <p className="text-sm text-green-700 dark:text-green-300">
-                Install the NPM package and extend your DO class. Automatic updates, full TypeScript support, no copy-paste errors.
+                Install the NPM package and extend your DO class. Automatic
+                updates, full TypeScript support, no copy-paste errors.
               </p>
             </div>
-            
+
             <div className="space-y-3">
               <div>
                 <p className="text-sm font-medium">1. Install the package</p>
@@ -117,9 +118,11 @@ export class ${className} extends withAdminHooks() {
                   </Button>
                 </div>
               </div>
-              
+
               <div>
-                <Label htmlFor="npm-class-name" className="text-sm font-medium">2. Enter your class name</Label>
+                <Label htmlFor="npm-class-name" className="text-sm font-medium">
+                  2. Enter your class name
+                </Label>
                 <Input
                   id="npm-class-name"
                   value={className}
@@ -128,9 +131,11 @@ export class ${className} extends withAdminHooks() {
                   className="mt-2"
                 />
               </div>
-              
+
               <div>
-                <p className="text-sm font-medium">3. Update your Durable Object class</p>
+                <p className="text-sm font-medium">
+                  3. Update your Durable Object class
+                </p>
                 <div className="mt-2 relative">
                   <pre className="bg-muted p-3 rounded-lg text-sm font-mono overflow-x-auto whitespace-pre-wrap">
                     {npmUsageCode}
@@ -150,17 +155,28 @@ export class ${className} extends withAdminHooks() {
                   </Button>
                 </div>
               </div>
-              
+
               <div>
                 <p className="text-sm font-medium">4. Deploy and configure</p>
                 <div className="mt-2 text-sm text-muted-foreground space-y-1">
-                  <p>• Deploy your Worker: <code className="bg-muted px-1 rounded">wrangler deploy</code></p>
-                  <p>• In DO Manager Settings, set the <strong>Admin Hook Endpoint URL</strong> to your Worker URL</p>
-                  <p>• Admin hooks are automatically enabled when you save the URL</p>
+                  <p>
+                    • Deploy your Worker:{" "}
+                    <code className="bg-muted px-1 rounded">
+                      wrangler deploy
+                    </code>
+                  </p>
+                  <p>
+                    • In DO Manager Settings, set the{" "}
+                    <strong>Admin Hook Endpoint URL</strong> to your Worker URL
+                  </p>
+                  <p>
+                    • Admin hooks are automatically enabled when you save the
+                    URL
+                  </p>
                 </div>
               </div>
             </div>
-            
+
             <div className="pt-2 border-t">
               <a
                 href="https://github.com/neverinfamous/do-manager-admin-hooks"
@@ -173,17 +189,18 @@ export class ${className} extends withAdminHooks() {
               </a>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="manual" className="space-y-4 mt-4">
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
               <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
                 Manual Setup
               </h4>
               <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                Copy and paste this code into your Durable Object class. Use this if you can&apos;t install NPM packages.
+                Copy and paste this code into your Durable Object class. Use
+                this if you can&apos;t install NPM packages.
               </p>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="class-name">Class Name</Label>
@@ -203,8 +220,8 @@ export class ${className} extends withAdminHooks() {
                       name="storage"
                       id="hook-storage-sqlite"
                       value="sqlite"
-                      checked={storageBackend === 'sqlite'}
-                      onChange={() => setStorageBackend('sqlite')}
+                      checked={storageBackend === "sqlite"}
+                      onChange={() => setStorageBackend("sqlite")}
                       className="accent-primary"
                     />
                     <span className="text-sm">SQLite</span>
@@ -215,8 +232,8 @@ export class ${className} extends withAdminHooks() {
                       name="storage"
                       id="hook-storage-kv"
                       value="kv"
-                      checked={storageBackend === 'kv'}
-                      onChange={() => setStorageBackend('kv')}
+                      checked={storageBackend === "kv"}
+                      onChange={() => setStorageBackend("kv")}
                       className="accent-primary"
                     />
                     <span className="text-sm">KV (Legacy)</span>
@@ -232,5 +249,5 @@ export class ${className} extends withAdminHooks() {
         </Tabs>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

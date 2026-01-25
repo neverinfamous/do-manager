@@ -1,69 +1,75 @@
-import { createContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useEffect, useState, type ReactNode } from "react";
 
-type Theme = 'light' | 'dark' | 'system'
+type Theme = "light" | "dark" | "system";
 
 interface ThemeContextType {
-  theme: Theme
-  setTheme: (theme: Theme) => void
-  resolvedTheme: 'light' | 'dark'
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  resolvedTheme: "light" | "dark";
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
+export const ThemeContext = createContext<ThemeContextType | undefined>(
+  undefined,
+);
 
 interface ThemeProviderProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
-export function ThemeProvider({ children }: ThemeProviderProps): React.ReactElement {
+export function ThemeProvider({
+  children,
+}: ThemeProviderProps): React.ReactElement {
   const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('do-manager-theme') as Theme | null
-      return stored ?? 'system'
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("do-manager-theme") as Theme | null;
+      return stored ?? "system";
     }
-    return 'system'
-  })
+    return "system";
+  });
 
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    const root = window.document.documentElement
+    const root = window.document.documentElement;
 
     const updateTheme = (): void => {
-      let resolved: 'light' | 'dark'
-      
-      if (theme === 'system') {
-        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      let resolved: "light" | "dark";
+
+      if (theme === "system") {
+        resolved = window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
       } else {
-        resolved = theme
+        resolved = theme;
       }
 
-      setResolvedTheme(resolved)
-      root.classList.remove('light', 'dark')
-      root.classList.add(resolved)
-    }
+      setResolvedTheme(resolved);
+      root.classList.remove("light", "dark");
+      root.classList.add(resolved);
+    };
 
-    updateTheme()
+    updateTheme();
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (): void => {
-      if (theme === 'system') {
-        updateTheme()
+      if (theme === "system") {
+        updateTheme();
       }
-    }
+    };
 
-    mediaQuery.addEventListener('change', handleChange)
-    return (): void => mediaQuery.removeEventListener('change', handleChange)
-  }, [theme])
+    mediaQuery.addEventListener("change", handleChange);
+    return (): void => mediaQuery.removeEventListener("change", handleChange);
+  }, [theme]);
 
   const setTheme = (newTheme: Theme): void => {
-    setThemeState(newTheme)
-    localStorage.setItem('do-manager-theme', newTheme)
-  }
+    setThemeState(newTheme);
+    localStorage.setItem("do-manager-theme", newTheme);
+  };
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
       {children}
     </ThemeContext.Provider>
-  )
+  );
 }

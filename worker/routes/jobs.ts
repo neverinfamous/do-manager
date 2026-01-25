@@ -1,40 +1,40 @@
-import type { Env, CorsHeaders, Job } from '../types'
-import { jsonResponse, errorResponse } from '../utils/helpers'
-import { logWarning } from '../utils/error-logger'
+import type { Env, CorsHeaders, Job } from "../types";
+import { jsonResponse, errorResponse } from "../utils/helpers";
+import { logWarning } from "../utils/error-logger";
 
 /**
  * Mock jobs for local development
  */
 const MOCK_JOBS: Job[] = [
   {
-    id: 'job-1',
-    type: 'backup',
-    status: 'completed',
-    namespace_id: 'ns-1',
-    instance_id: 'inst-1',
-    user_email: 'dev@localhost',
+    id: "job-1",
+    type: "backup",
+    status: "completed",
+    namespace_id: "ns-1",
+    instance_id: "inst-1",
+    user_email: "dev@localhost",
     progress: 100,
-    result: JSON.stringify({ backup_id: 'backup-123' }),
+    result: JSON.stringify({ backup_id: "backup-123" }),
     error: null,
-    created_at: '2024-03-01T10:00:00Z',
-    started_at: '2024-03-01T10:00:01Z',
-    completed_at: '2024-03-01T10:00:05Z',
+    created_at: "2024-03-01T10:00:00Z",
+    started_at: "2024-03-01T10:00:01Z",
+    completed_at: "2024-03-01T10:00:05Z",
   },
   {
-    id: 'job-2',
-    type: 'bulk_delete',
-    status: 'failed',
-    namespace_id: 'ns-2',
+    id: "job-2",
+    type: "bulk_delete",
+    status: "failed",
+    namespace_id: "ns-2",
     instance_id: null,
-    user_email: 'dev@localhost',
+    user_email: "dev@localhost",
     progress: 50,
     result: null,
-    error: 'Connection timeout',
-    created_at: '2024-03-02T14:30:00Z',
-    started_at: '2024-03-02T14:30:01Z',
-    completed_at: '2024-03-02T14:30:10Z',
+    error: "Connection timeout",
+    created_at: "2024-03-02T14:30:00Z",
+    started_at: "2024-03-02T14:30:01Z",
+    completed_at: "2024-03-02T14:30:10Z",
   },
-]
+];
 
 /**
  * Handle job routes
@@ -45,27 +45,27 @@ export async function handleJobRoutes(
   url: URL,
   corsHeaders: CorsHeaders,
   isLocalDev: boolean,
-  _userEmail: string | null
+  _userEmail: string | null,
 ): Promise<Response> {
-  const method = request.method
-  const path = url.pathname
+  const method = request.method;
+  const path = url.pathname;
 
   // GET /api/jobs - List all jobs
-  if (method === 'GET' && path === '/api/jobs') {
-    return listJobs(env, url, corsHeaders, isLocalDev)
+  if (method === "GET" && path === "/api/jobs") {
+    return listJobs(env, url, corsHeaders, isLocalDev);
   }
 
   // GET /api/jobs/:id - Get single job
-  const singleMatch = /^\/api\/jobs\/([^/]+)$/.exec(path)
-  if (method === 'GET' && singleMatch) {
-    const jobId = singleMatch[1]
+  const singleMatch = /^\/api\/jobs\/([^/]+)$/.exec(path);
+  if (method === "GET" && singleMatch) {
+    const jobId = singleMatch[1];
     if (!jobId) {
-      return errorResponse('Job ID required', corsHeaders, 400)
+      return errorResponse("Job ID required", corsHeaders, 400);
     }
-    return getJob(jobId, env, corsHeaders, isLocalDev)
+    return getJob(jobId, env, corsHeaders, isLocalDev);
   }
 
-  return errorResponse('Not Found', corsHeaders, 404)
+  return errorResponse("Not Found", corsHeaders, 404);
 }
 
 /**
@@ -75,49 +75,59 @@ async function listJobs(
   env: Env,
   url: URL,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
 ): Promise<Response> {
-  const status = url.searchParams.get('status')
-  const namespaceId = url.searchParams.get('namespace_id')
-  const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '50', 10), 100)
+  const status = url.searchParams.get("status");
+  const namespaceId = url.searchParams.get("namespace_id");
+  const limit = Math.min(
+    parseInt(url.searchParams.get("limit") ?? "50", 10),
+    100,
+  );
 
   if (isLocalDev) {
-    let filtered = [...MOCK_JOBS]
+    let filtered = [...MOCK_JOBS];
     if (status) {
-      filtered = filtered.filter((j) => j.status === status)
+      filtered = filtered.filter((j) => j.status === status);
     }
     if (namespaceId) {
-      filtered = filtered.filter((j) => j.namespace_id === namespaceId)
+      filtered = filtered.filter((j) => j.namespace_id === namespaceId);
     }
-    return jsonResponse({ jobs: filtered.slice(0, limit) }, corsHeaders)
+    return jsonResponse({ jobs: filtered.slice(0, limit) }, corsHeaders);
   }
 
   try {
-    let query = 'SELECT * FROM jobs WHERE 1=1'
-    const params: (string | number)[] = []
+    let query = "SELECT * FROM jobs WHERE 1=1";
+    const params: (string | number)[] = [];
 
     if (status) {
-      query += ' AND status = ?'
-      params.push(status)
+      query += " AND status = ?";
+      params.push(status);
     }
     if (namespaceId) {
-      query += ' AND namespace_id = ?'
-      params.push(namespaceId)
+      query += " AND namespace_id = ?";
+      params.push(namespaceId);
     }
 
-    query += ' ORDER BY created_at DESC LIMIT ?'
-    params.push(limit)
+    query += " ORDER BY created_at DESC LIMIT ?";
+    params.push(limit);
 
-    const result = await env.METADATA.prepare(query).bind(...params).all<Job>()
+    const result = await env.METADATA.prepare(query)
+      .bind(...params)
+      .all<Job>();
 
-    return jsonResponse({ jobs: result.results }, corsHeaders)
+    return jsonResponse({ jobs: result.results }, corsHeaders);
   } catch (error) {
-    logWarning(`List error: ${error instanceof Error ? error.message : String(error)}`, {
-      module: 'jobs',
-      operation: 'list',
-      metadata: { error: error instanceof Error ? error.message : String(error) }
-    })
-    return errorResponse('Failed to list jobs', corsHeaders, 500)
+    logWarning(
+      `List error: ${error instanceof Error ? error.message : String(error)}`,
+      {
+        module: "jobs",
+        operation: "list",
+        metadata: {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      },
+    );
+    return errorResponse("Failed to list jobs", corsHeaders, 500);
   }
 }
 
@@ -128,33 +138,38 @@ async function getJob(
   jobId: string,
   env: Env,
   corsHeaders: CorsHeaders,
-  isLocalDev: boolean
+  isLocalDev: boolean,
 ): Promise<Response> {
   if (isLocalDev) {
-    const job = MOCK_JOBS.find((j) => j.id === jobId)
+    const job = MOCK_JOBS.find((j) => j.id === jobId);
     if (!job) {
-      return errorResponse('Job not found', corsHeaders, 404)
+      return errorResponse("Job not found", corsHeaders, 404);
     }
-    return jsonResponse({ job }, corsHeaders)
+    return jsonResponse({ job }, corsHeaders);
   }
 
   try {
-    const result = await env.METADATA.prepare(
-      'SELECT * FROM jobs WHERE id = ?'
-    ).bind(jobId).first<Job>()
+    const result = await env.METADATA.prepare("SELECT * FROM jobs WHERE id = ?")
+      .bind(jobId)
+      .first<Job>();
 
     if (!result) {
-      return errorResponse('Job not found', corsHeaders, 404)
+      return errorResponse("Job not found", corsHeaders, 404);
     }
 
-    return jsonResponse({ job: result }, corsHeaders)
+    return jsonResponse({ job: result }, corsHeaders);
   } catch (error) {
-    logWarning(`Get error: ${error instanceof Error ? error.message : String(error)}`, {
-      module: 'jobs',
-      operation: 'get',
-      metadata: { jobId, error: error instanceof Error ? error.message : String(error) }
-    })
-    return errorResponse('Failed to get job', corsHeaders, 500)
+    logWarning(
+      `Get error: ${error instanceof Error ? error.message : String(error)}`,
+      {
+        module: "jobs",
+        operation: "get",
+        metadata: {
+          jobId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      },
+    );
+    return errorResponse("Failed to get job", corsHeaders, 500);
   }
 }
-

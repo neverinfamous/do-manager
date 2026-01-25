@@ -1,24 +1,24 @@
-import { useState, useRef, useLayoutEffect } from 'react'
-import { Palette, X, Loader2 } from 'lucide-react'
-import { Button } from '../ui/button'
-import type { InstanceColor } from '../../types'
-import { INSTANCE_COLORS, getColorConfig } from '../../lib/instanceColors'
+import { useState, useRef, useLayoutEffect } from "react";
+import { Palette, X, Loader2 } from "lucide-react";
+import { Button } from "../ui/button";
+import type { InstanceColor } from "../../types";
+import { INSTANCE_COLORS, getColorConfig } from "../../lib/instanceColors";
 
 interface InstanceColorPickerProps {
   /** Current color value */
-  value: InstanceColor
+  value: InstanceColor;
   /** Callback when color changes */
-  onChange: (color: InstanceColor) => Promise<void> | void
+  onChange: (color: InstanceColor) => Promise<void> | void;
   /** Disable the picker */
-  disabled?: boolean
+  disabled?: boolean;
   /** Show as small inline picker */
-  variant?: 'dropdown' | 'inline'
+  variant?: "dropdown" | "inline";
 }
 
 interface DropdownPosition {
-  top?: number
-  bottom?: number
-  right: number
+  top?: number;
+  bottom?: number;
+  right: number;
 }
 
 /**
@@ -29,55 +29,55 @@ export function InstanceColorPicker({
   value,
   onChange,
   disabled = false,
-  variant = 'dropdown',
+  variant = "dropdown",
 }: InstanceColorPickerProps): React.ReactElement {
-  const [isOpen, setIsOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [position, setPosition] = useState<DropdownPosition | null>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [position, setPosition] = useState<DropdownPosition | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Calculate fixed position for dropdown based on button position and available space
   useLayoutEffect(() => {
     if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      const viewportHeight = window.innerHeight
-      const viewportWidth = window.innerWidth
-      const spaceBelow = viewportHeight - rect.bottom
-      const dropdownHeight = 200 // Approximate height including "Remove color" button
+      const rect = buttonRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const dropdownHeight = 200; // Approximate height including "Remove color" button
 
       // Calculate right position (align right edge of dropdown with right edge of button)
-      const rightPos = viewportWidth - rect.right
+      const rightPos = viewportWidth - rect.right;
 
       // Open above if not enough space below (with some margin)
       if (spaceBelow < dropdownHeight + 10) {
         setPosition({
           bottom: viewportHeight - rect.top + 4,
-          right: rightPos
-        })
+          right: rightPos,
+        });
       } else {
         setPosition({
           top: rect.bottom + 4,
-          right: rightPos
-        })
+          right: rightPos,
+        });
       }
     } else {
-      setPosition(null)
+      setPosition(null);
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   const handleColorSelect = async (color: InstanceColor): Promise<void> => {
-    setLoading(true)
+    setLoading(true);
     try {
-      await onChange(color)
-      setIsOpen(false)
+      await onChange(color);
+      setIsOpen(false);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const currentColor = getColorConfig(value)
+  const currentColor = getColorConfig(value);
 
-  if (variant === 'inline') {
+  if (variant === "inline") {
     return (
       <div className="flex items-center gap-1 flex-wrap">
         {INSTANCE_COLORS.map((color) => (
@@ -85,8 +85,11 @@ export function InstanceColorPicker({
             key={color.value}
             onClick={() => void handleColorSelect(color.value)}
             disabled={disabled || loading}
-            className={`w-5 h-5 rounded-full transition-all ${color.bgClass} ${value === color.value ? 'ring-2 ring-offset-2 ring-offset-background ring-primary scale-110' : 'hover:scale-110'
-              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            className={`w-5 h-5 rounded-full transition-all ${color.bgClass} ${
+              value === color.value
+                ? "ring-2 ring-offset-2 ring-offset-background ring-primary scale-110"
+                : "hover:scale-110"
+            } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
             title={color.label}
             aria-label={`Set color to ${color.label}`}
           />
@@ -95,8 +98,9 @@ export function InstanceColorPicker({
           <button
             onClick={() => void handleColorSelect(null)}
             disabled={disabled || loading}
-            className={`w-5 h-5 rounded-full border-2 border-dashed border-muted-foreground/50 flex items-center justify-center hover:border-destructive hover:text-destructive transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-              }`}
+            className={`w-5 h-5 rounded-full border-2 border-dashed border-muted-foreground/50 flex items-center justify-center hover:border-destructive hover:text-destructive transition-colors ${
+              disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            }`}
             title="Remove color"
             aria-label="Remove color"
           >
@@ -104,7 +108,7 @@ export function InstanceColorPicker({
           </button>
         )}
       </div>
-    )
+    );
   }
 
   // Dropdown variant
@@ -115,13 +119,13 @@ export function InstanceColorPicker({
         variant="ghost"
         size="sm"
         onClick={(e) => {
-          e.stopPropagation()
-          setIsOpen(!isOpen)
+          e.stopPropagation();
+          setIsOpen(!isOpen);
         }}
         disabled={disabled || loading}
         className="h-8 w-8 p-0"
-        title={currentColor ? `Color: ${currentColor.label}` : 'Set color'}
-        aria-label={currentColor ? `Color: ${currentColor.label}` : 'Set color'}
+        title={currentColor ? `Color: ${currentColor.label}` : "Set color"}
+        aria-label={currentColor ? `Color: ${currentColor.label}` : "Set color"}
       >
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -138,8 +142,8 @@ export function InstanceColorPicker({
           <div
             className="fixed inset-0 z-40"
             onClick={(e) => {
-              e.stopPropagation()
-              setIsOpen(false)
+              e.stopPropagation();
+              setIsOpen(false);
             }}
           />
 
@@ -148,8 +152,14 @@ export function InstanceColorPicker({
             <div
               className="fixed z-50 bg-popover border rounded-lg shadow-lg p-3"
               style={{
-                top: position.top !== undefined ? `${String(position.top)}px` : undefined,
-                bottom: position.bottom !== undefined ? `${String(position.bottom)}px` : undefined,
+                top:
+                  position.top !== undefined
+                    ? `${String(position.top)}px`
+                    : undefined,
+                bottom:
+                  position.bottom !== undefined
+                    ? `${String(position.bottom)}px`
+                    : undefined,
                 right: `${String(position.right)}px`,
               }}
               onClick={(e) => e.stopPropagation()}
@@ -161,8 +171,11 @@ export function InstanceColorPicker({
                     type="button"
                     onClick={() => void handleColorSelect(color.value)}
                     disabled={loading}
-                    className={`w-6 h-6 rounded-full transition-all ${color.bgClass} ${value === color.value ? 'ring-2 ring-offset-1 ring-offset-background ring-primary' : 'hover:scale-110'
-                      }`}
+                    className={`w-6 h-6 rounded-full transition-all ${color.bgClass} ${
+                      value === color.value
+                        ? "ring-2 ring-offset-1 ring-offset-background ring-primary"
+                        : "hover:scale-110"
+                    }`}
                     title={color.label}
                     aria-label={`Set color to ${color.label}`}
                   />
@@ -184,5 +197,5 @@ export function InstanceColorPicker({
         </>
       )}
     </div>
-  )
+  );
 }

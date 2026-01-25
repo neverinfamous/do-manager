@@ -1,74 +1,81 @@
-import { useState, useEffect } from 'react'
-import { RefreshCw, Loader2, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState, useEffect } from "react";
+import {
+  RefreshCw,
+  Loader2,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card'
-import { jobApi } from '../../services/api'
-import type { Job } from '../../types'
+} from "../ui/card";
+import { jobApi } from "../../services/api";
+import type { Job } from "../../types";
 
 export function JobHistory(): React.ReactElement {
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
   const loadJobs = async (): Promise<void> => {
     try {
-      setLoading(true)
-      setError('')
-      const data = await jobApi.list({ limit: 50 })
-      setJobs(data)
+      setLoading(true);
+      setError("");
+      const data = await jobApi.list({ limit: 50 });
+      setJobs(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load jobs')
+      setError(err instanceof Error ? err.message : "Failed to load jobs");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    void loadJobs()
-  }, [])
+    void loadJobs();
+  }, []);
 
-  const getStatusIcon = (status: Job['status']): React.ReactElement => {
+  const getStatusIcon = (status: Job["status"]): React.ReactElement => {
     switch (status) {
-      case 'completed':
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />
-      case 'failed':
-        return <XCircle className="h-5 w-5 text-destructive" />
-      case 'running':
-        return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-      case 'cancelled':
-        return <AlertCircle className="h-5 w-5 text-yellow-500" />
+      case "completed":
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case "failed":
+        return <XCircle className="h-5 w-5 text-destructive" />;
+      case "running":
+        return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />;
+      case "cancelled":
+        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
       default:
-        return <Clock className="h-5 w-5 text-muted-foreground" />
+        return <Clock className="h-5 w-5 text-muted-foreground" />;
     }
-  }
+  };
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const formatDuration = (job: Job): string => {
-    if (!job.started_at) return '-'
-    const start = new Date(job.started_at).getTime()
+    if (!job.started_at) return "-";
+    const start = new Date(job.started_at).getTime();
     const end = job.completed_at
       ? new Date(job.completed_at).getTime()
-      : Date.now()
-    const duration = Math.round((end - start) / 1000)
-    if (duration < 60) return `${String(duration)}s`
-    if (duration < 3600) return `${String(Math.round(duration / 60))}m`
-    return `${String(Math.round(duration / 3600))}h`
-  }
+      : Date.now();
+    const duration = Math.round((end - start) / 1000);
+    if (duration < 60) return `${String(duration)}s`;
+    if (duration < 3600) return `${String(Math.round(duration / 60))}m`;
+    return `${String(Math.round(duration / 3600))}h`;
+  };
 
   return (
     <div>
@@ -85,7 +92,9 @@ export function JobHistory(): React.ReactElement {
           onClick={() => void loadJobs()}
           disabled={loading}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+          />
           Refresh
         </Button>
       </div>
@@ -133,13 +142,13 @@ export function JobHistory(): React.ReactElement {
                   </div>
                   <span
                     className={`text-xs px-2 py-1 rounded-full ${
-                      job.status === 'completed'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : job.status === 'failed'
-                        ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        : job.status === 'running'
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                      job.status === "completed"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                        : job.status === "failed"
+                          ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                          : job.status === "running"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                     }`}
                   >
                     {job.status}
@@ -178,6 +187,5 @@ export function JobHistory(): React.ReactElement {
         </div>
       )}
     </div>
-  )
+  );
 }
-

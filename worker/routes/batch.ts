@@ -1,62 +1,74 @@
-import type { Env, CorsHeaders, Instance, Namespace } from '../types'
-import { jsonResponse, errorResponse, generateId, nowISO, parseJsonBody, createJob, completeJob, failJob } from '../utils/helpers'
-import { triggerWebhooks, createBatchCompleteWebhookData } from '../utils/webhooks'
-import { logWarning } from '../utils/error-logger'
+import type { Env, CorsHeaders, Instance, Namespace } from "../types";
+import {
+  jsonResponse,
+  errorResponse,
+  generateId,
+  nowISO,
+  parseJsonBody,
+  createJob,
+  completeJob,
+  failJob,
+} from "../utils/helpers";
+import {
+  triggerWebhooks,
+  createBatchCompleteWebhookData,
+} from "../utils/webhooks";
+import { logWarning } from "../utils/error-logger";
 
 /**
  * Batch operation request types
  */
 interface BatchDeleteInstancesRequest {
-  instanceIds?: string[]
+  instanceIds?: string[];
 }
 
 interface BatchDeleteNamespacesRequest {
-  namespaceIds?: string[]
+  namespaceIds?: string[];
 }
 
 interface BatchBackupRequest {
-  instanceIds?: string[]
+  instanceIds?: string[];
 }
 
 interface BatchExportInstancesRequest {
-  instanceIds?: string[]
-  namespaceId: string
-  namespaceName: string
+  instanceIds?: string[];
+  namespaceId: string;
+  namespaceName: string;
 }
 
 interface BatchExportNamespacesRequest {
-  namespaceIds?: string[]
+  namespaceIds?: string[];
 }
 
 interface BatchDeleteKeysRequest {
-  instanceId: string
-  instanceName: string
-  namespaceId: string
-  namespaceName: string
-  keys?: string[]
-  successCount: number
-  failedCount: number
+  instanceId: string;
+  instanceName: string;
+  namespaceId: string;
+  namespaceName: string;
+  keys?: string[];
+  successCount: number;
+  failedCount: number;
 }
 
 interface BatchExportKeysRequest {
-  instanceId: string
-  instanceName: string
-  namespaceId: string
-  namespaceName: string
-  keys?: string[]
-  exportedCount: number
+  instanceId: string;
+  instanceName: string;
+  namespaceId: string;
+  namespaceName: string;
+  keys?: string[];
+  exportedCount: number;
 }
 
 interface BatchOperationResult {
-  id: string
-  name: string
-  success: boolean
-  error?: string
+  id: string;
+  name: string;
+  success: boolean;
+  error?: string;
 }
 
 interface BatchBackupResult extends BatchOperationResult {
-  backupId?: string
-  size?: number
+  backupId?: string;
+  size?: number;
 }
 
 /**
@@ -68,47 +80,65 @@ export async function handleBatchRoutes(
   url: URL,
   corsHeaders: CorsHeaders,
   isLocalDev: boolean,
-  userEmail: string | null
+  userEmail: string | null,
 ): Promise<Response> {
-  const method = request.method
-  const path = url.pathname
+  const method = request.method;
+  const path = url.pathname;
 
   // POST /api/batch/instances/delete - Batch delete instances
-  if (method === 'POST' && path === '/api/batch/instances/delete') {
-    return batchDeleteInstances(request, env, corsHeaders, isLocalDev, userEmail)
+  if (method === "POST" && path === "/api/batch/instances/delete") {
+    return batchDeleteInstances(
+      request,
+      env,
+      corsHeaders,
+      isLocalDev,
+      userEmail,
+    );
   }
 
   // POST /api/batch/instances/backup - Batch backup instances
-  if (method === 'POST' && path === '/api/batch/instances/backup') {
-    return batchBackupInstances(request, env, corsHeaders, isLocalDev, userEmail)
+  if (method === "POST" && path === "/api/batch/instances/backup") {
+    return batchBackupInstances(
+      request,
+      env,
+      corsHeaders,
+      isLocalDev,
+      userEmail,
+    );
   }
 
   // POST /api/batch/instances/export - Log batch export instances job
-  if (method === 'POST' && path === '/api/batch/instances/export') {
-    return batchExportInstances(request, env, corsHeaders, userEmail)
+  if (method === "POST" && path === "/api/batch/instances/export") {
+    return batchExportInstances(request, env, corsHeaders, userEmail);
   }
 
   // POST /api/batch/namespaces/delete - Batch delete namespaces
-  if (method === 'POST' && path === '/api/batch/namespaces/delete') {
-    return batchDeleteNamespaces(request, env, corsHeaders, isLocalDev, userEmail)
+  if (method === "POST" && path === "/api/batch/namespaces/delete") {
+    return batchDeleteNamespaces(
+      request,
+      env,
+      corsHeaders,
+      isLocalDev,
+      userEmail,
+    );
   }
 
   // POST /api/batch/namespaces/export - Log batch export namespaces job
-  if (method === 'POST' && path === '/api/batch/namespaces/export') {
-    return batchExportNamespaces(request, env, corsHeaders, userEmail)
+  if (method === "POST" && path === "/api/batch/namespaces/export") {
+    return batchExportNamespaces(request, env, corsHeaders, userEmail);
   }
 
   // POST /api/batch/keys/delete - Log batch delete keys job
-  if (method === 'POST' && path === '/api/batch/keys/delete') {
-    return batchDeleteKeys(request, env, corsHeaders, userEmail)
+  if (method === "POST" && path === "/api/batch/keys/delete") {
+    return batchDeleteKeys(request, env, corsHeaders, userEmail);
   }
 
   // POST /api/batch/keys/export - Log batch export keys job
-  if (method === 'POST' && path === '/api/batch/keys/export') {
-    return batchExportKeys(request, env, corsHeaders, userEmail)
+  if (method === "POST" && path === "/api/batch/keys/export") {
+    return batchExportKeys(request, env, corsHeaders, userEmail);
   }
 
-  return errorResponse('Not Found', corsHeaders, 404)
+  return errorResponse("Not Found", corsHeaders, 404);
 }
 
 /**
@@ -119,34 +149,40 @@ async function batchDeleteInstances(
   env: Env,
   corsHeaders: CorsHeaders,
   isLocalDev: boolean,
-  userEmail: string | null
+  userEmail: string | null,
 ): Promise<Response> {
-  const body = await parseJsonBody<BatchDeleteInstancesRequest>(request)
+  const body = await parseJsonBody<BatchDeleteInstancesRequest>(request);
   if (!body?.instanceIds || body.instanceIds.length === 0) {
-    return errorResponse('instanceIds array is required', corsHeaders, 400)
+    return errorResponse("instanceIds array is required", corsHeaders, 400);
   }
 
-  const results: BatchOperationResult[] = []
+  const results: BatchOperationResult[] = [];
 
   // Create job record
-  const jobId = await createJob(env.METADATA, 'batch_delete_instances', userEmail)
+  const jobId = await createJob(
+    env.METADATA,
+    "batch_delete_instances",
+    userEmail,
+  );
 
   try {
     for (const instanceId of body.instanceIds) {
       try {
         // Get instance info for result
         const instance = await env.METADATA.prepare(
-          'SELECT * FROM instances WHERE id = ?'
-        ).bind(instanceId).first<Instance>()
+          "SELECT * FROM instances WHERE id = ?",
+        )
+          .bind(instanceId)
+          .first<Instance>();
 
         if (!instance) {
           results.push({
             id: instanceId,
-            name: 'Unknown',
+            name: "Unknown",
             success: false,
-            error: 'Instance not found',
-          })
-          continue
+            error: "Instance not found",
+          });
+          continue;
         }
 
         if (isLocalDev) {
@@ -155,70 +191,82 @@ async function batchDeleteInstances(
             id: instanceId,
             name: instance.name ?? instance.object_id,
             success: true,
-          })
-          continue
+          });
+          continue;
         }
 
         // Delete the instance tracking record
-        await env.METADATA.prepare(
-          'DELETE FROM instances WHERE id = ?'
-        ).bind(instanceId).run()
+        await env.METADATA.prepare("DELETE FROM instances WHERE id = ?")
+          .bind(instanceId)
+          .run();
 
         results.push({
           id: instanceId,
           name: instance.name ?? instance.object_id,
           success: true,
-        })
+        });
       } catch (err) {
         results.push({
           id: instanceId,
           name: instanceId,
           success: false,
-          error: err instanceof Error ? err.message : 'Delete failed',
-        })
+          error: err instanceof Error ? err.message : "Delete failed",
+        });
       }
     }
 
-    const successCount = results.filter((r) => r.success).length
-    const failureCount = results.filter((r) => !r.success).length
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
 
     await completeJob(env.METADATA, jobId, {
       total: body.instanceIds.length,
       success: successCount,
       failed: failureCount,
       instances: results.filter((r) => r.success).map((r) => r.name),
-    })
+    });
 
     // Trigger webhook
     void triggerWebhooks(
       env,
-      'batch_complete',
+      "batch_complete",
       createBatchCompleteWebhookData(
-        'batch_delete_instances',
+        "batch_delete_instances",
         body.instanceIds.length,
         successCount,
         failureCount,
-        userEmail
+        userEmail,
       ),
-      isLocalDev
-    )
+      isLocalDev,
+    );
 
-    return jsonResponse({
-      results,
-      summary: {
-        total: body.instanceIds.length,
-        success: successCount,
-        failed: failureCount,
+    return jsonResponse(
+      {
+        results,
+        summary: {
+          total: body.instanceIds.length,
+          success: successCount,
+          failed: failureCount,
+        },
       },
-    }, corsHeaders)
+      corsHeaders,
+    );
   } catch (error) {
-    logWarning(`Delete instances error: ${error instanceof Error ? error.message : String(error)}`, {
-      module: 'batch',
-      operation: 'delete_instances',
-      metadata: { error: error instanceof Error ? error.message : String(error) }
-    })
-    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Batch delete failed')
-    return errorResponse('Batch delete failed', corsHeaders, 500)
+    logWarning(
+      `Delete instances error: ${error instanceof Error ? error.message : String(error)}`,
+      {
+        module: "batch",
+        operation: "delete_instances",
+        metadata: {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      },
+    );
+    await failJob(
+      env.METADATA,
+      jobId,
+      error instanceof Error ? error.message : "Batch delete failed",
+    );
+    return errorResponse("Batch delete failed", corsHeaders, 500);
   }
 }
 
@@ -230,34 +278,40 @@ async function batchDeleteNamespaces(
   env: Env,
   corsHeaders: CorsHeaders,
   isLocalDev: boolean,
-  userEmail: string | null
+  userEmail: string | null,
 ): Promise<Response> {
-  const body = await parseJsonBody<BatchDeleteNamespacesRequest>(request)
+  const body = await parseJsonBody<BatchDeleteNamespacesRequest>(request);
   if (!body?.namespaceIds || body.namespaceIds.length === 0) {
-    return errorResponse('namespaceIds array is required', corsHeaders, 400)
+    return errorResponse("namespaceIds array is required", corsHeaders, 400);
   }
 
-  const results: BatchOperationResult[] = []
+  const results: BatchOperationResult[] = [];
 
   // Create job record
-  const jobId = await createJob(env.METADATA, 'batch_delete_namespaces', userEmail)
+  const jobId = await createJob(
+    env.METADATA,
+    "batch_delete_namespaces",
+    userEmail,
+  );
 
   try {
     for (const namespaceId of body.namespaceIds) {
       try {
         // Get namespace info for result
         const namespace = await env.METADATA.prepare(
-          'SELECT * FROM namespaces WHERE id = ?'
-        ).bind(namespaceId).first<Namespace>()
+          "SELECT * FROM namespaces WHERE id = ?",
+        )
+          .bind(namespaceId)
+          .first<Namespace>();
 
         if (!namespace) {
           results.push({
             id: namespaceId,
-            name: 'Unknown',
+            name: "Unknown",
             success: false,
-            error: 'Namespace not found',
-          })
-          continue
+            error: "Namespace not found",
+          });
+          continue;
         }
 
         if (isLocalDev) {
@@ -266,70 +320,82 @@ async function batchDeleteNamespaces(
             id: namespaceId,
             name: namespace.name,
             success: true,
-          })
-          continue
+          });
+          continue;
         }
 
         // Delete the namespace tracking record
-        await env.METADATA.prepare(
-          'DELETE FROM namespaces WHERE id = ?'
-        ).bind(namespaceId).run()
+        await env.METADATA.prepare("DELETE FROM namespaces WHERE id = ?")
+          .bind(namespaceId)
+          .run();
 
         results.push({
           id: namespaceId,
           name: namespace.name,
           success: true,
-        })
+        });
       } catch (err) {
         results.push({
           id: namespaceId,
           name: namespaceId,
           success: false,
-          error: err instanceof Error ? err.message : 'Delete failed',
-        })
+          error: err instanceof Error ? err.message : "Delete failed",
+        });
       }
     }
 
-    const successCount = results.filter((r) => r.success).length
-    const failureCount = results.filter((r) => !r.success).length
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
 
     await completeJob(env.METADATA, jobId, {
       total: body.namespaceIds.length,
       success: successCount,
       failed: failureCount,
       namespaces: results.filter((r) => r.success).map((r) => r.name),
-    })
+    });
 
     // Trigger webhook
     void triggerWebhooks(
       env,
-      'batch_complete',
+      "batch_complete",
       createBatchCompleteWebhookData(
-        'batch_delete_namespaces',
+        "batch_delete_namespaces",
         body.namespaceIds.length,
         successCount,
         failureCount,
-        userEmail
+        userEmail,
       ),
-      isLocalDev
-    )
+      isLocalDev,
+    );
 
-    return jsonResponse({
-      results,
-      summary: {
-        total: body.namespaceIds.length,
-        success: successCount,
-        failed: failureCount,
+    return jsonResponse(
+      {
+        results,
+        summary: {
+          total: body.namespaceIds.length,
+          success: successCount,
+          failed: failureCount,
+        },
       },
-    }, corsHeaders)
+      corsHeaders,
+    );
   } catch (error) {
-    logWarning(`Delete namespaces error: ${error instanceof Error ? error.message : String(error)}`, {
-      module: 'batch',
-      operation: 'delete_namespaces',
-      metadata: { error: error instanceof Error ? error.message : String(error) }
-    })
-    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Batch delete failed')
-    return errorResponse('Batch delete failed', corsHeaders, 500)
+    logWarning(
+      `Delete namespaces error: ${error instanceof Error ? error.message : String(error)}`,
+      {
+        module: "batch",
+        operation: "delete_namespaces",
+        metadata: {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      },
+    );
+    await failJob(
+      env.METADATA,
+      jobId,
+      error instanceof Error ? error.message : "Batch delete failed",
+    );
+    return errorResponse("Batch delete failed", corsHeaders, 500);
   }
 }
 
@@ -341,49 +407,53 @@ async function batchBackupInstances(
   env: Env,
   corsHeaders: CorsHeaders,
   isLocalDev: boolean,
-  userEmail: string | null
+  userEmail: string | null,
 ): Promise<Response> {
-  const body = await parseJsonBody<BatchBackupRequest>(request)
+  const body = await parseJsonBody<BatchBackupRequest>(request);
   if (!body?.instanceIds || body.instanceIds.length === 0) {
-    return errorResponse('instanceIds array is required', corsHeaders, 400)
+    return errorResponse("instanceIds array is required", corsHeaders, 400);
   }
 
-  const results: BatchBackupResult[] = []
+  const results: BatchBackupResult[] = [];
 
   // Create job record
-  const jobId = await createJob(env.METADATA, 'batch_backup', userEmail)
+  const jobId = await createJob(env.METADATA, "batch_backup", userEmail);
 
   try {
     for (const instanceId of body.instanceIds) {
       try {
         // Get instance info
         const instance = await env.METADATA.prepare(
-          'SELECT * FROM instances WHERE id = ?'
-        ).bind(instanceId).first<Instance>()
+          "SELECT * FROM instances WHERE id = ?",
+        )
+          .bind(instanceId)
+          .first<Instance>();
 
         if (!instance) {
           results.push({
             id: instanceId,
-            name: 'Unknown',
+            name: "Unknown",
             success: false,
-            error: 'Instance not found',
-          })
-          continue
+            error: "Instance not found",
+          });
+          continue;
         }
 
         // Get namespace info
         const namespace = await env.METADATA.prepare(
-          'SELECT * FROM namespaces WHERE id = ?'
-        ).bind(instance.namespace_id).first<Namespace>()
+          "SELECT * FROM namespaces WHERE id = ?",
+        )
+          .bind(instance.namespace_id)
+          .first<Namespace>();
 
         if (!namespace?.endpoint_url) {
           results.push({
             id: instanceId,
             name: instance.name ?? instance.object_id,
             success: false,
-            error: 'Namespace endpoint not configured',
-          })
-          continue
+            error: "Namespace endpoint not configured",
+          });
+          continue;
         }
 
         if (isLocalDev) {
@@ -394,20 +464,20 @@ async function batchBackupInstances(
             success: true,
             backupId: generateId(),
             size: Math.floor(Math.random() * 10000),
-          })
-          continue
+          });
+          continue;
         }
 
         // Fetch storage data from DO
-        const instanceName = instance.object_id
-        const baseUrl = namespace.endpoint_url.replace(/\/+$/, '')
+        const instanceName = instance.object_id;
+        const baseUrl = namespace.endpoint_url.replace(/\/+$/, "");
         const storageResponse = await fetch(
           `${baseUrl}/admin/${encodeURIComponent(instanceName)}/export`,
           {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }
-        )
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          },
+        );
 
         if (!storageResponse.ok) {
           results.push({
@@ -415,40 +485,44 @@ async function batchBackupInstances(
             name: instanceName,
             success: false,
             error: `Export failed: ${String(storageResponse.status)}`,
-          })
-          continue
+          });
+          continue;
         }
 
-        const storageData = await storageResponse.text()
-        const timestamp = new Date().toISOString().replace(/:/g, '-')
-        const r2Key = `backups/${instance.namespace_id}/${instanceId}/${timestamp}.json`
+        const storageData = await storageResponse.text();
+        const timestamp = new Date().toISOString().replace(/:/g, "-");
+        const r2Key = `backups/${instance.namespace_id}/${instanceId}/${timestamp}.json`;
 
         // Store in R2
         await env.BACKUP_BUCKET.put(r2Key, storageData, {
           customMetadata: {
             instanceId,
             namespaceId: instance.namespace_id,
-            createdBy: userEmail ?? 'unknown',
+            createdBy: userEmail ?? "unknown",
             storageBackend: namespace.storage_backend,
-            batchJob: jobId ?? '',
+            batchJob: jobId ?? "",
           },
-        })
+        });
 
         // Record backup in D1
-        const backupId = generateId()
-        await env.METADATA.prepare(`
+        const backupId = generateId();
+        await env.METADATA.prepare(
+          `
           INSERT INTO backups (id, instance_id, namespace_id, r2_key, size_bytes, storage_type, created_by, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(
-          backupId,
-          instanceId,
-          instance.namespace_id,
-          r2Key,
-          storageData.length,
-          namespace.storage_backend,
-          userEmail,
-          nowISO()
-        ).run()
+        `,
+        )
+          .bind(
+            backupId,
+            instanceId,
+            instance.namespace_id,
+            r2Key,
+            storageData.length,
+            namespace.storage_backend,
+            userEmail,
+            nowISO(),
+          )
+          .run();
 
         results.push({
           id: instanceId,
@@ -456,57 +530,69 @@ async function batchBackupInstances(
           success: true,
           backupId,
           size: storageData.length,
-        })
+        });
       } catch (err) {
         results.push({
           id: instanceId,
           name: instanceId,
           success: false,
-          error: err instanceof Error ? err.message : 'Backup failed',
-        })
+          error: err instanceof Error ? err.message : "Backup failed",
+        });
       }
     }
 
-    const successCount = results.filter((r) => r.success).length
-    const failureCount = results.filter((r) => !r.success).length
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
 
     await completeJob(env.METADATA, jobId, {
       total: body.instanceIds.length,
       success: successCount,
       failed: failureCount,
       instances: results.filter((r) => r.success).map((r) => r.name),
-    })
+    });
 
     // Trigger webhook
     void triggerWebhooks(
       env,
-      'batch_complete',
+      "batch_complete",
       createBatchCompleteWebhookData(
-        'batch_backup',
+        "batch_backup",
         body.instanceIds.length,
         successCount,
         failureCount,
-        userEmail
+        userEmail,
       ),
-      isLocalDev
-    )
+      isLocalDev,
+    );
 
-    return jsonResponse({
-      results,
-      summary: {
-        total: body.instanceIds.length,
-        success: successCount,
-        failed: failureCount,
+    return jsonResponse(
+      {
+        results,
+        summary: {
+          total: body.instanceIds.length,
+          success: successCount,
+          failed: failureCount,
+        },
       },
-    }, corsHeaders)
+      corsHeaders,
+    );
   } catch (error) {
-    logWarning(`Backup error: ${error instanceof Error ? error.message : String(error)}`, {
-      module: 'batch',
-      operation: 'backup',
-      metadata: { error: error instanceof Error ? error.message : String(error) }
-    })
-    await failJob(env.METADATA, jobId, error instanceof Error ? error.message : 'Batch backup failed')
-    return errorResponse('Batch backup failed', corsHeaders, 500)
+    logWarning(
+      `Backup error: ${error instanceof Error ? error.message : String(error)}`,
+      {
+        module: "batch",
+        operation: "backup",
+        metadata: {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      },
+    );
+    await failJob(
+      env.METADATA,
+      jobId,
+      error instanceof Error ? error.message : "Batch backup failed",
+    );
+    return errorResponse("Batch backup failed", corsHeaders, 500);
   }
 }
 
@@ -517,23 +603,28 @@ async function batchExportInstances(
   request: Request,
   env: Env,
   corsHeaders: CorsHeaders,
-  userEmail: string | null
+  userEmail: string | null,
 ): Promise<Response> {
-  const body = await parseJsonBody<BatchExportInstancesRequest>(request)
+  const body = await parseJsonBody<BatchExportInstancesRequest>(request);
   if (!body?.instanceIds || body.instanceIds.length === 0) {
-    return errorResponse('instanceIds array is required', corsHeaders, 400)
+    return errorResponse("instanceIds array is required", corsHeaders, 400);
   }
 
   // Create job record
-  const jobId = await createJob(env.METADATA, 'batch_export_instances', userEmail, body.namespaceId)
+  const jobId = await createJob(
+    env.METADATA,
+    "batch_export_instances",
+    userEmail,
+    body.namespaceId,
+  );
 
   await completeJob(env.METADATA, jobId, {
     total: body.instanceIds.length,
     namespace_name: body.namespaceName,
     instance_ids: body.instanceIds,
-  })
+  });
 
-  return jsonResponse({ success: true, jobId }, corsHeaders)
+  return jsonResponse({ success: true, jobId }, corsHeaders);
 }
 
 /**
@@ -543,22 +634,26 @@ async function batchExportNamespaces(
   request: Request,
   env: Env,
   corsHeaders: CorsHeaders,
-  userEmail: string | null
+  userEmail: string | null,
 ): Promise<Response> {
-  const body = await parseJsonBody<BatchExportNamespacesRequest>(request)
+  const body = await parseJsonBody<BatchExportNamespacesRequest>(request);
   if (!body?.namespaceIds || body.namespaceIds.length === 0) {
-    return errorResponse('namespaceIds array is required', corsHeaders, 400)
+    return errorResponse("namespaceIds array is required", corsHeaders, 400);
   }
 
   // Create job record
-  const jobId = await createJob(env.METADATA, 'batch_export_namespaces', userEmail)
+  const jobId = await createJob(
+    env.METADATA,
+    "batch_export_namespaces",
+    userEmail,
+  );
 
   await completeJob(env.METADATA, jobId, {
     total: body.namespaceIds.length,
     namespace_ids: body.namespaceIds,
-  })
+  });
 
-  return jsonResponse({ success: true, jobId }, corsHeaders)
+  return jsonResponse({ success: true, jobId }, corsHeaders);
 }
 
 /**
@@ -568,15 +663,21 @@ async function batchDeleteKeys(
   request: Request,
   env: Env,
   corsHeaders: CorsHeaders,
-  userEmail: string | null
+  userEmail: string | null,
 ): Promise<Response> {
-  const body = await parseJsonBody<BatchDeleteKeysRequest>(request)
+  const body = await parseJsonBody<BatchDeleteKeysRequest>(request);
   if (!body?.keys || body.keys.length === 0) {
-    return errorResponse('keys array is required', corsHeaders, 400)
+    return errorResponse("keys array is required", corsHeaders, 400);
   }
 
   // Create job record
-  const jobId = await createJob(env.METADATA, 'batch_delete_keys', userEmail, body.namespaceId, body.instanceId)
+  const jobId = await createJob(
+    env.METADATA,
+    "batch_delete_keys",
+    userEmail,
+    body.namespaceId,
+    body.instanceId,
+  );
 
   await completeJob(env.METADATA, jobId, {
     total: body.keys.length,
@@ -585,9 +686,9 @@ async function batchDeleteKeys(
     instance_name: body.instanceName,
     namespace_name: body.namespaceName,
     keys: body.keys.slice(0, 20), // Limit to first 20 keys in result
-  })
+  });
 
-  return jsonResponse({ success: true, jobId }, corsHeaders)
+  return jsonResponse({ success: true, jobId }, corsHeaders);
 }
 
 /**
@@ -597,15 +698,21 @@ async function batchExportKeys(
   request: Request,
   env: Env,
   corsHeaders: CorsHeaders,
-  userEmail: string | null
+  userEmail: string | null,
 ): Promise<Response> {
-  const body = await parseJsonBody<BatchExportKeysRequest>(request)
+  const body = await parseJsonBody<BatchExportKeysRequest>(request);
   if (!body?.keys || body.keys.length === 0) {
-    return errorResponse('keys array is required', corsHeaders, 400)
+    return errorResponse("keys array is required", corsHeaders, 400);
   }
 
   // Create job record
-  const jobId = await createJob(env.METADATA, 'batch_export_keys', userEmail, body.namespaceId, body.instanceId)
+  const jobId = await createJob(
+    env.METADATA,
+    "batch_export_keys",
+    userEmail,
+    body.namespaceId,
+    body.instanceId,
+  );
 
   await completeJob(env.METADATA, jobId, {
     total: body.keys.length,
@@ -613,7 +720,7 @@ async function batchExportKeys(
     instance_name: body.instanceName,
     namespace_name: body.namespaceName,
     keys: body.keys.slice(0, 20), // Limit to first 20 keys in result
-  })
+  });
 
-  return jsonResponse({ success: true, jobId }, corsHeaders)
+  return jsonResponse({ success: true, jobId }, corsHeaders);
 }

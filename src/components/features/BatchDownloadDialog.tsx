@@ -1,6 +1,13 @@
-import { useState } from 'react'
-import { Download, Loader2, CheckCircle2, XCircle, AlertTriangle, FileArchive } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState } from "react";
+import {
+  Download,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  FileArchive,
+} from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,21 +15,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { Progress } from '../ui/progress'
+} from "../ui/dialog";
+import { Progress } from "../ui/progress";
 import {
   batchExportInstances,
   type BatchProgress,
   type BatchItemResult,
-} from '../../services/batchApi'
-import type { Instance, Namespace } from '../../types'
+} from "../../services/batchApi";
+import type { Instance, Namespace } from "../../types";
 
 interface BatchDownloadDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  instances: Instance[]
-  namespace: Namespace
-  onComplete: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  instances: Instance[];
+  namespace: Namespace;
+  onComplete: () => void;
 }
 
 export function BatchDownloadDialog({
@@ -32,42 +39,42 @@ export function BatchDownloadDialog({
   namespace,
   onComplete,
 }: BatchDownloadDialogProps): React.ReactElement {
-  const [isDownloading, setIsDownloading] = useState(false)
-  const [progress, setProgress] = useState<BatchProgress | null>(null)
-  const [results, setResults] = useState<BatchItemResult[] | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [progress, setProgress] = useState<BatchProgress | null>(null);
+  const [results, setResults] = useState<BatchItemResult[] | null>(null);
 
   const handleDownload = async (): Promise<void> => {
-    setIsDownloading(true)
-    setProgress(null)
-    setResults(null)
+    setIsDownloading(true);
+    setProgress(null);
+    setResults(null);
 
     try {
-      await batchExportInstances(instances, namespace, setProgress)
+      await batchExportInstances(instances, namespace, setProgress);
       // Get results from final progress update
-      setResults(progress?.results ?? [])
+      setResults(progress?.results ?? []);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('Batch download error:', err)
+      console.error("Batch download error:", err);
     } finally {
-      setIsDownloading(false)
+      setIsDownloading(false);
     }
-  }
+  };
 
   const handleClose = (): void => {
-    if (isDownloading) return
-    if (results || progress?.status === 'completed') {
-      onComplete()
+    if (isDownloading) return;
+    if (results || progress?.status === "completed") {
+      onComplete();
     }
-    setProgress(null)
-    setResults(null)
-    onOpenChange(false)
-  }
+    setProgress(null);
+    setResults(null);
+    onOpenChange(false);
+  };
 
-  const pluralLabel = instances.length === 1 ? 'instance' : 'instances'
-  const currentResults = results ?? progress?.results ?? []
-  const successCount = currentResults.filter((r) => r.success).length
-  const failureCount = currentResults.filter((r) => !r.success).length
-  const isComplete = progress?.status === 'completed'
+  const pluralLabel = instances.length === 1 ? "instance" : "instances";
+  const currentResults = results ?? progress?.results ?? [];
+  const successCount = currentResults.filter((r) => r.success).length;
+  const failureCount = currentResults.filter((r) => !r.success).length;
+  const isComplete = progress?.status === "completed";
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -93,12 +100,14 @@ export function BatchDownloadDialog({
           <DialogDescription>
             {!isComplete ? (
               <>
-                Export {instances.length} {pluralLabel} from{' '}
-                <span className="font-medium">{namespace.name}</span> as a ZIP file.
+                Export {instances.length} {pluralLabel} from{" "}
+                <span className="font-medium">{namespace.name}</span> as a ZIP
+                file.
               </>
             ) : (
               <>
-                {successCount} of {instances.length} {pluralLabel} exported successfully.
+                {successCount} of {instances.length} {pluralLabel} exported
+                successfully.
                 {failureCount > 0 && ` ${String(failureCount)} failed.`}
               </>
             )}
@@ -152,7 +161,10 @@ export function BatchDownloadDialog({
                 )}
                 <span className="truncate flex-1">{result.name}</span>
                 {result.error && (
-                  <span className="text-xs text-destructive truncate max-w-[150px]" title={result.error}>
+                  <span
+                    className="text-xs text-destructive truncate max-w-[150px]"
+                    title={result.error}
+                  >
                     {result.error}
                   </span>
                 )}
@@ -172,7 +184,11 @@ export function BatchDownloadDialog({
         <DialogFooter>
           {!isComplete ? (
             <>
-              <Button variant="outline" onClick={handleClose} disabled={isDownloading}>
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                disabled={isDownloading}
+              >
                 Cancel
               </Button>
               <Button
@@ -193,13 +209,10 @@ export function BatchDownloadDialog({
               </Button>
             </>
           ) : (
-            <Button onClick={handleClose}>
-              Done
-            </Button>
+            <Button onClick={handleClose}>Done</Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

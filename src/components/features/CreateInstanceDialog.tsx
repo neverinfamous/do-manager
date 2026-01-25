@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,17 +8,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { instanceApi } from '../../services/instanceApi'
-import type { Instance } from '../../types'
+} from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { instanceApi } from "../../services/instanceApi";
+import type { Instance } from "../../types";
 
 interface CreateInstanceDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  namespaceId: string
-  onComplete: (instance: Instance) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  namespaceId: string;
+  onComplete: (instance: Instance) => void;
 }
 
 export function CreateInstanceDialog({
@@ -27,60 +27,61 @@ export function CreateInstanceDialog({
   namespaceId,
   onComplete,
 }: CreateInstanceDialogProps): React.ReactElement {
-  const [name, setName] = useState('')
-  const [objectId, setObjectId] = useState('')
-  const [idType, setIdType] = useState<'name' | 'hex'>('name')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [name, setName] = useState("");
+  const [objectId, setObjectId] = useState("");
+  const [idType, setIdType] = useState<"name" | "hex">("name");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const resetForm = (): void => {
-    setName('')
-    setObjectId('')
-    setIdType('name')
-    setError('')
-  }
+    setName("");
+    setObjectId("");
+    setIdType("name");
+    setError("");
+  };
 
   const handleSubmit = async (): Promise<void> => {
     if (!objectId.trim()) {
-      setError('Object ID or Name is required')
-      return
+      setError("Object ID or Name is required");
+      return;
     }
 
     // For name-based IDs, the object_id will be derived from the name
     // For hex IDs, validate the format
-    if (idType === 'hex') {
-      const hexRegex = /^[a-f0-9]{64}$/i
+    if (idType === "hex") {
+      const hexRegex = /^[a-f0-9]{64}$/i;
       if (!hexRegex.test(objectId.trim())) {
-        setError('Hex ID must be exactly 64 hexadecimal characters')
-        return
+        setError("Hex ID must be exactly 64 hexadecimal characters");
+        return;
       }
     }
 
     try {
-      setLoading(true)
-      setError('')
-      
-      const trimmedName = name.trim() || (idType === 'name' ? objectId.trim() : '')
+      setLoading(true);
+      setError("");
+
+      const trimmedName =
+        name.trim() || (idType === "name" ? objectId.trim() : "");
       const result = await instanceApi.create(namespaceId, {
         ...(trimmedName && { name: trimmedName }),
         object_id: objectId.trim(),
-      })
-      
-      onComplete(result.instance)
-      resetForm()
+      });
+
+      onComplete(result.instance);
+      resetForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add instance')
+      setError(err instanceof Error ? err.message : "Failed to add instance");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleOpenChange = (newOpen: boolean): void => {
     if (!newOpen) {
-      resetForm()
+      resetForm();
     }
-    onOpenChange(newOpen)
-  }
+    onOpenChange(newOpen);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -107,8 +108,8 @@ export function CreateInstanceDialog({
                   name="id_type"
                   id="id_type_name"
                   value="name"
-                  checked={idType === 'name'}
-                  onChange={() => setIdType('name')}
+                  checked={idType === "name"}
+                  onChange={() => setIdType("name")}
                   className="accent-primary"
                 />
                 <span className="text-sm">Named (idFromName)</span>
@@ -119,8 +120,8 @@ export function CreateInstanceDialog({
                   name="id_type"
                   id="id_type_hex"
                   value="hex"
-                  checked={idType === 'hex'}
-                  onChange={() => setIdType('hex')}
+                  checked={idType === "hex"}
+                  onChange={() => setIdType("hex")}
                   className="accent-primary"
                 />
                 <span className="text-sm">Hex ID (newUniqueId)</span>
@@ -130,19 +131,19 @@ export function CreateInstanceDialog({
 
           <div className="grid gap-2">
             <Label htmlFor="object_id">
-              {idType === 'name' ? 'Object Name' : 'Object ID (64-char hex)'}
+              {idType === "name" ? "Object Name" : "Object ID (64-char hex)"}
             </Label>
             <Input
               id="object_id"
-              placeholder={idType === 'name' ? 'my-object-name' : 'a1b2c3d4...'}
+              placeholder={idType === "name" ? "my-object-name" : "a1b2c3d4..."}
               value={objectId}
               onChange={(e) => setObjectId(e.target.value)}
-              className={idType === 'hex' ? 'font-mono text-xs' : ''}
+              className={idType === "hex" ? "font-mono text-xs" : ""}
             />
             <p className="text-xs text-muted-foreground">
-              {idType === 'name'
-                ? 'The name used with idFromName() or getByName()'
-                : 'The 64-character hex ID from newUniqueId()'}
+              {idType === "name"
+                ? "The name used with idFromName() or getByName()"
+                : "The 64-character hex ID from newUniqueId()"}
             </p>
           </div>
 
@@ -171,6 +172,5 @@ export function CreateInstanceDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

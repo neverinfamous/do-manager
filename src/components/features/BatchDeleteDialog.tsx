@@ -1,6 +1,12 @@
-import { useState } from 'react'
-import { Trash2, AlertTriangle, Loader2, CheckCircle2, XCircle } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState } from "react";
+import {
+  Trash2,
+  AlertTriangle,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,35 +14,35 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { Progress } from '../ui/progress'
+} from "../ui/dialog";
+import { Progress } from "../ui/progress";
 import {
   batchDeleteInstances,
   batchDeleteNamespaces,
   type BatchProgress,
   type BatchItemResult,
-} from '../../services/batchApi'
-import type { Instance, Namespace } from '../../types'
+} from "../../services/batchApi";
+import type { Instance, Namespace } from "../../types";
 
-type DeleteItem = Instance | Namespace
+type DeleteItem = Instance | Namespace;
 
 interface BatchDeleteDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  items: DeleteItem[]
-  itemType: 'instance' | 'namespace'
-  onComplete: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  items: DeleteItem[];
+  itemType: "instance" | "namespace";
+  onComplete: () => void;
 }
 
 function isInstance(item: DeleteItem): item is Instance {
-  return 'object_id' in item
+  return "object_id" in item;
 }
 
 function getItemName(item: DeleteItem): string {
   if (isInstance(item)) {
-    return item.name ?? item.object_id
+    return item.name ?? item.object_id;
   }
-  return item.name
+  return item.name;
 }
 
 export function BatchDeleteDialog({
@@ -46,52 +52,52 @@ export function BatchDeleteDialog({
   itemType,
   onComplete,
 }: BatchDeleteDialogProps): React.ReactElement {
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [progress, setProgress] = useState<BatchProgress | null>(null)
-  const [results, setResults] = useState<BatchItemResult[] | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [progress, setProgress] = useState<BatchProgress | null>(null);
+  const [results, setResults] = useState<BatchItemResult[] | null>(null);
 
   const handleDelete = async (): Promise<void> => {
-    setIsDeleting(true)
-    setProgress(null)
-    setResults(null)
+    setIsDeleting(true);
+    setProgress(null);
+    setResults(null);
 
     try {
-      let deleteResults: BatchItemResult[]
+      let deleteResults: BatchItemResult[];
 
-      if (itemType === 'instance') {
+      if (itemType === "instance") {
         deleteResults = await batchDeleteInstances(
           items as Instance[],
-          setProgress
-        )
+          setProgress,
+        );
       } else {
         deleteResults = await batchDeleteNamespaces(
           items as Namespace[],
-          setProgress
-        )
+          setProgress,
+        );
       }
 
-      setResults(deleteResults)
+      setResults(deleteResults);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('Batch delete error:', err)
+      console.error("Batch delete error:", err);
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   const handleClose = (): void => {
-    if (isDeleting) return
+    if (isDeleting) return;
     if (results) {
-      onComplete()
+      onComplete();
     }
-    setProgress(null)
-    setResults(null)
-    onOpenChange(false)
-  }
+    setProgress(null);
+    setResults(null);
+    onOpenChange(false);
+  };
 
-  const pluralItemType = items.length === 1 ? itemType : `${itemType}s`
-  const successCount = results?.filter((r) => r.success).length ?? 0
-  const failureCount = results?.filter((r) => !r.success).length ?? 0
+  const pluralItemType = items.length === 1 ? itemType : `${itemType}s`;
+  const successCount = results?.filter((r) => r.success).length ?? 0;
+  const failureCount = results?.filter((r) => !r.success).length ?? 0;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -117,12 +123,14 @@ export function BatchDeleteDialog({
           <DialogDescription>
             {!results ? (
               <>
-                Are you sure you want to delete {items.length === 1 ? 'this' : 'these'}{' '}
-                {pluralItemType}? This action cannot be undone.
+                Are you sure you want to delete{" "}
+                {items.length === 1 ? "this" : "these"} {pluralItemType}? This
+                action cannot be undone.
               </>
             ) : (
               <>
-                {successCount} of {items.length} {pluralItemType} deleted successfully.
+                {successCount} of {items.length} {pluralItemType} deleted
+                successfully.
                 {failureCount > 0 && ` ${String(failureCount)} failed.`}
               </>
             )}
@@ -136,9 +144,7 @@ export function BatchDeleteDialog({
               <span className="text-muted-foreground">
                 {progress.currentItemName}
               </span>
-              <span className="font-medium">
-                {progress.percentage}%
-              </span>
+              <span className="font-medium">{progress.percentage}%</span>
             </div>
             <Progress value={progress.percentage} />
           </div>
@@ -181,7 +187,10 @@ export function BatchDeleteDialog({
                 )}
                 <span className="truncate flex-1">{result.name}</span>
                 {result.error && (
-                  <span className="text-xs text-destructive truncate max-w-[150px]" title={result.error}>
+                  <span
+                    className="text-xs text-destructive truncate max-w-[150px]"
+                    title={result.error}
+                  >
                     {result.error}
                   </span>
                 )}
@@ -193,7 +202,11 @@ export function BatchDeleteDialog({
         <DialogFooter>
           {!results ? (
             <>
-              <Button variant="outline" onClick={handleClose} disabled={isDeleting}>
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                disabled={isDeleting}
+              >
                 Cancel
               </Button>
               <Button
@@ -215,12 +228,10 @@ export function BatchDeleteDialog({
               </Button>
             </>
           ) : (
-            <Button onClick={handleClose}>
-              Done
-            </Button>
+            <Button onClick={handleClose}>Done</Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

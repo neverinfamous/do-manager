@@ -1,17 +1,17 @@
-import { useState } from 'react'
-import { ArrowLeft, Box, Code, Settings } from 'lucide-react'
-import { Button } from '../ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
-import { InstanceList } from './InstanceList'
-import { AdminHookDialog } from './AdminHookDialog'
-import { NamespaceSettingsDialog } from './NamespaceSettingsDialog'
-import type { Namespace, Instance } from '../../types'
+import { useState } from "react";
+import { ArrowLeft, Box, Code, Settings } from "lucide-react";
+import { Button } from "../ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { InstanceList } from "./InstanceList";
+import { AdminHookDialog } from "./AdminHookDialog";
+import { NamespaceSettingsDialog } from "./NamespaceSettingsDialog";
+import type { Namespace, Instance } from "../../types";
 
 interface NamespaceViewProps {
-  namespace: Namespace
-  onBack: () => void
-  onSelectInstance: (instance: Instance) => void
-  onNamespaceUpdate: (namespace: Namespace) => void
+  namespace: Namespace;
+  onBack: () => void;
+  onSelectInstance: (instance: Instance) => void;
+  onNamespaceUpdate: (namespace: Namespace) => void;
 }
 
 export function NamespaceView({
@@ -20,8 +20,8 @@ export function NamespaceView({
   onSelectInstance,
   onNamespaceUpdate,
 }: NamespaceViewProps): React.ReactElement {
-  const [activeTab, setActiveTab] = useState('instances')
-  const [showSettings, setShowSettings] = useState(false)
+  const [activeTab, setActiveTab] = useState("instances");
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <div>
@@ -67,9 +67,9 @@ export function NamespaceView({
       <div className="flex items-center gap-2 mb-6">
         <span
           className={`text-xs px-2 py-1 rounded-full ${
-            namespace.storage_backend === 'sqlite'
-              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-              : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+            namespace.storage_backend === "sqlite"
+              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+              : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
           }`}
         >
           {namespace.storage_backend.toUpperCase()} Backend
@@ -110,9 +110,9 @@ export function NamespaceView({
             <div className="mb-4">
               <h3 className="text-lg font-semibold mb-2">Setup Admin Hook</h3>
               <p className="text-sm text-muted-foreground">
-                To manage storage for instances in this namespace, you need to add
-                admin hook methods to your Durable Object class. Click the button
-                below to generate the code.
+                To manage storage for instances in this namespace, you need to
+                add admin hook methods to your Durable Object class. Click the
+                button below to generate the code.
               </p>
             </div>
             <AdminHookDialog
@@ -123,6 +123,5 @@ export function NamespaceView({
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
-

@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Bell, BellOff, Clock, Loader2, Trash2 } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState, useEffect, useCallback } from "react";
+import { Bell, BellOff, Clock, Loader2, Trash2 } from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card'
+} from "../ui/card";
 import {
   Dialog,
   DialogContent,
@@ -15,16 +15,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { alarmApi, type AlarmResponse } from '../../services/alarmApi'
+} from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { alarmApi, type AlarmResponse } from "../../services/alarmApi";
 
 interface AlarmManagerProps {
-  instanceId: string
-  instanceName: string | null
+  instanceId: string;
+  instanceName: string | null;
   /** Called when an alarm is set or deleted, allowing parent to refresh instance data */
-  onAlarmChange?: () => void
+  onAlarmChange?: () => void;
 }
 
 export function AlarmManager({
@@ -32,71 +32,71 @@ export function AlarmManager({
   instanceName,
   onAlarmChange,
 }: AlarmManagerProps): React.ReactElement {
-  const [alarm, setAlarm] = useState<AlarmResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
-  const [showSetDialog, setShowSetDialog] = useState(false)
+  const [alarm, setAlarm] = useState<AlarmResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+  const [showSetDialog, setShowSetDialog] = useState(false);
 
   const loadAlarm = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true)
-      setError('')
-      const data = await alarmApi.get(instanceId)
-      setAlarm(data)
+      setLoading(true);
+      setError("");
+      const data = await alarmApi.get(instanceId);
+      setAlarm(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load alarm')
+      setError(err instanceof Error ? err.message : "Failed to load alarm");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [instanceId])
+  }, [instanceId]);
 
   const handleDeleteAlarm = async (): Promise<void> => {
-    if (!confirm('Delete the current alarm?')) {
-      return
+    if (!confirm("Delete the current alarm?")) {
+      return;
     }
     try {
-      await alarmApi.delete(instanceId)
-      await loadAlarm()
-      onAlarmChange?.()
+      await alarmApi.delete(instanceId);
+      await loadAlarm();
+      onAlarmChange?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete alarm')
+      setError(err instanceof Error ? err.message : "Failed to delete alarm");
     }
-  }
+  };
 
   useEffect(() => {
-    void loadAlarm()
-  }, [loadAlarm])
+    void loadAlarm();
+  }, [loadAlarm]);
 
   const formatAlarmTime = (timestamp: number): string => {
-    const date = new Date(timestamp)
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
-  }
+    const date = new Date(timestamp);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
 
   const getTimeUntilAlarm = (timestamp: number): string => {
-    const now = Date.now()
-    const diff = timestamp - now
+    const now = Date.now();
+    const diff = timestamp - now;
 
-    if (diff <= 0) return 'Overdue'
+    if (diff <= 0) return "Overdue";
 
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
     if (hours > 24) {
-      const days = Math.floor(hours / 24)
-      return `${String(days)} day${days > 1 ? 's' : ''}`
+      const days = Math.floor(hours / 24);
+      return `${String(days)} day${days > 1 ? "s" : ""}`;
     }
     if (hours > 0) {
-      return `${String(hours)}h ${String(minutes)}m`
+      return `${String(hours)}h ${String(minutes)}m`;
     }
-    return `${String(minutes)} min`
-  }
+    return `${String(minutes)} min`;
+  };
 
   return (
     <Card>
@@ -117,7 +117,7 @@ export function AlarmManager({
             disabled={loading || alarm?.admin_hook_required}
           >
             <Clock className="h-4 w-4 mr-2" />
-            {alarm?.hasAlarm ? 'Change' : 'Set'}
+            {alarm?.hasAlarm ? "Change" : "Set"}
           </Button>
         </div>
         <CardDescription>
@@ -182,21 +182,21 @@ export function AlarmManager({
         instanceId={instanceId}
         instanceName={instanceName}
         onComplete={() => {
-          setShowSetDialog(false)
-          void loadAlarm()
-          onAlarmChange?.()
+          setShowSetDialog(false);
+          void loadAlarm();
+          onAlarmChange?.();
         }}
       />
     </Card>
-  )
+  );
 }
 
 interface SetAlarmDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  instanceId: string
-  instanceName: string | null
-  onComplete: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  instanceId: string;
+  instanceName: string | null;
+  onComplete: () => void;
 }
 
 function SetAlarmDialog({
@@ -206,44 +206,44 @@ function SetAlarmDialog({
   instanceName,
   onComplete,
 }: SetAlarmDialogProps): React.ReactElement {
-  const [date, setDate] = useState('')
-  const [time, setTime] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Initialize with current date/time + 1 hour
   useEffect(() => {
     if (open) {
-      const future = new Date(Date.now() + 3600000)
-      setDate(future.toISOString().split('T')[0] ?? '')
-      setTime(future.toTimeString().slice(0, 5))
-      setError('')
+      const future = new Date(Date.now() + 3600000);
+      setDate(future.toISOString().split("T")[0] ?? "");
+      setTime(future.toTimeString().slice(0, 5));
+      setError("");
     }
-  }, [open])
+  }, [open]);
 
   const handleSubmit = async (): Promise<void> => {
     if (!date || !time) {
-      setError('Date and time are required')
-      return
+      setError("Date and time are required");
+      return;
     }
 
-    const timestamp = new Date(`${date}T${time}`).getTime()
+    const timestamp = new Date(`${date}T${time}`).getTime();
     if (timestamp <= Date.now()) {
-      setError('Alarm must be set in the future')
-      return
+      setError("Alarm must be set in the future");
+      return;
     }
 
     try {
-      setLoading(true)
-      setError('')
-      await alarmApi.set(instanceId, timestamp)
-      onComplete()
+      setLoading(true);
+      setError("");
+      await alarmApi.set(instanceId, timestamp);
+      onComplete();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set alarm')
+      setError(err instanceof Error ? err.message : "Failed to set alarm");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,7 +251,7 @@ function SetAlarmDialog({
         <DialogHeader>
           <DialogTitle>Set Alarm</DialogTitle>
           <DialogDescription>
-            Schedule an alarm for {instanceName ?? 'this instance'}
+            Schedule an alarm for {instanceName ?? "this instance"}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -267,7 +267,7 @@ function SetAlarmDialog({
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
+              min={new Date().toISOString().split("T")[0]}
             />
           </div>
           <div className="grid gap-2">
@@ -281,8 +281,9 @@ function SetAlarmDialog({
           </div>
           <div className="p-3 bg-muted rounded-lg">
             <p className="text-xs text-muted-foreground">
-              The alarm will trigger the <code className="text-xs">alarm()</code>{' '}
-              handler method in your Durable Object at the scheduled time.
+              The alarm will trigger the{" "}
+              <code className="text-xs">alarm()</code> handler method in your
+              Durable Object at the scheduled time.
             </p>
           </div>
         </div>
@@ -301,6 +302,5 @@ function SetAlarmDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

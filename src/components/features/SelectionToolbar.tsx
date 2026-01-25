@@ -1,21 +1,21 @@
-import { CheckSquare, X } from 'lucide-react'
-import { Button } from '../ui/button'
+import { CheckSquare, X } from "lucide-react";
+import { Button } from "../ui/button";
 
 interface SelectionToolbarProps {
   /** Number of selected items */
-  selectedCount: number
+  selectedCount: number;
   /** Total number of items */
-  totalCount: number
+  totalCount: number;
   /** Whether all items are selected */
-  isAllSelected: boolean
+  isAllSelected: boolean;
   /** Callback to select all items */
-  onSelectAll: () => void
+  onSelectAll: () => void;
   /** Callback to clear selection */
-  onClear: () => void
+  onClear: () => void;
   /** Label for items (e.g., "instance", "namespace") */
-  itemLabel: string
+  itemLabel: string;
   /** Action buttons to display */
-  children?: React.ReactNode
+  children?: React.ReactNode;
 }
 
 export function SelectionToolbar({
@@ -28,10 +28,10 @@ export function SelectionToolbar({
   children,
 }: SelectionToolbarProps): React.ReactElement | null {
   if (selectedCount === 0) {
-    return null
+    return null;
   }
 
-  const pluralLabel = selectedCount === 1 ? itemLabel : `${itemLabel}s`
+  const pluralLabel = selectedCount === 1 ? itemLabel : `${itemLabel}s`;
 
   return (
     <div className="sticky top-4 z-10 mb-4">
@@ -41,9 +41,7 @@ export function SelectionToolbar({
           <span className="inline-flex items-center justify-center bg-primary text-primary-foreground text-sm font-medium rounded-full h-6 min-w-6 px-2">
             {selectedCount}
           </span>
-          <span className="text-sm font-medium">
-            {pluralLabel} selected
-          </span>
+          <span className="text-sm font-medium">{pluralLabel} selected</span>
         </div>
 
         {/* Selection actions */}
@@ -79,5 +77,5 @@ export function SelectionToolbar({
         </div>
       </div>
     </div>
-  )
+  );
 }

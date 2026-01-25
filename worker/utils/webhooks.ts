@@ -1,5 +1,5 @@
-import type { Webhook, WebhookEventType, WebhookPayload, Env } from '../types'
-import { nowISO } from './helpers'
+import type { Webhook, WebhookEventType, WebhookPayload, Env } from "../types";
+import { nowISO } from "./helpers";
 
 // Note: This file uses formatted console output instead of error-logger
 // due to circular dependency (error-logger imports triggerWebhooks from this file).
@@ -9,26 +9,33 @@ import { nowISO } from './helpers'
  * Result of sending a webhook
  */
 export interface WebhookResult {
-  success: boolean
-  statusCode?: number
-  error?: string
+  success: boolean;
+  statusCode?: number;
+  error?: string;
 }
 
 /**
  * Generate HMAC-SHA256 signature for webhook payload
  */
-async function generateSignature(payload: string, secret: string): Promise<string> {
-  const encoder = new TextEncoder()
+async function generateSignature(
+  payload: string,
+  secret: string,
+): Promise<string> {
+  const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
-    'raw',
+    "raw",
     encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
+    { name: "HMAC", hash: "SHA-256" },
     false,
-    ['sign']
-  )
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(payload))
-  const hashArray = Array.from(new Uint8Array(signature))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(payload),
+  );
+  const hashArray = Array.from(new Uint8Array(signature));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /**
@@ -37,49 +44,49 @@ async function generateSignature(payload: string, secret: string): Promise<strin
 export async function sendWebhook(
   webhook: Webhook,
   event: WebhookEventType,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): Promise<WebhookResult> {
   const payload: WebhookPayload = {
     event,
     timestamp: nowISO(),
     data,
-  }
+  };
 
-  const body = JSON.stringify(payload)
+  const body = JSON.stringify(payload);
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'User-Agent': 'DO-Manager-Webhook/1.0',
-    'X-Webhook-Event': event,
-  }
+    "Content-Type": "application/json",
+    "User-Agent": "DO-Manager-Webhook/1.0",
+    "X-Webhook-Event": event,
+  };
 
   // Add HMAC signature if secret is configured
   if (webhook.secret) {
-    const signature = await generateSignature(body, webhook.secret)
-    headers['X-Webhook-Signature'] = `sha256=${signature}`
+    const signature = await generateSignature(body, webhook.secret);
+    headers["X-Webhook-Signature"] = `sha256=${signature}`;
   }
 
   try {
     const response = await fetch(webhook.url, {
-      method: 'POST',
+      method: "POST",
       headers,
       body,
-    })
+    });
 
     if (response.ok) {
-      return { success: true, statusCode: response.status }
+      return { success: true, statusCode: response.status };
     } else {
-      const errorText = await response.text().catch(() => 'Unknown error')
+      const errorText = await response.text().catch(() => "Unknown error");
       return {
         success: false,
         statusCode: response.status,
         error: errorText.slice(0, 200),
-      }
+      };
     }
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
@@ -88,26 +95,29 @@ export async function sendWebhook(
  */
 export async function getWebhooksForEvent(
   db: D1Database,
-  event: WebhookEventType
+  event: WebhookEventType,
 ): Promise<Webhook[]> {
   try {
-    const result = await db.prepare(
-      'SELECT * FROM webhooks WHERE enabled = 1'
-    ).all<Webhook>()
+    const result = await db
+      .prepare("SELECT * FROM webhooks WHERE enabled = 1")
+      .all<Webhook>();
 
     // Filter webhooks that are subscribed to this event
     return result.results.filter((webhook) => {
       try {
-        const events = JSON.parse(webhook.events) as string[]
-        return events.includes(event)
+        const events = JSON.parse(webhook.events) as string[];
+        return events.includes(event);
       } catch {
-        return false
+        return false;
       }
-    })
+    });
   } catch (error) {
     // Log locally - can't use logError here due to circular dependency
-    console.error('[ERROR] [webhooks] [WEBHOOK_GET_FAILED]', error instanceof Error ? error.message : String(error))
-    return []
+    console.error(
+      "[ERROR] [webhooks] [WEBHOOK_GET_FAILED]",
+      error instanceof Error ? error.message : String(error),
+    );
+    return [];
   }
 }
 
@@ -119,44 +129,58 @@ export async function triggerWebhooks(
   env: Env,
   event: WebhookEventType,
   data: Record<string, unknown>,
-  isLocalDev: boolean
+  isLocalDev: boolean,
 ): Promise<void> {
   if (isLocalDev) {
     // Log locally - can't use logInfo here due to circular dependency
-    console.log('[INFO] [webhooks] [WEBHOOK_MOCK_TRIGGER]', event, JSON.stringify(data))
-    return
+    console.log(
+      "[INFO] [webhooks] [WEBHOOK_MOCK_TRIGGER]",
+      event,
+      JSON.stringify(data),
+    );
+    return;
   }
 
   try {
-    const webhooks = await getWebhooksForEvent(env.METADATA, event)
-    
+    const webhooks = await getWebhooksForEvent(env.METADATA, event);
+
     if (webhooks.length === 0) {
-      return
+      return;
     }
 
     // Log locally - can't use logInfo here due to circular dependency
-    console.log(`[INFO] [webhooks] [WEBHOOK_TRIGGERING] Triggering ${String(webhooks.length)} webhook(s) for event: ${event}`)
+    console.log(
+      `[INFO] [webhooks] [WEBHOOK_TRIGGERING] Triggering ${String(webhooks.length)} webhook(s) for event: ${event}`,
+    );
 
     // Send webhooks in parallel, don't await completion
     const promises = webhooks.map(async (webhook) => {
       try {
-        const result = await sendWebhook(webhook, event, data)
+        const result = await sendWebhook(webhook, event, data);
         if (!result.success) {
           // Log locally - can't use logError here due to circular dependency
-          console.error(`[ERROR] [webhooks] [WEBHOOK_SEND_FAILED] ${webhook.name}: ${result.error ?? 'unknown'}`)
+          console.error(
+            `[ERROR] [webhooks] [WEBHOOK_SEND_FAILED] ${webhook.name}: ${result.error ?? "unknown"}`,
+          );
         }
       } catch (error) {
         // Log locally - can't use logError here due to circular dependency
-        console.error(`[ERROR] [webhooks] [WEBHOOK_SEND_ERROR] ${webhook.name}:`, error instanceof Error ? error.message : String(error))
+        console.error(
+          `[ERROR] [webhooks] [WEBHOOK_SEND_ERROR] ${webhook.name}:`,
+          error instanceof Error ? error.message : String(error),
+        );
       }
-    })
+    });
 
     // Use waitUntil if available (in Cloudflare Workers context)
     // For now, we'll just fire and forget
-    void Promise.all(promises)
+    void Promise.all(promises);
   } catch (error) {
     // Log locally - can't use logError here due to circular dependency
-    console.error('[ERROR] [webhooks] [WEBHOOK_TRIGGER_ERROR]', error instanceof Error ? error.message : String(error))
+    console.error(
+      "[ERROR] [webhooks] [WEBHOOK_TRIGGER_ERROR]",
+      error instanceof Error ? error.message : String(error),
+    );
   }
 }
 
@@ -170,7 +194,7 @@ export function createBackupWebhookData(
   namespaceId: string,
   namespaceName: string,
   sizeBytes: number,
-  userEmail: string | null
+  userEmail: string | null,
 ): Record<string, unknown> {
   return {
     backup_id: backupId,
@@ -180,7 +204,7 @@ export function createBackupWebhookData(
     namespace_name: namespaceName,
     size_bytes: sizeBytes,
     user_email: userEmail,
-  }
+  };
 }
 
 /**
@@ -192,7 +216,7 @@ export function createAlarmWebhookData(
   namespaceId: string,
   namespaceName: string,
   alarmTime: string | null,
-  userEmail: string | null
+  userEmail: string | null,
 ): Record<string, unknown> {
   return {
     instance_id: instanceId,
@@ -201,7 +225,7 @@ export function createAlarmWebhookData(
     namespace_name: namespaceName,
     alarm_time: alarmTime,
     user_email: userEmail,
-  }
+  };
 }
 
 /**
@@ -213,7 +237,7 @@ export function createJobFailedWebhookData(
   error: string,
   namespaceId: string | null,
   instanceId: string | null,
-  userEmail: string | null
+  userEmail: string | null,
 ): Record<string, unknown> {
   return {
     job_id: jobId,
@@ -222,7 +246,7 @@ export function createJobFailedWebhookData(
     namespace_id: namespaceId,
     instance_id: instanceId,
     user_email: userEmail,
-  }
+  };
 }
 
 /**
@@ -233,7 +257,7 @@ export function createBatchCompleteWebhookData(
   total: number,
   success: number,
   failed: number,
-  userEmail: string | null
+  userEmail: string | null,
 ): Record<string, unknown> {
   return {
     job_type: jobType,
@@ -241,6 +265,5 @@ export function createBatchCompleteWebhookData(
     success,
     failed,
     user_email: userEmail,
-  }
+  };
 }
-

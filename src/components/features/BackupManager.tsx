@@ -1,13 +1,20 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Download, Upload, Trash2, Loader2, Archive, Clock } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState, useEffect, useCallback } from "react";
+import {
+  Download,
+  Upload,
+  Trash2,
+  Loader2,
+  Archive,
+  Clock,
+} from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card'
+} from "../ui/card";
 import {
   Dialog,
   DialogContent,
@@ -15,100 +22,100 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { backupApi, type Backup } from '../../services/backupApi'
+} from "../ui/dialog";
+import { backupApi, type Backup } from "../../services/backupApi";
 
 interface BackupManagerProps {
-  instanceId: string
-  onRestore?: () => void
+  instanceId: string;
+  onRestore?: () => void;
 }
 
 export function BackupManager({
   instanceId,
   onRestore,
 }: BackupManagerProps): React.ReactElement {
-  const [backups, setBackups] = useState<Backup[]>([])
-  const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
-  const [error, setError] = useState<string>('')
-  const [restoreDialog, setRestoreDialog] = useState<Backup | null>(null)
-  const [restoring, setRestoring] = useState(false)
+  const [backups, setBackups] = useState<Backup[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [restoreDialog, setRestoreDialog] = useState<Backup | null>(null);
+  const [restoring, setRestoring] = useState(false);
 
   const loadBackups = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true)
-      setError('')
-      const data = await backupApi.listForInstance(instanceId)
-      setBackups(data)
+      setLoading(true);
+      setError("");
+      const data = await backupApi.listForInstance(instanceId);
+      setBackups(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load backups')
+      setError(err instanceof Error ? err.message : "Failed to load backups");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [instanceId])
+  }, [instanceId]);
 
   const handleCreateBackup = async (): Promise<void> => {
     try {
-      setCreating(true)
-      setError('')
-      const backup = await backupApi.create(instanceId)
-      setBackups((prev) => [backup, ...prev])
+      setCreating(true);
+      setError("");
+      const backup = await backupApi.create(instanceId);
+      setBackups((prev) => [backup, ...prev]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create backup')
+      setError(err instanceof Error ? err.message : "Failed to create backup");
     } finally {
-      setCreating(false)
+      setCreating(false);
     }
-  }
+  };
 
   const handleRestore = async (backup: Backup): Promise<void> => {
     try {
-      setRestoring(true)
-      setError('')
-      await backupApi.restore(instanceId, backup.id)
-      setRestoreDialog(null)
+      setRestoring(true);
+      setError("");
+      await backupApi.restore(instanceId, backup.id);
+      setRestoreDialog(null);
       // Trigger refresh of storage data
       if (onRestore) {
-        onRestore()
+        onRestore();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to restore backup')
+      setError(err instanceof Error ? err.message : "Failed to restore backup");
     } finally {
-      setRestoring(false)
+      setRestoring(false);
     }
-  }
+  };
 
   const handleDelete = async (backup: Backup): Promise<void> => {
-    if (!confirm('Delete this backup? This cannot be undone.')) {
-      return
+    if (!confirm("Delete this backup? This cannot be undone.")) {
+      return;
     }
     try {
-      await backupApi.delete(backup.id)
-      setBackups((prev) => prev.filter((b) => b.id !== backup.id))
+      await backupApi.delete(backup.id);
+      setBackups((prev) => prev.filter((b) => b.id !== backup.id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete backup')
+      setError(err instanceof Error ? err.message : "Failed to delete backup");
     }
-  }
+  };
 
   useEffect(() => {
-    void loadBackups()
-  }, [loadBackups])
+    void loadBackups();
+  }, [loadBackups]);
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+    return new Date(dateString).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const formatSize = (bytes: number | null): string => {
-    if (bytes === null) return 'Unknown'
-    if (bytes < 1024) return `${String(bytes)} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
+    if (bytes === null) return "Unknown";
+    if (bytes < 1024) return `${String(bytes)} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   return (
     <Card>
@@ -206,7 +213,7 @@ export function BackupManager({
             {restoreDialog && (
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-sm">
-                  <strong>Backup from:</strong>{' '}
+                  <strong>Backup from:</strong>{" "}
                   {formatDate(restoreDialog.created_at)}
                 </p>
                 <p className="text-sm">
@@ -240,6 +247,5 @@ export function BackupManager({
         </DialogContent>
       </Dialog>
     </Card>
-  )
+  );
 }
-

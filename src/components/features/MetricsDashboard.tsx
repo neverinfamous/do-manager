@@ -1,73 +1,81 @@
-import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Loader2, BarChart3, Database, Clock, TrendingUp } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState, useEffect, useCallback } from "react";
+import {
+  RefreshCw,
+  Loader2,
+  BarChart3,
+  Database,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card'
-import { metricsApi, type MetricsData } from '../../services/metricsApi'
+} from "../ui/card";
+import { metricsApi, type MetricsData } from "../../services/metricsApi";
 
 interface MetricsDashboardProps {
-  namespaceId?: string
+  namespaceId?: string;
 }
 
 export function MetricsDashboard({
   namespaceId,
 }: MetricsDashboardProps): React.ReactElement {
-  const [metrics, setMetrics] = useState<MetricsData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
-  const [days, setDays] = useState(7)
+  const [metrics, setMetrics] = useState<MetricsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+  const [days, setDays] = useState(7);
 
   const loadMetrics = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true)
-      setError('')
+      setLoading(true);
+      setError("");
       const data = namespaceId
         ? await metricsApi.getNamespaceMetrics(namespaceId, days)
-        : await metricsApi.getAccountMetrics(days)
-      setMetrics(data)
+        : await metricsApi.getAccountMetrics(days);
+      setMetrics(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load metrics')
+      setError(err instanceof Error ? err.message : "Failed to load metrics");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [namespaceId, days])
+  }, [namespaceId, days]);
 
   useEffect(() => {
-    void loadMetrics()
-  }, [loadMetrics])
+    void loadMetrics();
+  }, [loadMetrics]);
 
   const formatNumber = (num: number): string => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
-    return num.toString()
-  }
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
+  };
 
   const formatBytes = (bytes: number): string => {
-    if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(2)} GB`
-    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(2)} MB`
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`
-    return `${String(bytes)} B`
-  }
+    if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(2)} GB`;
+    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(2)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${String(bytes)} B`;
+  };
 
   const formatDuration = (ms: number): string => {
-    if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`
-    return `${ms.toFixed(0)}ms`
-  }
+    if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`;
+    return `${ms.toFixed(0)}ms`;
+  };
 
   const getStoragePercentage = (): number => {
-    if (!metrics) return 0
-    return (metrics.storage.totalBytes / metrics.storage.maxBytes) * 100
-  }
+    if (!metrics) return 0;
+    return (metrics.storage.totalBytes / metrics.storage.maxBytes) * 100;
+  };
 
-  const maxRequests = metrics?.invocations.byDay.reduce(
-    (max, day) => Math.max(max, day.requests),
-    1
-  ) ?? 1
+  const maxRequests =
+    metrics?.invocations.byDay.reduce(
+      (max, day) => Math.max(max, day.requests),
+      1,
+    ) ?? 1;
 
   return (
     <div className="space-y-6">
@@ -80,7 +88,9 @@ export function MetricsDashboard({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="metrics-date-range" className="sr-only">Date range</label>
+          <label htmlFor="metrics-date-range" className="sr-only">
+            Date range
+          </label>
           <select
             id="metrics-date-range"
             value={days}
@@ -96,7 +106,9 @@ export function MetricsDashboard({
             onClick={() => void loadMetrics()}
             disabled={loading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -162,11 +174,14 @@ export function MetricsDashboard({
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-primary transition-all"
-                      style={{ width: `${String(Math.min(getStoragePercentage(), 100))}%` }}
+                      style={{
+                        width: `${String(Math.min(getStoragePercentage(), 100))}%`,
+                      }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {getStoragePercentage().toFixed(2)}% of {formatBytes(metrics.storage.maxBytes)}
+                    {getStoragePercentage().toFixed(2)}% of{" "}
+                    {formatBytes(metrics.storage.maxBytes)}
                   </p>
                 </div>
               </CardContent>
@@ -229,14 +244,14 @@ export function MetricsDashboard({
                       className="w-full bg-primary/80 hover:bg-primary rounded-t transition-all"
                       style={{
                         height: `${String((day.requests / maxRequests) * 100)}%`,
-                        minHeight: day.requests > 0 ? '4px' : '0',
+                        minHeight: day.requests > 0 ? "4px" : "0",
                       }}
                       title={`${day.requests.toLocaleString()} requests`}
                     />
                     <span className="text-xs text-muted-foreground">
-                      {new Date(day.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
+                      {new Date(day.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
                       })}
                     </span>
                   </div>
@@ -257,19 +272,25 @@ export function MetricsDashboard({
                   <div className="text-2xl font-bold text-green-600">
                     {formatDuration(metrics.duration.totalMs ?? 0)}
                   </div>
-                  <p className="text-sm text-muted-foreground">Total CPU Time</p>
+                  <p className="text-sm text-muted-foreground">
+                    Total CPU Time
+                  </p>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">
                     {formatDuration(metrics.duration.p50)}
                   </div>
-                  <p className="text-sm text-muted-foreground">Avg per Request</p>
+                  <p className="text-sm text-muted-foreground">
+                    Avg per Request
+                  </p>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-2xl font-bold text-primary">
                     {metrics.invocations.total.toLocaleString()}
                   </div>
-                  <p className="text-sm text-muted-foreground">Total Requests</p>
+                  <p className="text-sm text-muted-foreground">
+                    Total Requests
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -277,6 +298,5 @@ export function MetricsDashboard({
         </>
       )}
     </div>
-  )
+  );
 }
-

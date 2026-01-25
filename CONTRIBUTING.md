@@ -117,6 +117,7 @@ cd worker && npm run dev  # Worker API
 ```
 
 Test all major features:
+
 - Namespace listing
 - Object creation and browsing
 - State inspection
@@ -170,6 +171,7 @@ Look for issues labeled `good first issue` - these are great for newcomers!
 ## 🌟 Recognition
 
 Contributors are recognized in:
+
 - GitHub's automatic contributors list
 - Release notes for significant contributions
 - Our gratitude and appreciation!

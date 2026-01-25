@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw,
   Loader2,
@@ -11,15 +11,15 @@ import {
   XCircle,
   Link,
   Shield,
-} from 'lucide-react'
-import { Button } from '../ui/button'
+} from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card'
+} from "../ui/card";
 import {
   Dialog,
   DialogContent,
@@ -27,83 +27,90 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { Checkbox } from '../ui/checkbox'
-import { webhookApi } from '../../services/webhookApi'
-import type { Webhook, WebhookEventType, WebhookInput } from '../../types/webhook'
-import { ALL_WEBHOOK_EVENTS, WEBHOOK_EVENT_LABELS } from '../../types/webhook'
+} from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Checkbox } from "../ui/checkbox";
+import { webhookApi } from "../../services/webhookApi";
+import type {
+  Webhook,
+  WebhookEventType,
+  WebhookInput,
+} from "../../types/webhook";
+import { ALL_WEBHOOK_EVENTS, WEBHOOK_EVENT_LABELS } from "../../types/webhook";
 
 export function WebhookManager(): React.ReactElement {
-  const [webhooks, setWebhooks] = useState<Webhook[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
+  const [webhooks, setWebhooks] = useState<Webhook[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
   // Dialog states
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [editingWebhook, setEditingWebhook] = useState<Webhook | null>(null)
-  const [deletingWebhook, setDeletingWebhook] = useState<Webhook | null>(null)
-  const [testingWebhook, setTestingWebhook] = useState<string | null>(null)
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingWebhook, setEditingWebhook] = useState<Webhook | null>(null);
+  const [deletingWebhook, setDeletingWebhook] = useState<Webhook | null>(null);
+  const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   // Form states
-  const [formName, setFormName] = useState('')
-  const [formUrl, setFormUrl] = useState('')
-  const [formSecret, setFormSecret] = useState('')
-  const [formEvents, setFormEvents] = useState<WebhookEventType[]>([])
-  const [formEnabled, setFormEnabled] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
+  const [formName, setFormName] = useState("");
+  const [formUrl, setFormUrl] = useState("");
+  const [formSecret, setFormSecret] = useState("");
+  const [formEvents, setFormEvents] = useState<WebhookEventType[]>([]);
+  const [formEnabled, setFormEnabled] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const loadWebhooks = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true)
-      setError('')
-      const data = await webhookApi.list()
-      setWebhooks(data)
+      setLoading(true);
+      setError("");
+      const data = await webhookApi.list();
+      setWebhooks(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load webhooks')
+      setError(err instanceof Error ? err.message : "Failed to load webhooks");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    void loadWebhooks()
-  }, [loadWebhooks])
+    void loadWebhooks();
+  }, [loadWebhooks]);
 
   const resetForm = (): void => {
-    setFormName('')
-    setFormUrl('')
-    setFormSecret('')
-    setFormEvents([])
-    setFormEnabled(true)
-  }
+    setFormName("");
+    setFormUrl("");
+    setFormSecret("");
+    setFormEvents([]);
+    setFormEnabled(true);
+  };
 
   const openCreateDialog = (): void => {
-    resetForm()
-    setShowCreateDialog(true)
-  }
+    resetForm();
+    setShowCreateDialog(true);
+  };
 
   const openEditDialog = (webhook: Webhook): void => {
-    setFormName(webhook.name)
-    setFormUrl(webhook.url)
-    setFormSecret(webhook.secret ?? '')
+    setFormName(webhook.name);
+    setFormUrl(webhook.url);
+    setFormSecret(webhook.secret ?? "");
     try {
-      setFormEvents(JSON.parse(webhook.events) as WebhookEventType[])
+      setFormEvents(JSON.parse(webhook.events) as WebhookEventType[]);
     } catch {
-      setFormEvents([])
+      setFormEvents([]);
     }
-    setFormEnabled(webhook.enabled === 1)
-    setEditingWebhook(webhook)
-  }
+    setFormEnabled(webhook.enabled === 1);
+    setEditingWebhook(webhook);
+  };
 
   const handleCreateWebhook = async (): Promise<void> => {
     if (!formName.trim() || !formUrl.trim() || formEvents.length === 0) {
-      return
+      return;
     }
 
-    setSubmitting(true)
+    setSubmitting(true);
     try {
       const input: WebhookInput = {
         name: formName.trim(),
@@ -111,24 +118,29 @@ export function WebhookManager(): React.ReactElement {
         secret: formSecret.trim() || null,
         events: formEvents,
         enabled: formEnabled,
-      }
-      await webhookApi.create(input)
-      setShowCreateDialog(false)
-      resetForm()
-      await loadWebhooks()
+      };
+      await webhookApi.create(input);
+      setShowCreateDialog(false);
+      resetForm();
+      await loadWebhooks();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create webhook')
+      setError(err instanceof Error ? err.message : "Failed to create webhook");
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const handleUpdateWebhook = async (): Promise<void> => {
-    if (!editingWebhook || !formName.trim() || !formUrl.trim() || formEvents.length === 0) {
-      return
+    if (
+      !editingWebhook ||
+      !formName.trim() ||
+      !formUrl.trim() ||
+      formEvents.length === 0
+    ) {
+      return;
     }
 
-    setSubmitting(true)
+    setSubmitting(true);
     try {
       const input: Partial<WebhookInput> = {
         name: formName.trim(),
@@ -136,83 +148,81 @@ export function WebhookManager(): React.ReactElement {
         secret: formSecret.trim() || null,
         events: formEvents,
         enabled: formEnabled,
-      }
-      await webhookApi.update(editingWebhook.id, input)
-      setEditingWebhook(null)
-      resetForm()
-      await loadWebhooks()
+      };
+      await webhookApi.update(editingWebhook.id, input);
+      setEditingWebhook(null);
+      resetForm();
+      await loadWebhooks();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update webhook')
+      setError(err instanceof Error ? err.message : "Failed to update webhook");
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const handleDeleteWebhook = async (): Promise<void> => {
-    if (!deletingWebhook) return
+    if (!deletingWebhook) return;
 
-    setSubmitting(true)
+    setSubmitting(true);
     try {
-      await webhookApi.delete(deletingWebhook.id)
-      setDeletingWebhook(null)
-      await loadWebhooks()
+      await webhookApi.delete(deletingWebhook.id);
+      setDeletingWebhook(null);
+      await loadWebhooks();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete webhook')
+      setError(err instanceof Error ? err.message : "Failed to delete webhook");
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const handleTestWebhook = async (webhookId: string): Promise<void> => {
-    setTestingWebhook(webhookId)
-    setTestResult(null)
+    setTestingWebhook(webhookId);
+    setTestResult(null);
     try {
-      const result = await webhookApi.test(webhookId)
-      setTestResult(result)
+      const result = await webhookApi.test(webhookId);
+      setTestResult(result);
     } catch (err) {
       setTestResult({
         success: false,
-        message: err instanceof Error ? err.message : 'Test failed',
-      })
+        message: err instanceof Error ? err.message : "Test failed",
+      });
     } finally {
-      setTestingWebhook(null)
+      setTestingWebhook(null);
     }
-  }
+  };
 
   const handleToggleEnabled = async (webhook: Webhook): Promise<void> => {
     try {
-      await webhookApi.update(webhook.id, { enabled: webhook.enabled !== 1 })
-      await loadWebhooks()
+      await webhookApi.update(webhook.id, { enabled: webhook.enabled !== 1 });
+      await loadWebhooks();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle webhook')
+      setError(err instanceof Error ? err.message : "Failed to toggle webhook");
     }
-  }
+  };
 
   const toggleEvent = (event: WebhookEventType): void => {
     setFormEvents((prev) =>
-      prev.includes(event)
-        ? prev.filter((e) => e !== event)
-        : [...prev, event]
-    )
-  }
+      prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event],
+    );
+  };
 
   const parseEvents = (eventsJson: string): WebhookEventType[] => {
     try {
-      return JSON.parse(eventsJson) as WebhookEventType[]
+      return JSON.parse(eventsJson) as WebhookEventType[];
     } catch {
-      return []
+      return [];
     }
-  }
+  };
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <div>
@@ -230,7 +240,9 @@ export function WebhookManager(): React.ReactElement {
             onClick={() => void loadWebhooks()}
             disabled={loading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button onClick={openCreateDialog}>
@@ -246,7 +258,7 @@ export function WebhookManager(): React.ReactElement {
           {error}
           <button
             type="button"
-            onClick={() => setError('')}
+            onClick={() => setError("")}
             className="ml-2 underline"
           >
             Dismiss
@@ -259,8 +271,8 @@ export function WebhookManager(): React.ReactElement {
         <div
           className={`mb-6 px-4 py-3 rounded-lg flex items-center gap-2 ${
             testResult.success
-              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
           }`}
         >
           {testResult.success ? (
@@ -305,13 +317,18 @@ export function WebhookManager(): React.ReactElement {
       {!loading && webhooks.length > 0 && (
         <div className="space-y-4">
           {webhooks.map((webhook) => {
-            const events = parseEvents(webhook.events)
+            const events = parseEvents(webhook.events);
             return (
-              <Card key={webhook.id} className={webhook.enabled === 0 ? 'opacity-60' : ''}>
+              <Card
+                key={webhook.id}
+                className={webhook.enabled === 0 ? "opacity-60" : ""}
+              >
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Bell className={`h-5 w-5 ${webhook.enabled === 1 ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <Bell
+                        className={`h-5 w-5 ${webhook.enabled === 1 ? "text-primary" : "text-muted-foreground"}`}
+                      />
                       <div>
                         <CardTitle className="text-base flex items-center gap-2">
                           {webhook.name}
@@ -333,11 +350,11 @@ export function WebhookManager(): React.ReactElement {
                       <span
                         className={`text-xs px-2 py-1 rounded-full ${
                           webhook.enabled === 1
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                         }`}
                       >
-                        {webhook.enabled === 1 ? 'Enabled' : 'Disabled'}
+                        {webhook.enabled === 1 ? "Enabled" : "Disabled"}
                       </span>
                     </div>
                   </div>
@@ -376,7 +393,7 @@ export function WebhookManager(): React.ReactElement {
                         variant="outline"
                         onClick={() => void handleToggleEnabled(webhook)}
                       >
-                        {webhook.enabled === 1 ? 'Disable' : 'Enable'}
+                        {webhook.enabled === 1 ? "Disable" : "Enable"}
                       </Button>
                       <Button
                         size="sm"
@@ -396,7 +413,7 @@ export function WebhookManager(): React.ReactElement {
                   </div>
                 </CardContent>
               </Card>
-            )
+            );
           })}
         </div>
       )}
@@ -406,16 +423,16 @@ export function WebhookManager(): React.ReactElement {
         open={showCreateDialog || editingWebhook !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setShowCreateDialog(false)
-            setEditingWebhook(null)
-            resetForm()
+            setShowCreateDialog(false);
+            setEditingWebhook(null);
+            resetForm();
           }
         }}
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingWebhook ? 'Edit Webhook' : 'Add Webhook'}
+              {editingWebhook ? "Edit Webhook" : "Add Webhook"}
             </DialogTitle>
             <DialogDescription>
               Configure a webhook endpoint to receive event notifications
@@ -424,8 +441,10 @@ export function WebhookManager(): React.ReactElement {
           <form
             id="webhook-form"
             onSubmit={(e) => {
-              e.preventDefault()
-              void (editingWebhook ? handleUpdateWebhook() : handleCreateWebhook())
+              e.preventDefault();
+              void (editingWebhook
+                ? handleUpdateWebhook()
+                : handleCreateWebhook());
             }}
             className="space-y-4 py-4"
             autoComplete="off"
@@ -469,7 +488,9 @@ export function WebhookManager(): React.ReactElement {
               </p>
             </div>
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium leading-none">Events</legend>
+              <legend className="text-sm font-medium leading-none">
+                Events
+              </legend>
               <div className="grid grid-cols-2 gap-2">
                 {ALL_WEBHOOK_EVENTS.map((event) => (
                   <div key={event} className="flex items-center space-x-2">
@@ -506,9 +527,9 @@ export function WebhookManager(): React.ReactElement {
               type="button"
               variant="outline"
               onClick={() => {
-                setShowCreateDialog(false)
-                setEditingWebhook(null)
-                resetForm()
+                setShowCreateDialog(false);
+                setEditingWebhook(null);
+                resetForm();
               }}
             >
               Cancel
@@ -516,22 +537,31 @@ export function WebhookManager(): React.ReactElement {
             <Button
               type="submit"
               form="webhook-form"
-              disabled={submitting || !formName.trim() || !formUrl.trim() || formEvents.length === 0}
+              disabled={
+                submitting ||
+                !formName.trim() ||
+                !formUrl.trim() ||
+                formEvents.length === 0
+              }
             >
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingWebhook ? 'Update' : 'Create'}
+              {editingWebhook ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deletingWebhook !== null} onOpenChange={() => setDeletingWebhook(null)}>
+      <Dialog
+        open={deletingWebhook !== null}
+        onOpenChange={() => setDeletingWebhook(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Webhook</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{deletingWebhook?.name}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{deletingWebhook?.name}
+              &quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -550,6 +580,5 @@ export function WebhookManager(): React.ReactElement {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
-

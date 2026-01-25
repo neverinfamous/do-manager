@@ -4,10 +4,10 @@
 
 We release patches for security vulnerabilities. Currently supported versions:
 
-| Version | Supported          |
-| ------- | ------------------ |
-| Latest  | :white_check_mark: |
-| < Latest| :x:                |
+| Version  | Supported          |
+| -------- | ------------------ |
+| Latest   | :white_check_mark: |
+| < Latest | :x:                |
 
 We recommend always using the latest version of Durable Objects Manager.
 
@@ -53,7 +53,7 @@ Please include as much information as possible:
 1. **Validation**: We'll confirm the vulnerability
 2. **Fix Development**: We'll work on a patch
 3. **Testing**: Thorough testing of the fix
-4. **Disclosure**: 
+4. **Disclosure**:
    - We'll coordinate disclosure with you
    - Security advisory published
    - Release with fix deployed
@@ -163,21 +163,25 @@ This project follows:
 
 **Description**: The `glob` npm package (versions 10.2.0-10.4.x and 11.0.0-11.0.3) contained a command injection vulnerability in its CLI's `-c/--cmd` option. Malicious filenames with shell metacharacters could execute arbitrary commands when processed.
 
-**Impact on DO Manager**: 
+**Impact on DO Manager**:
+
 - DO Manager does not directly use the glob CLI
 - No current dependencies use vulnerable glob versions
 - Risk was theoretical/future-facing
 
-**Mitigation**: 
+**Mitigation**:
+
 - Added `"glob": "^11.1.0"` to `package.json` overrides section
 - Forces all dependencies (current and future) to use patched version 11.1.0
 - Provides defense-in-depth protection against transitive dependencies
 
 **References**:
+
 - [GitHub Advisory GHSA-xj72-wvfv-8985](https://github.com/advisories/GHSA-xj72-wvfv-8985)
 - [CVE-2025-64756](https://nvd.nist.gov/vuln/detail/CVE-2025-64756)
 
 **Verification**:
+
 ```bash
 # Verify no vulnerable glob versions in dependency tree
 npm ls glob --all

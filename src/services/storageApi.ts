@@ -1,23 +1,23 @@
-import { apiFetch } from '../lib/apiFetch'
+import { apiFetch } from "../lib/apiFetch";
 
 export interface StorageListResponse {
-  keys?: string[]
-  tables?: string[]
-  error?: string
-  warning?: string
-  details?: string
-  admin_hook_required?: boolean
+  keys?: string[];
+  tables?: string[];
+  error?: string;
+  warning?: string;
+  details?: string;
+  admin_hook_required?: boolean;
 }
 
 export interface StorageValueResponse {
-  key: string
-  value: unknown
+  key: string;
+  value: unknown;
 }
 
 export interface SqlResponse {
-  results: unknown[]
-  rowCount: number
-  message?: string
+  results: unknown[];
+  rowCount: number;
+  message?: string;
 }
 
 /**
@@ -30,7 +30,7 @@ export const storageApi = {
    * List storage keys and tables
    */
   async list(instanceId: string): Promise<StorageListResponse> {
-    return apiFetch<StorageListResponse>(`/instances/${instanceId}/storage`)
+    return apiFetch<StorageListResponse>(`/instances/${instanceId}/storage`);
   },
 
   /**
@@ -38,37 +38,47 @@ export const storageApi = {
    */
   async get(instanceId: string, key: string): Promise<StorageValueResponse> {
     return apiFetch<StorageValueResponse>(
-      `/instances/${instanceId}/storage/${encodeURIComponent(key)}`
-    )
+      `/instances/${instanceId}/storage/${encodeURIComponent(key)}`,
+    );
   },
 
   /**
    * Set a storage value
    */
   async set(instanceId: string, key: string, value: unknown): Promise<void> {
-    await apiFetch(`/instances/${instanceId}/storage/${encodeURIComponent(key)}`, {
-      method: 'PUT',
-      body: JSON.stringify({ value }),
-    })
+    await apiFetch(
+      `/instances/${instanceId}/storage/${encodeURIComponent(key)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ value }),
+      },
+    );
   },
 
   /**
    * Delete a storage value
    */
   async delete(instanceId: string, key: string): Promise<void> {
-    await apiFetch(`/instances/${instanceId}/storage/${encodeURIComponent(key)}`, {
-      method: 'DELETE',
-    })
+    await apiFetch(
+      `/instances/${instanceId}/storage/${encodeURIComponent(key)}`,
+      {
+        method: "DELETE",
+      },
+    );
   },
 
   /**
    * Rename a storage key
    */
-  async renameKey(instanceId: string, oldKey: string, newKey: string): Promise<void> {
+  async renameKey(
+    instanceId: string,
+    oldKey: string,
+    newKey: string,
+  ): Promise<void> {
     await apiFetch(`/instances/${instanceId}/storage/rename`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({ oldKey, newKey }),
-    })
+    });
   },
 
   /**
@@ -76,8 +86,8 @@ export const storageApi = {
    */
   async sql(instanceId: string, query: string): Promise<SqlResponse> {
     return apiFetch<SqlResponse>(`/instances/${instanceId}/sql`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({ query }),
-    })
+    });
   },
-}
+};

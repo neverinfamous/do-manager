@@ -1,6 +1,6 @@
 # Cloudflare Durable Object Manager
 
-Last Updated January 12, 2026 - v1.3.0
+Last Updated January 25, 2026 - v1.3.0
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -25,6 +25,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 ## 🎯 Features
 
 ### Namespace Management
+
 - **Auto-discover** DO namespaces from Cloudflare API
 - **Manual configuration** for custom setups
 - **List/Grid toggle** - Switch between compact List view (default) and card-based Grid view; preference saved to localStorage
@@ -35,6 +36,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - Support for SQLite and KV storage backends
 
 ### Instance Management
+
 - Track DO instances by name or hex ID
 - Create new instances with custom names
 - **List/Grid toggle** - Switch between compact List view (default) and card-based Grid view; preference saved to localStorage
@@ -48,6 +50,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - View storage contents (keys/values)
 
 ### SQL Console (SQLite-backed DOs)
+
 - **Enhanced SQL Editor** with Prism.js syntax highlighting and line numbers
 - **Real-time validation** with inline error indicators
 - **Context-aware autocomplete** for SQL keywords, table names, and columns
@@ -62,6 +65,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - Results displayed in sortable table format
 
 ### Multi-Select & Batch Operations
+
 - **Always-visible checkboxes** - Select namespaces, instances, and storage keys directly from lists
 - **Batch download (namespaces)** - Export multiple namespace configs as a ZIP file with manifest
 - **Batch download (instances)** - Export multiple instance storage as a ZIP file with manifest
@@ -73,6 +77,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Job history integration** - All batch operations are tracked in job history
 
 ### Storage Management
+
 - **Key search & filter** - Real-time filtering to find keys quickly
 - **Rename keys** - Edit key names directly in the Edit Key dialog
 - **Multi-select keys** - Select multiple keys with checkboxes for batch operations
@@ -83,26 +88,31 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - Clickable key rows for easy editing
 
 ### Admin Hook System
+
 - **NPM package** (`do-manager-admin-hooks`) for easy integration
 - Copy-paste template also available for custom setups
 - Support for both SQLite and KV backends
 
 ### Alarms
+
 - View current alarm state
 - Set new alarms with date/time picker
 - Delete existing alarms
 
 ### R2 Backup & Restore
+
 - Snapshot DO storage to R2
 - Browse backup history
 - Restore from any backup with auto-refresh
 
 ### Metrics Dashboard
+
 - Request volume over time
 - Storage usage
 - CPU time metrics (average and total)
 
 ### Global Search
+
 - **Cross-namespace key search** - Search for storage keys by name across all instances
 - **Value search** - Search within JSON values to find data across instances
 - **Namespace filtering** - Filter search to specific namespaces
@@ -112,6 +122,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Job tracking** - All search operations logged to job history
 
 ### Job History
+
 - **Comprehensive tracking** - Records all operations including:
   - Namespace: create, delete, clone, download (single & batch)
   - Instance: create, delete, clone, download (single & batch)
@@ -125,6 +136,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - Filter by status or namespace
 
 ### Webhook Notifications
+
 - **Event-driven webhooks** - Send HTTP notifications on key events (13 event types)
 - **Configurable events**:
   - Storage: `storage_create`, `storage_update`, `storage_delete`
@@ -137,6 +149,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Test webhooks** - Verify endpoint connectivity before going live
 
 ### Centralized Error Logging
+
 - **Structured error payloads** - Consistent format with module, operation, context, and metadata
 - **Module-prefixed error codes** - e.g., `NS_CREATE_FAILED`, `INST_DELETE_FAILED`, `BKP_RESTORE_FAILED`
 - **Severity levels** - error, warning, info
@@ -144,6 +157,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Stack trace capture** - Full stack traces logged for debugging
 
 ### Health Dashboard
+
 - **System overview** - Total namespaces, instances, and alarms at a glance
 - **Stale instance detection** - Identify instances not accessed in 7+ days
 - **Storage quota alerts** - Warn when instances approach 10GB DO storage limit (80% warning, 90% critical)
@@ -152,6 +166,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 - **Recent activity** - Timeline of operations in last 24h/7d
 
 ### User Experience
+
 - Dark/Light/System themes
 - Responsive design
 - Enterprise auth via Cloudflare Access
@@ -175,13 +190,13 @@ Cloudflare Workers natively supports exporting OpenTelemetry-compliant traces an
 
 **Common OTLP Endpoints:**
 
-| Provider | Traces Endpoint | Logs Endpoint |
-|----------|-----------------|---------------|
-| Grafana Cloud | `https://otlp-gateway-{region}.grafana.net/otlp/v1/traces` | `https://otlp-gateway-{region}.grafana.net/otlp/v1/logs` |
-| Honeycomb | `https://api.honeycomb.io/v1/traces` | `https://api.honeycomb.io/v1/logs` |
-| Axiom | `https://api.axiom.co/v1/traces` | `https://api.axiom.co/v1/logs` |
-| Sentry | `https://{HOST}/api/{PROJECT_ID}/integration/otlp/v1/traces` | `https://{HOST}/api/{PROJECT_ID}/integration/otlp/v1/logs` |
-| Datadog | Coming soon | `https://otlp.{SITE}.datadoghq.com/v1/logs` |
+| Provider      | Traces Endpoint                                              | Logs Endpoint                                              |
+| ------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| Grafana Cloud | `https://otlp-gateway-{region}.grafana.net/otlp/v1/traces`   | `https://otlp-gateway-{region}.grafana.net/otlp/v1/logs`   |
+| Honeycomb     | `https://api.honeycomb.io/v1/traces`                         | `https://api.honeycomb.io/v1/logs`                         |
+| Axiom         | `https://api.axiom.co/v1/traces`                             | `https://api.axiom.co/v1/logs`                             |
+| Sentry        | `https://{HOST}/api/{PROJECT_ID}/integration/otlp/v1/traces` | `https://{HOST}/api/{PROJECT_ID}/integration/otlp/v1/logs` |
+| Datadog       | Coming soon                                                  | `https://otlp.{SITE}.datadoghq.com/v1/logs`                |
 
 **Step 2: Update wrangler.toml**
 
@@ -215,9 +230,9 @@ dataset = "do_manager_metrics"
 ```typescript
 // Example: Track backup operations
 env.DO_METRICS.writeDataPoint({
-  blobs: [namespaceId, instanceId, 'backup'],
+  blobs: [namespaceId, instanceId, "backup"],
   doubles: [backupSizeBytes, durationMs],
-  indexes: [userId]
+  indexes: [userId],
 });
 ```
 
@@ -242,12 +257,12 @@ export default {
   async tail(events: TraceItem[]) {
     for (const event of events) {
       // Forward to your logging service
-      await fetch('https://your-logging-service.com/ingest', {
-        method: 'POST',
+      await fetch("https://your-logging-service.com/ingest", {
+        method: "POST",
         body: JSON.stringify(event),
       });
     }
-  }
+  },
 };
 ```
 
@@ -272,22 +287,22 @@ For structured log export to storage destinations (R2, S3, etc.):
 
 DO Manager automatically hides internal system Durable Objects to prevent accidental deletion:
 
-| Pattern | Description |
-|---------|-------------|
+| Pattern        | Description                                               |
+| -------------- | --------------------------------------------------------- |
 | `kv-manager_*` | KV Manager internal DOs (ImportExportDO, BulkOperationDO) |
-| `d1-manager_*` | D1 Manager internal DOs |
-| `do-manager_*` | DO Manager internal DOs |
+| `d1-manager_*` | D1 Manager internal DOs                                   |
+| `do-manager_*` | DO Manager internal DOs                                   |
 
 These namespaces are filtered during auto-discovery. To modify the filter list, edit `worker/routes/namespaces.ts`:
 
 ```typescript
 const SYSTEM_DO_PATTERNS = [
-  'kv-manager_ImportExportDO',
-  'kv-manager_BulkOperationDO',
-  'd1-manager_',
-  'do-manager_',
+  "kv-manager_ImportExportDO",
+  "kv-manager_BulkOperationDO",
+  "d1-manager_",
+  "do-manager_",
   // Add your own patterns here
-]
+];
 ```
 
 ---
@@ -416,7 +431,7 @@ npm install do-manager-admin-hooks
 Extend your Durable Object class:
 
 ```typescript
-import { withAdminHooks } from 'do-manager-admin-hooks';
+import { withAdminHooks } from "do-manager-admin-hooks";
 
 export class MyDurableObject extends withAdminHooks() {
   async fetch(request: Request): Promise<Response> {
@@ -425,7 +440,7 @@ export class MyDurableObject extends withAdminHooks() {
     if (adminResponse) return adminResponse;
 
     // Your custom logic here
-    return new Response('Hello from my Durable Object!');
+    return new Response("Hello from my Durable Object!");
   }
 }
 ```
@@ -436,9 +451,9 @@ That's it! The package handles all admin endpoints automatically.
 
 ```typescript
 export class SecureDO extends withAdminHooks({
-  basePath: '/admin',      // Change admin endpoint path (default: '/admin')
-  requireAuth: true,       // Require authentication
-  adminKey: 'secret-key',  // Admin key for auth
+  basePath: "/admin", // Change admin endpoint path (default: '/admin')
+  requireAuth: true, // Require authentication
+  adminKey: "secret-key", // Admin key for auth
 }) {
   // ...
 }
@@ -461,64 +476,64 @@ Click "Get Admin Hook Code" in the namespace view to generate copy-paste TypeScr
 
 ### Admin Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/admin/list` | GET | List storage keys (KV) or tables (SQLite) |
-| `/admin/get?key=X` | GET | Get value for a key |
-| `/admin/put` | POST | Set key-value pair |
-| `/admin/delete` | POST | Delete a key |
-| `/admin/sql` | POST | Execute SQL (SQLite only) |
-| `/admin/alarm` | GET/PUT/DELETE | Manage alarms |
-| `/admin/export` | GET | Export all storage |
-| `/admin/import` | POST | Import data |
+| Endpoint           | Method         | Description                               |
+| ------------------ | -------------- | ----------------------------------------- |
+| `/admin/list`      | GET            | List storage keys (KV) or tables (SQLite) |
+| `/admin/get?key=X` | GET            | Get value for a key                       |
+| `/admin/put`       | POST           | Set key-value pair                        |
+| `/admin/delete`    | POST           | Delete a key                              |
+| `/admin/sql`       | POST           | Execute SQL (SQLite only)                 |
+| `/admin/alarm`     | GET/PUT/DELETE | Manage alarms                             |
+| `/admin/export`    | GET            | Export all storage                        |
+| `/admin/import`    | POST           | Import data                               |
 
 ---
 
 ## 📋 API Reference
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/namespaces` | List tracked namespaces |
-| `GET /api/namespaces/discover` | Auto-discover from Cloudflare API |
-| `POST /api/namespaces` | Add namespace manually |
-| `POST /api/namespaces/:id/clone` | Clone namespace with new name |
-| `DELETE /api/namespaces/:id` | Remove namespace |
-| `GET /api/namespaces/:id/instances` | List instances |
-| `POST /api/namespaces/:id/instances` | Track new instance |
-| `GET /api/instances/:id/storage` | Get storage contents |
-| `PUT /api/instances/:id/storage` | Update storage |
-| `POST /api/instances/:id/import` | Import keys from JSON |
-| `POST /api/instances/:id/sql` | Execute SQL query |
-| `GET /api/instances/:id/export` | Export instance storage as JSON |
-| `POST /api/instances/:id/clone` | Clone instance with new name |
-| `GET /api/instances/:id/alarm` | Get alarm state |
-| `PUT /api/instances/:id/alarm` | Set alarm |
-| `DELETE /api/instances/:id/alarm` | Delete alarm |
-| `GET /api/instances/:id/backups` | List backups |
-| `POST /api/instances/:id/backups` | Create backup |
-| `POST /api/instances/:id/restore` | Restore from backup |
-| `GET /api/metrics` | Get account metrics |
-| `GET /api/jobs` | List job history |
-| `GET /api/namespaces/:id/export` | Export namespace config as JSON |
-| `POST /api/batch/namespaces/delete` | Batch delete namespaces |
-| `POST /api/batch/instances/delete` | Batch delete instances |
-| `POST /api/batch/instances/backup` | Batch backup instances to R2 |
-| `POST /api/batch/keys/delete` | Log batch delete keys job |
-| `POST /api/batch/keys/export` | Log batch export keys job |
-| `POST /api/search/keys` | Search for keys across all instances |
-| `POST /api/search/values` | Search within storage values |
-| `GET /api/health` | Get system health summary |
-| `GET /api/webhooks` | List configured webhooks |
-| `POST /api/webhooks` | Create a new webhook |
-| `PUT /api/webhooks/:id` | Update a webhook |
-| `DELETE /api/webhooks/:id` | Delete a webhook |
-| `POST /api/webhooks/:id/test` | Send a test webhook |
-| `PUT /api/instances/:id/color` | Update instance color tag |
-| `POST /api/instances/diff` | Compare storage between two instances |
-| `GET /api/namespaces/:id/queries` | List saved SQL queries for namespace |
-| `POST /api/namespaces/:id/queries` | Create a saved SQL query |
-| `PUT /api/queries/:id` | Update a saved SQL query |
-| `DELETE /api/queries/:id` | Delete a saved SQL query |
+| Endpoint                             | Description                           |
+| ------------------------------------ | ------------------------------------- |
+| `GET /api/namespaces`                | List tracked namespaces               |
+| `GET /api/namespaces/discover`       | Auto-discover from Cloudflare API     |
+| `POST /api/namespaces`               | Add namespace manually                |
+| `POST /api/namespaces/:id/clone`     | Clone namespace with new name         |
+| `DELETE /api/namespaces/:id`         | Remove namespace                      |
+| `GET /api/namespaces/:id/instances`  | List instances                        |
+| `POST /api/namespaces/:id/instances` | Track new instance                    |
+| `GET /api/instances/:id/storage`     | Get storage contents                  |
+| `PUT /api/instances/:id/storage`     | Update storage                        |
+| `POST /api/instances/:id/import`     | Import keys from JSON                 |
+| `POST /api/instances/:id/sql`        | Execute SQL query                     |
+| `GET /api/instances/:id/export`      | Export instance storage as JSON       |
+| `POST /api/instances/:id/clone`      | Clone instance with new name          |
+| `GET /api/instances/:id/alarm`       | Get alarm state                       |
+| `PUT /api/instances/:id/alarm`       | Set alarm                             |
+| `DELETE /api/instances/:id/alarm`    | Delete alarm                          |
+| `GET /api/instances/:id/backups`     | List backups                          |
+| `POST /api/instances/:id/backups`    | Create backup                         |
+| `POST /api/instances/:id/restore`    | Restore from backup                   |
+| `GET /api/metrics`                   | Get account metrics                   |
+| `GET /api/jobs`                      | List job history                      |
+| `GET /api/namespaces/:id/export`     | Export namespace config as JSON       |
+| `POST /api/batch/namespaces/delete`  | Batch delete namespaces               |
+| `POST /api/batch/instances/delete`   | Batch delete instances                |
+| `POST /api/batch/instances/backup`   | Batch backup instances to R2          |
+| `POST /api/batch/keys/delete`        | Log batch delete keys job             |
+| `POST /api/batch/keys/export`        | Log batch export keys job             |
+| `POST /api/search/keys`              | Search for keys across all instances  |
+| `POST /api/search/values`            | Search within storage values          |
+| `GET /api/health`                    | Get system health summary             |
+| `GET /api/webhooks`                  | List configured webhooks              |
+| `POST /api/webhooks`                 | Create a new webhook                  |
+| `PUT /api/webhooks/:id`              | Update a webhook                      |
+| `DELETE /api/webhooks/:id`           | Delete a webhook                      |
+| `POST /api/webhooks/:id/test`        | Send a test webhook                   |
+| `PUT /api/instances/:id/color`       | Update instance color tag             |
+| `POST /api/instances/diff`           | Compare storage between two instances |
+| `GET /api/namespaces/:id/queries`    | List saved SQL queries for namespace  |
+| `POST /api/namespaces/:id/queries`   | Create a saved SQL query              |
+| `PUT /api/queries/:id`               | Update a saved SQL query              |
+| `DELETE /api/queries/:id`            | Delete a saved SQL query              |
 
 ---
 
@@ -564,26 +579,31 @@ do-manager/
 ## 🐞 Troubleshooting
 
 **"Failed to fetch from Cloudflare API"**
+
 - Verify `ACCOUNT_ID` is correct
 - Ensure API token has **Workers Scripts Read** permission
 - If using Global API Key, ensure email is correct in `worker/routes/namespaces.ts`
 
 **"Admin hook not configured"**
+
 - Add admin hook methods to your DO class
 - Set the endpoint URL in namespace settings
 - Ensure your Worker is deployed
 
 **"No namespaces discovered"**
+
 - You may not have any Durable Objects deployed
 - System namespaces are filtered by default (see Hidden System Namespaces section)
 
 **"Clone instance creates empty instance"**
+
 - Ensure your admin hooks use the correct export/import format
 - Export should return: `{ data: {...}, exportedAt: "...", keyCount: N }`
 - Import should accept: `{ data: {...} }`
 - The `do-manager-admin-hooks` NPM package handles this automatically
 
 **Authentication loop**
+
 - Check `TEAM_DOMAIN` includes `https://`
 - Verify `POLICY_AUD` matches your Access application's AUD tag
 

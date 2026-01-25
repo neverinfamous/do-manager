@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw,
   Loader2,
@@ -15,106 +15,127 @@ import {
   CheckCircle2,
   Ban,
   HardDrive,
-} from 'lucide-react'
-import { Button } from '../ui/button'
+} from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card'
-import { healthApi, type HealthSummary, type ActiveAlarmInfo, type CompletedAlarmInfo, type StaleInstance, type HighStorageInstance, STORAGE_QUOTA } from '../../services/healthApi'
+} from "../ui/card";
+import {
+  healthApi,
+  type HealthSummary,
+  type ActiveAlarmInfo,
+  type CompletedAlarmInfo,
+  type StaleInstance,
+  type HighStorageInstance,
+  STORAGE_QUOTA,
+} from "../../services/healthApi";
 
 export function HealthDashboard(): React.ReactElement {
-  const [health, setHealth] = useState<HealthSummary | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
+  const [health, setHealth] = useState<HealthSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
   const loadHealth = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true)
-      setError('')
-      const data = await healthApi.getSummary()
-      setHealth(data)
+      setLoading(true);
+      setError("");
+      const data = await healthApi.getSummary();
+      setHealth(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load health data')
+      setError(
+        err instanceof Error ? err.message : "Failed to load health data",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    void loadHealth()
-  }, [loadHealth])
+    void loadHealth();
+  }, [loadHealth]);
 
   const formatBytes = (bytes: number): string => {
-    if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(2)} GB`
-    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(2)} MB`
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`
-    return `${String(bytes)} B`
-  }
+    if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(2)} GB`;
+    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(2)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${String(bytes)} B`;
+  };
 
   const formatDate = (dateString: string | null): string => {
-    if (!dateString) return 'Never'
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+    if (!dateString) return "Never";
+    return new Date(dateString).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const formatTimeUntil = (dateString: string): string => {
-    const target = new Date(dateString).getTime()
-    const now = Date.now()
-    const diff = target - now
+    const target = new Date(dateString).getTime();
+    const now = Date.now();
+    const diff = target - now;
 
-    if (diff < 0) return 'Overdue'
-    
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
+    if (diff < 0) return "Overdue";
 
-    if (days > 0) return `${String(days)}d ${String(hours % 24)}h`
-    if (hours > 0) return `${String(hours)}h ${String(minutes % 60)}m`
-    return `${String(minutes)}m`
-  }
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${String(days)}d ${String(hours % 24)}h`;
+    if (hours > 0) return `${String(hours)}h ${String(minutes % 60)}m`;
+    return `${String(minutes)}m`;
+  };
 
   const formatTimeSince = (dateString: string): string => {
-    const target = new Date(dateString).getTime()
-    const now = Date.now()
-    const diff = now - target
+    const target = new Date(dateString).getTime();
+    const now = Date.now();
+    const diff = now - target;
 
-    if (diff < 0) return 'Just now'
-    
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(minutes / 60)
+    if (diff < 0) return "Just now";
 
-    if (hours > 0) return `${String(hours)}h ${String(minutes % 60)}m ago`
-    return `${String(minutes)}m ago`
-  }
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
 
-  const getHealthScore = (): { score: number; label: string; color: string } => {
-    if (!health) return { score: 0, label: 'Unknown', color: 'text-muted-foreground' }
+    if (hours > 0) return `${String(hours)}h ${String(minutes % 60)}m ago`;
+    return `${String(minutes)}m ago`;
+  };
 
-    let issues = 0
-    if (health.instances.stale > 0) issues++
-    if (health.recentJobs.failedLast24h > 0) issues++
-    if (health.namespaces.total > 0 && health.namespaces.withEndpoint === 0) issues++
+  const getHealthScore = (): {
+    score: number;
+    label: string;
+    color: string;
+  } => {
+    if (!health)
+      return { score: 0, label: "Unknown", color: "text-muted-foreground" };
+
+    let issues = 0;
+    if (health.instances.stale > 0) issues++;
+    if (health.recentJobs.failedLast24h > 0) issues++;
+    if (health.namespaces.total > 0 && health.namespaces.withEndpoint === 0)
+      issues++;
     // High storage is a more serious issue
-    if (health.instances.highStorage > 0) issues++
+    if (health.instances.highStorage > 0) issues++;
     // Critical storage instances count as additional issues
-    const criticalCount = health.highStorageInstances.filter((i) => i.level === 'critical').length
-    if (criticalCount > 0) issues++
+    const criticalCount = health.highStorageInstances.filter(
+      (i) => i.level === "critical",
+    ).length;
+    if (criticalCount > 0) issues++;
 
-    if (issues === 0) return { score: 100, label: 'Healthy', color: 'text-green-500' }
-    if (issues === 1) return { score: 75, label: 'Good', color: 'text-yellow-500' }
-    if (issues === 2) return { score: 50, label: 'Fair', color: 'text-orange-500' }
-    return { score: 25, label: 'Needs Attention', color: 'text-red-500' }
-  }
+    if (issues === 0)
+      return { score: 100, label: "Healthy", color: "text-green-500" };
+    if (issues === 1)
+      return { score: 75, label: "Good", color: "text-yellow-500" };
+    if (issues === 2)
+      return { score: 50, label: "Fair", color: "text-orange-500" };
+    return { score: 25, label: "Needs Attention", color: "text-red-500" };
+  };
 
-  const healthScore = getHealthScore()
+  const healthScore = getHealthScore();
 
   return (
     <div className="space-y-6">
@@ -131,7 +152,9 @@ export function HealthDashboard(): React.ReactElement {
           onClick={() => void loadHealth()}
           disabled={loading}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+          />
           Refresh
         </Button>
       </div>
@@ -162,7 +185,9 @@ export function HealthDashboard(): React.ReactElement {
                     {healthScore.score}
                   </div>
                   <div>
-                    <div className={`text-xl font-semibold ${healthScore.color}`}>
+                    <div
+                      className={`text-xl font-semibold ${healthScore.color}`}
+                    >
                       {healthScore.label}
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -186,7 +211,9 @@ export function HealthDashboard(): React.ReactElement {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{health.namespaces.total}</div>
+                <div className="text-3xl font-bold">
+                  {health.namespaces.total}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {health.namespaces.withEndpoint} with endpoint configured
                 </p>
@@ -202,7 +229,9 @@ export function HealthDashboard(): React.ReactElement {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{health.instances.total}</div>
+                <div className="text-3xl font-bold">
+                  {health.instances.total}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {health.instances.withAlarms} with active alarms
                 </p>
@@ -218,7 +247,9 @@ export function HealthDashboard(): React.ReactElement {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{formatBytes(health.storage.totalBytes)}</div>
+                <div className="text-3xl font-bold">
+                  {formatBytes(health.storage.totalBytes)}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   ~{formatBytes(health.storage.avgPerInstance)} avg per instance
                 </p>
@@ -234,7 +265,9 @@ export function HealthDashboard(): React.ReactElement {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{health.recentJobs.last24h}</div>
+                <div className="text-3xl font-bold">
+                  {health.recentJobs.last24h}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Last 24h ({health.recentJobs.last7d} last 7d)
                 </p>
@@ -274,7 +307,9 @@ export function HealthDashboard(): React.ReactElement {
                         className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{alarm.instanceName}</div>
+                          <div className="font-medium truncate">
+                            {alarm.instanceName}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {alarm.namespaceName}
                           </div>
@@ -324,7 +359,7 @@ export function HealthDashboard(): React.ReactElement {
                       >
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate flex items-center gap-2">
-                            {alarm.status === 'completed' ? (
+                            {alarm.status === "completed" ? (
                               <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                             ) : (
                               <Ban className="h-4 w-4 text-orange-500 flex-shrink-0" />
@@ -336,10 +371,16 @@ export function HealthDashboard(): React.ReactElement {
                           </div>
                         </div>
                         <div className="text-right ml-4">
-                          <div className={`text-sm font-medium ${
-                            alarm.status === 'completed' ? 'text-green-500' : 'text-orange-500'
-                          }`}>
-                            {alarm.status === 'completed' ? 'Completed' : 'Cancelled'}
+                          <div
+                            className={`text-sm font-medium ${
+                              alarm.status === "completed"
+                                ? "text-green-500"
+                                : "text-orange-500"
+                            }`}
+                          >
+                            {alarm.status === "completed"
+                              ? "Completed"
+                              : "Cancelled"}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {formatTimeSince(alarm.completedAt)}
@@ -360,9 +401,7 @@ export function HealthDashboard(): React.ReactElement {
                 <AlertTriangle className="h-5 w-5 text-orange-500" />
                 <CardTitle>Stale Instances</CardTitle>
               </div>
-              <CardDescription>
-                Not accessed in 7+ days
-              </CardDescription>
+              <CardDescription>Not accessed in 7+ days</CardDescription>
             </CardHeader>
             <CardContent>
               {health.staleInstances.length === 0 ? (
@@ -378,7 +417,9 @@ export function HealthDashboard(): React.ReactElement {
                       className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{instance.name}</div>
+                        <div className="font-medium truncate">
+                          {instance.name}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {instance.namespaceName}
                         </div>
@@ -417,44 +458,53 @@ export function HealthDashboard(): React.ReactElement {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {health.highStorageInstances.map((instance: HighStorageInstance) => (
-                    <div
-                      key={instance.id}
-                      className={`flex items-center justify-between p-3 rounded-lg ${
-                        instance.level === 'critical'
-                          ? 'bg-red-500/10 border border-red-500/30'
-                          : 'bg-yellow-500/10 border border-yellow-500/30'
-                      }`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate flex items-center gap-2">
-                          {instance.level === 'critical' ? (
-                            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                          ) : (
-                            <HardDrive className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-                          )}
-                          {instance.name}
+                  {health.highStorageInstances.map(
+                    (instance: HighStorageInstance) => (
+                      <div
+                        key={instance.id}
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          instance.level === "critical"
+                            ? "bg-red-500/10 border border-red-500/30"
+                            : "bg-yellow-500/10 border border-yellow-500/30"
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate flex items-center gap-2">
+                            {instance.level === "critical" ? (
+                              <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                            ) : (
+                              <HardDrive className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                            )}
+                            {instance.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {instance.namespaceName}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {instance.namespaceName}
+                        <div className="text-right ml-4">
+                          <div
+                            className={`text-sm font-medium ${
+                              instance.level === "critical"
+                                ? "text-red-500"
+                                : "text-yellow-500"
+                            }`}
+                          >
+                            {instance.percentUsed}%
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatBytes(instance.storageSizeBytes)}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right ml-4">
-                        <div className={`text-sm font-medium ${
-                          instance.level === 'critical' ? 'text-red-500' : 'text-yellow-500'
-                        }`}>
-                          {instance.percentUsed}%
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatBytes(instance.storageSizeBytes)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-3">
-                Warning at {String(STORAGE_QUOTA.WARNING_THRESHOLD * 100)}% (8GB) • Critical at {String(STORAGE_QUOTA.CRITICAL_THRESHOLD * 100)}% (9GB) of 10GB limit
+                Warning at {String(STORAGE_QUOTA.WARNING_THRESHOLD * 100)}%
+                (8GB) • Critical at{" "}
+                {String(STORAGE_QUOTA.CRITICAL_THRESHOLD * 100)}% (9GB) of 10GB
+                limit
               </p>
             </CardContent>
           </Card>
@@ -463,7 +513,9 @@ export function HealthDashboard(): React.ReactElement {
           <Card>
             <CardHeader>
               <CardTitle>System Status</CardTitle>
-              <CardDescription>Quick overview of system configuration</CardDescription>
+              <CardDescription>
+                Quick overview of system configuration
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -474,7 +526,8 @@ export function HealthDashboard(): React.ReactElement {
                     <XCircle className="h-5 w-5 text-red-500" />
                   )}
                   <span className="text-sm">
-                    {health.namespaces.withEndpoint}/{health.namespaces.total} endpoints
+                    {health.namespaces.withEndpoint}/{health.namespaces.total}{" "}
+                    endpoints
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -508,7 +561,9 @@ export function HealthDashboard(): React.ReactElement {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Bell className={`h-5 w-5 ${health.instances.withAlarms > 0 ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                  <Bell
+                    className={`h-5 w-5 ${health.instances.withAlarms > 0 ? "text-yellow-500" : "text-muted-foreground"}`}
+                  />
                   <span className="text-sm">
                     {health.instances.withAlarms} active alarms
                   </span>
@@ -519,5 +574,5 @@ export function HealthDashboard(): React.ReactElement {
         </>
       )}
     </div>
-  )
+  );
 }

@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,16 +8,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { namespaceApi } from '../../services/api'
-import type { Namespace } from '../../types'
+} from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { namespaceApi } from "../../services/api";
+import type { Namespace } from "../../types";
 
 interface AddNamespaceDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onComplete: (namespace: Namespace) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onComplete: (namespace: Namespace) => void;
 }
 
 export function AddNamespaceDialog({
@@ -25,54 +25,56 @@ export function AddNamespaceDialog({
   onOpenChange,
   onComplete,
 }: AddNamespaceDialogProps): React.ReactElement {
-  const [name, setName] = useState('')
-  const [className, setClassName] = useState('')
-  const [scriptName, setScriptName] = useState('')
-  const [endpointUrl, setEndpointUrl] = useState('')
-  const [storageBackend, setStorageBackend] = useState<'sqlite' | 'kv'>('sqlite')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [name, setName] = useState("");
+  const [className, setClassName] = useState("");
+  const [scriptName, setScriptName] = useState("");
+  const [endpointUrl, setEndpointUrl] = useState("");
+  const [storageBackend, setStorageBackend] = useState<"sqlite" | "kv">(
+    "sqlite",
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const resetForm = (): void => {
-    setName('')
-    setClassName('')
-    setScriptName('')
-    setEndpointUrl('')
-    setStorageBackend('sqlite')
-    setError('')
-  }
+    setName("");
+    setClassName("");
+    setScriptName("");
+    setEndpointUrl("");
+    setStorageBackend("sqlite");
+    setError("");
+  };
 
   const handleSubmit = async (): Promise<void> => {
     if (!name.trim() || !className.trim()) {
-      setError('Name and Class Name are required')
-      return
+      setError("Name and Class Name are required");
+      return;
     }
 
     try {
-      setLoading(true)
-      setError('')
+      setLoading(true);
+      setError("");
       const namespace = await namespaceApi.add({
         name: name.trim(),
         class_name: className.trim(),
         ...(scriptName.trim() && { script_name: scriptName.trim() }),
         ...(endpointUrl.trim() && { endpoint_url: endpointUrl.trim() }),
         storage_backend: storageBackend,
-      })
-      onComplete(namespace)
-      resetForm()
+      });
+      onComplete(namespace);
+      resetForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add namespace')
+      setError(err instanceof Error ? err.message : "Failed to add namespace");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleOpenChange = (newOpen: boolean): void => {
     if (!newOpen) {
-      resetForm()
+      resetForm();
     }
-    onOpenChange(newOpen)
-  }
+    onOpenChange(newOpen);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -128,7 +130,8 @@ export function AddNamespaceDialog({
               onChange={(e) => setEndpointUrl(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Your Worker URL with admin hooks installed. Setting this auto-enables admin hooks.
+              Your Worker URL with admin hooks installed. Setting this
+              auto-enables admin hooks.
             </p>
           </div>
           <fieldset className="grid gap-2">
@@ -140,8 +143,8 @@ export function AddNamespaceDialog({
                   name="storage_backend"
                   id="add-storage-sqlite"
                   value="sqlite"
-                  checked={storageBackend === 'sqlite'}
-                  onChange={() => setStorageBackend('sqlite')}
+                  checked={storageBackend === "sqlite"}
+                  onChange={() => setStorageBackend("sqlite")}
                   className="accent-primary"
                 />
                 <span className="text-sm">SQLite</span>
@@ -152,8 +155,8 @@ export function AddNamespaceDialog({
                   name="storage_backend"
                   id="add-storage-kv"
                   value="kv"
-                  checked={storageBackend === 'kv'}
-                  onChange={() => setStorageBackend('kv')}
+                  checked={storageBackend === "kv"}
+                  onChange={() => setStorageBackend("kv")}
                   className="accent-primary"
                 />
                 <span className="text-sm">KV (Legacy)</span>
@@ -176,6 +179,5 @@ export function AddNamespaceDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

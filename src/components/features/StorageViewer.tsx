@@ -1,49 +1,86 @@
-import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
-import { RefreshCw, Loader2, Key, Table, Trash2, Edit, Plus, Bell, Archive, Search, X, Copy, Check, Download, CheckSquare, Upload } from 'lucide-react'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Checkbox } from '../ui/checkbox'
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  lazy,
+  Suspense,
+} from "react";
+import {
+  RefreshCw,
+  Loader2,
+  Key,
+  Table,
+  Trash2,
+  Edit,
+  Plus,
+  Bell,
+  Archive,
+  Search,
+  X,
+  Copy,
+  Check,
+  Download,
+  CheckSquare,
+  Upload,
+} from "lucide-react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Checkbox } from "../ui/checkbox";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
+} from "../ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 // Lazy load SQL Console (includes SqlEditor, prismjs, sql-formatter, sql-validator)
-const SqlConsole = lazy(() => import('./SqlConsole').then(m => ({ default: m.SqlConsole })))
+const SqlConsole = lazy(() =>
+  import("./SqlConsole").then((m) => ({ default: m.SqlConsole })),
+);
 
 // Loading fallback for SQL Console
 const SqlConsoleFallback = (): React.ReactElement => (
   <div className="flex items-center justify-center py-16">
     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
   </div>
-)
-import { StorageEditor } from './StorageEditor'
-import { AlarmManager } from './AlarmManager'
-import { BackupManager } from './BackupManager'
-import { SelectionToolbar } from './SelectionToolbar'
-import { ImportKeysDialog } from './ImportKeysDialog'
-import { storageApi, type StorageListResponse } from '../../services/storageApi'
-import { logBatchDeleteKeys, logBatchExportKeys } from '../../services/batchApi'
-import { downloadJson, generateTimestampedFilename } from '../../lib/downloadUtils'
-import type { Instance, Namespace } from '../../types'
+);
+import { StorageEditor } from "./StorageEditor";
+import { AlarmManager } from "./AlarmManager";
+import { BackupManager } from "./BackupManager";
+import { SelectionToolbar } from "./SelectionToolbar";
+import { ImportKeysDialog } from "./ImportKeysDialog";
+import {
+  storageApi,
+  type StorageListResponse,
+} from "../../services/storageApi";
+import {
+  logBatchDeleteKeys,
+  logBatchExportKeys,
+} from "../../services/batchApi";
+import {
+  downloadJson,
+  generateTimestampedFilename,
+} from "../../lib/downloadUtils";
+import type { Instance, Namespace } from "../../types";
 
 interface StorageViewerProps {
-  namespace: Namespace
-  instance: Instance
-  onBack: () => void
+  namespace: Namespace;
+  instance: Instance;
+  onBack: () => void;
   /** Optional key to open in edit dialog immediately */
-  initialEditKey?: string
+  initialEditKey?: string;
 }
 
 /**
  * Highlight matching text in a string
  */
 function highlightMatch(text: string, search: string): React.ReactNode {
-  if (!search) return text
-  const parts = text.split(new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
+  if (!search) return text;
+  const parts = text.split(
+    new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"),
+  );
   return parts.map((part, i) =>
     part.toLowerCase() === search.toLowerCase() ? (
       <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 rounded px-0.5">
@@ -51,8 +88,8 @@ function highlightMatch(text: string, search: string): React.ReactNode {
       </mark>
     ) : (
       part
-    )
-  )
+    ),
+  );
 }
 
 export function StorageViewer({
@@ -61,104 +98,117 @@ export function StorageViewer({
   onBack,
   initialEditKey,
 }: StorageViewerProps): React.ReactElement {
-  const [storage, setStorage] = useState<StorageListResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
-  const [activeTab, setActiveTab] = useState('keys')
-  const [editingKey, setEditingKey] = useState<string | null>(initialEditKey ?? null)
-  const [showAddKey, setShowAddKey] = useState(false)
-  const [showImportDialog, setShowImportDialog] = useState(false)
-  const [keySearch, setKeySearch] = useState('')
-  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [storage, setStorage] = useState<StorageListResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+  const [activeTab, setActiveTab] = useState("keys");
+  const [editingKey, setEditingKey] = useState<string | null>(
+    initialEditKey ?? null,
+  );
+  const [showAddKey, setShowAddKey] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [keySearch, setKeySearch] = useState("");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Multi-select state for keys
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
-  const [batchDeleting, setBatchDeleting] = useState(false)
-  const [batchExporting, setBatchExporting] = useState(false)
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [batchDeleting, setBatchDeleting] = useState(false);
+  const [batchExporting, setBatchExporting] = useState(false);
 
   const handleCopyKey = async (key: string): Promise<void> => {
     try {
-      await navigator.clipboard.writeText(key)
-      setCopiedKey(key)
-      setTimeout(() => setCopiedKey(null), 2000)
+      await navigator.clipboard.writeText(key);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
     } catch {
       // Clipboard API not available, silently fail
       // eslint-disable-next-line no-console
-      console.warn('Clipboard API not available')
+      console.warn("Clipboard API not available");
     }
-  }
+  };
 
   // Filter keys based on search term (must be defined before selection helpers)
   const filteredKeys = useMemo(() => {
-    if (!storage?.keys) return []
-    if (!keySearch.trim()) return storage.keys
-    const searchLower = keySearch.toLowerCase()
-    return storage.keys.filter((key) => key.toLowerCase().includes(searchLower))
-  }, [storage?.keys, keySearch])
+    if (!storage?.keys) return [];
+    if (!keySearch.trim()) return storage.keys;
+    const searchLower = keySearch.toLowerCase();
+    return storage.keys.filter((key) =>
+      key.toLowerCase().includes(searchLower),
+    );
+  }, [storage?.keys, keySearch]);
 
   // Selection helpers
   const toggleKeySelection = useCallback((key: string) => {
     setSelectedKeys((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(key)) {
-        next.delete(key)
+        next.delete(key);
       } else {
-        next.add(key)
+        next.add(key);
       }
-      return next
-    })
-  }, [])
+      return next;
+    });
+  }, []);
 
   const selectAllKeys = useCallback(() => {
-    setSelectedKeys(new Set(filteredKeys))
-  }, [filteredKeys])
+    setSelectedKeys(new Set(filteredKeys));
+  }, [filteredKeys]);
 
   const clearKeySelection = useCallback(() => {
-    setSelectedKeys(new Set())
-  }, [])
+    setSelectedKeys(new Set());
+  }, []);
 
   const isAllKeysSelected = useMemo(() => {
-    return filteredKeys.length > 0 && filteredKeys.every((key) => selectedKeys.has(key))
-  }, [filteredKeys, selectedKeys])
+    return (
+      filteredKeys.length > 0 &&
+      filteredKeys.every((key) => selectedKeys.has(key))
+    );
+  }, [filteredKeys, selectedKeys]);
 
   const loadStorage = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true)
-      setError('')
+      setLoading(true);
+      setError("");
       // Clear selection when reloading
-      setSelectedKeys(new Set())
-      const data = await storageApi.list(instance.id)
-      setStorage(data)
+      setSelectedKeys(new Set());
+      const data = await storageApi.list(instance.id);
+      setStorage(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load storage')
+      setError(err instanceof Error ? err.message : "Failed to load storage");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [instance.id])
+  }, [instance.id]);
 
   // Batch delete handler
   const handleBatchDelete = async (): Promise<void> => {
-    const count = selectedKeys.size
-    if (count === 0) return
+    const count = selectedKeys.size;
+    if (count === 0) return;
 
-    if (!confirm(`Delete ${String(count)} key${count === 1 ? '' : 's'}? This action cannot be undone.`)) {
-      return
+    if (
+      !confirm(
+        `Delete ${String(count)} key${count === 1 ? "" : "s"}? This action cannot be undone.`,
+      )
+    ) {
+      return;
     }
 
-    setBatchDeleting(true)
-    setError('')
+    setBatchDeleting(true);
+    setError("");
 
     try {
-      const keysToDelete = Array.from(selectedKeys)
-      let successCount = 0
-      const errors: string[] = []
+      const keysToDelete = Array.from(selectedKeys);
+      let successCount = 0;
+      const errors: string[] = [];
 
       for (const key of keysToDelete) {
         try {
-          await storageApi.delete(instance.id, key)
-          successCount++
+          await storageApi.delete(instance.id, key);
+          successCount++;
         } catch (err) {
-          errors.push(`${key}: ${err instanceof Error ? err.message : 'Failed'}`)
+          errors.push(
+            `${key}: ${err instanceof Error ? err.message : "Failed"}`,
+          );
         }
       }
 
@@ -171,41 +221,45 @@ export function StorageViewer({
         keys: keysToDelete,
         successCount,
         failedCount: errors.length,
-      })
+      });
 
       // Clear selection and refresh
-      setSelectedKeys(new Set())
-      await loadStorage()
+      setSelectedKeys(new Set());
+      await loadStorage();
 
       if (errors.length > 0) {
-        setError(`Deleted ${String(successCount)}/${String(count)} keys. Errors: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`)
+        setError(
+          `Deleted ${String(successCount)}/${String(count)} keys. Errors: ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? "..." : ""}`,
+        );
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Batch delete failed')
+      setError(err instanceof Error ? err.message : "Batch delete failed");
     } finally {
-      setBatchDeleting(false)
+      setBatchDeleting(false);
     }
-  }
+  };
 
   // Batch export handler
   const handleBatchExport = async (): Promise<void> => {
-    const count = selectedKeys.size
-    if (count === 0) return
+    const count = selectedKeys.size;
+    if (count === 0) return;
 
-    setBatchExporting(true)
-    setError('')
+    setBatchExporting(true);
+    setError("");
 
     try {
-      const keysToExport = Array.from(selectedKeys)
-      const exportData: Record<string, unknown> = {}
-      const errors: string[] = []
+      const keysToExport = Array.from(selectedKeys);
+      const exportData: Record<string, unknown> = {};
+      const errors: string[] = [];
 
       for (const key of keysToExport) {
         try {
-          const result = await storageApi.get(instance.id, key)
-          exportData[key] = result.value
+          const result = await storageApi.get(instance.id, key);
+          exportData[key] = result.value;
         } catch (err) {
-          errors.push(`${key}: ${err instanceof Error ? err.message : 'Failed'}`)
+          errors.push(
+            `${key}: ${err instanceof Error ? err.message : "Failed"}`,
+          );
         }
       }
 
@@ -223,16 +277,16 @@ export function StorageViewer({
         },
         keyCount: Object.keys(exportData).length,
         data: exportData,
-      }
+      };
 
       const filename = generateTimestampedFilename(
         `${namespace.name}-${instance.name ?? instance.object_id}-keys`,
-        'json'
-      )
-      downloadJson(exportPayload, filename)
+        "json",
+      );
+      downloadJson(exportPayload, filename);
 
       // Log to job history
-      const exportedKeys = Object.keys(exportData)
+      const exportedKeys = Object.keys(exportData);
       await logBatchExportKeys({
         instanceId: instance.id,
         instanceName: instance.name ?? instance.object_id,
@@ -240,36 +294,38 @@ export function StorageViewer({
         namespaceName: namespace.name,
         keys: keysToExport,
         exportedCount: exportedKeys.length,
-      })
+      });
 
       // Clear selection after successful export
-      setSelectedKeys(new Set())
+      setSelectedKeys(new Set());
 
       if (errors.length > 0) {
-        setError(`Exported ${String(Object.keys(exportData).length)}/${String(count)} keys. Some keys failed: ${errors.slice(0, 3).join('; ')}`)
+        setError(
+          `Exported ${String(Object.keys(exportData).length)}/${String(count)} keys. Some keys failed: ${errors.slice(0, 3).join("; ")}`,
+        );
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Batch export failed')
+      setError(err instanceof Error ? err.message : "Batch export failed");
     } finally {
-      setBatchExporting(false)
+      setBatchExporting(false);
     }
-  }
+  };
 
   const handleDeleteKey = async (key: string): Promise<void> => {
     if (!confirm(`Delete key "${key}"?`)) {
-      return
+      return;
     }
     try {
-      await storageApi.delete(instance.id, key)
-      await loadStorage()
+      await storageApi.delete(instance.id, key);
+      await loadStorage();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete key')
+      setError(err instanceof Error ? err.message : "Failed to delete key");
     }
-  }
+  };
 
   useEffect(() => {
-    void loadStorage()
-  }, [loadStorage])
+    void loadStorage();
+  }, [loadStorage]);
 
   return (
     <div>
@@ -283,7 +339,7 @@ export function StorageViewer({
             ← Back to {namespace.name}
           </button>
           <h2 className="text-2xl font-bold">
-            {instance.name ?? 'Instance Storage'}
+            {instance.name ?? "Instance Storage"}
           </h2>
           <p className="text-sm text-muted-foreground font-mono">
             {instance.object_id}
@@ -294,7 +350,9 @@ export function StorageViewer({
           onClick={() => void loadStorage()}
           disabled={loading}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+          />
           Refresh
         </Button>
       </div>
@@ -342,7 +400,7 @@ export function StorageViewer({
               <Key className="h-4 w-4" />
               Keys ({storage.keys?.length ?? 0})
             </TabsTrigger>
-            {namespace.storage_backend === 'sqlite' && (
+            {namespace.storage_backend === "sqlite" && (
               <TabsTrigger value="sql" className="flex items-center gap-2">
                 <Table className="h-4 w-4" />
                 SQL Console
@@ -373,7 +431,11 @@ export function StorageViewer({
                     Select All
                   </Button>
                 )}
-                <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowImportDialog(true)}
+                >
                   <Upload className="h-4 w-4 mr-2" />
                   Import
                 </Button>
@@ -424,7 +486,9 @@ export function StorageViewer({
             {/* Search/Filter */}
             {storage.keys && storage.keys.length > 0 && (
               <div className="relative mb-4">
-                <label htmlFor="storage-key-filter" className="sr-only">Filter storage keys</label>
+                <label htmlFor="storage-key-filter" className="sr-only">
+                  Filter storage keys
+                </label>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="storage-key-filter"
@@ -438,7 +502,7 @@ export function StorageViewer({
                     variant="ghost"
                     size="sm"
                     className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                    onClick={() => setKeySearch('')}
+                    onClick={() => setKeySearch("")}
                     aria-label="Clear key filter"
                   >
                     <X className="h-4 w-4" />
@@ -468,11 +532,13 @@ export function StorageViewer({
               <Card>
                 <CardContent className="py-8 text-center">
                   <Search className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">No keys match "{keySearch}"</p>
+                  <p className="text-muted-foreground">
+                    No keys match "{keySearch}"
+                  </p>
                   <Button
                     variant="link"
                     size="sm"
-                    onClick={() => setKeySearch('')}
+                    onClick={() => setKeySearch("")}
                     className="mt-2"
                   >
                     Clear filter
@@ -484,8 +550,11 @@ export function StorageViewer({
                 {filteredKeys.map((key) => (
                   <Card
                     key={key}
-                    className={`cursor-pointer hover:bg-muted/50 transition-colors ${selectedKeys.has(key) ? 'ring-2 ring-primary bg-primary/5' : ''
-                      }`}
+                    className={`cursor-pointer hover:bg-muted/50 transition-colors ${
+                      selectedKeys.has(key)
+                        ? "ring-2 ring-primary bg-primary/5"
+                        : ""
+                    }`}
                     onClick={() => setEditingKey(key)}
                   >
                     <CardHeader className="py-3">
@@ -504,12 +573,10 @@ export function StorageViewer({
                           </div>
                           <div className="flex-1 min-w-0">
                             <CardTitle className="text-sm font-mono truncate">
-                              {keySearch ? (
-                                // Highlight matching text
-                                highlightMatch(key, keySearch)
-                              ) : (
-                                key
-                              )}
+                              {keySearch
+                                ? // Highlight matching text
+                                  highlightMatch(key, keySearch)
+                                : key}
                             </CardTitle>
                             <CardDescription className="text-xs">
                               Click to view/edit value
@@ -521,11 +588,15 @@ export function StorageViewer({
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
-                              e.stopPropagation()
-                              void handleCopyKey(key)
+                              e.stopPropagation();
+                              void handleCopyKey(key);
                             }}
-                            aria-label={copiedKey === key ? 'Copied!' : 'Copy key name'}
-                            title={copiedKey === key ? 'Copied!' : 'Copy key name'}
+                            aria-label={
+                              copiedKey === key ? "Copied!" : "Copy key name"
+                            }
+                            title={
+                              copiedKey === key ? "Copied!" : "Copy key name"
+                            }
                           >
                             {copiedKey === key ? (
                               <Check className="h-4 w-4 text-green-500" />
@@ -537,8 +608,8 @@ export function StorageViewer({
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
-                              e.stopPropagation()
-                              setEditingKey(key)
+                              e.stopPropagation();
+                              setEditingKey(key);
                             }}
                             aria-label="Edit key"
                           >
@@ -548,8 +619,8 @@ export function StorageViewer({
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
-                              e.stopPropagation()
-                              void handleDeleteKey(key)
+                              e.stopPropagation();
+                              void handleDeleteKey(key);
                             }}
                             aria-label="Delete key"
                           >
@@ -564,7 +635,7 @@ export function StorageViewer({
             )}
           </TabsContent>
 
-          {namespace.storage_backend === 'sqlite' && (
+          {namespace.storage_backend === "sqlite" && (
             <TabsContent value="sql" className="mt-6">
               <Suspense fallback={<SqlConsoleFallback />}>
                 <SqlConsole
@@ -602,8 +673,8 @@ export function StorageViewer({
           keyName={editingKey}
           onClose={() => setEditingKey(null)}
           onSave={() => {
-            setEditingKey(null)
-            void loadStorage()
+            setEditingKey(null);
+            void loadStorage();
           }}
         />
       )}
@@ -615,8 +686,8 @@ export function StorageViewer({
           keyName={null}
           onClose={() => setShowAddKey(false)}
           onSave={() => {
-            setShowAddKey(false)
-            void loadStorage()
+            setShowAddKey(false);
+            void loadStorage();
           }}
         />
       )}
@@ -630,6 +701,5 @@ export function StorageViewer({
         onSuccess={() => void loadStorage()}
       />
     </div>
-  )
+  );
 }
-

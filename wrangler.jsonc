@@ -10,12 +10,12 @@
 
   "build": {
     "command": "npm run build",
-    "cwd": "."
+    "cwd": ".",
   },
 
   "assets": {
     "directory": "./dist",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
 
   // D1 METADATA DATABASE
@@ -23,22 +23,22 @@
     {
       "binding": "METADATA",
       "database_name": "do-manager-metadata",
-      "database_id": "568945bc-2506-4a17-a929-45b6bbae0d31"
-    }
+      "database_id": "568945bc-2506-4a17-a929-45b6bbae0d31",
+    },
   ],
 
   // R2 BACKUP BUCKET
   "r2_buckets": [
     {
       "binding": "BACKUP_BUCKET",
-      "bucket_name": "do-manager-backups"
-    }
+      "bucket_name": "do-manager-backups",
+    },
   ],
 
   "observability": {
     "logs": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
 
   // Custom domain routing
@@ -46,8 +46,7 @@
     {
       "pattern": "do.adamic.tech",
       "custom_domain": true,
-      "zone_name": "adamic.tech"
-    }
-  ]
+      "zone_name": "adamic.tech",
+    },
+  ],
 }
-

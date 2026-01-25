@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Loader2, Copy, AlertTriangle, Info } from 'lucide-react'
-import { Button } from '../ui/button'
+import { useState } from "react";
+import { Loader2, Copy, AlertTriangle, Info } from "lucide-react";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,18 +8,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { Checkbox } from '../ui/checkbox'
-import { namespaceApi } from '../../services/api'
-import type { Namespace } from '../../types'
+} from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Checkbox } from "../ui/checkbox";
+import { namespaceApi } from "../../services/api";
+import type { Namespace } from "../../types";
 
 interface CloneNamespaceDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  sourceNamespace: Namespace | null
-  onComplete: (namespace: Namespace) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  sourceNamespace: Namespace | null;
+  onComplete: (namespace: Namespace) => void;
 }
 
 export function CloneNamespaceDialog({
@@ -28,77 +28,86 @@ export function CloneNamespaceDialog({
   sourceNamespace,
   onComplete,
 }: CloneNamespaceDialogProps): React.ReactElement {
-  const [newName, setNewName] = useState('')
-  const [deepClone, setDeepClone] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [newName, setNewName] = useState("");
+  const [deepClone, setDeepClone] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [cloneResult, setCloneResult] = useState<{
-    instancesCloned?: number
-    warnings?: string[]
-  } | null>(null)
+    instancesCloned?: number;
+    warnings?: string[];
+  } | null>(null);
 
   // Check if admin hooks are enabled
   const adminHooksEnabled = Boolean(
-    sourceNamespace?.endpoint_url && sourceNamespace.admin_hook_enabled === 1
-  )
+    sourceNamespace?.endpoint_url && sourceNamespace.admin_hook_enabled === 1,
+  );
 
   const resetForm = (): void => {
-    setNewName('')
-    setDeepClone(false)
-    setError('')
-    setCloneResult(null)
-  }
+    setNewName("");
+    setDeepClone(false);
+    setError("");
+    setCloneResult(null);
+  };
 
   const handleSubmit = async (): Promise<void> => {
     if (!newName.trim()) {
-      setError('New namespace name is required')
-      return
+      setError("New namespace name is required");
+      return;
     }
 
     if (!sourceNamespace) {
-      setError('No source namespace selected')
-      return
+      setError("No source namespace selected");
+      return;
     }
 
     if (newName.trim() === sourceNamespace.name) {
-      setError('New name must be different from the source namespace')
-      return
+      setError("New name must be different from the source namespace");
+      return;
     }
 
     try {
-      setLoading(true)
-      setError('')
-      setCloneResult(null)
+      setLoading(true);
+      setError("");
+      setCloneResult(null);
 
       const result = await namespaceApi.clone(
         sourceNamespace.id,
         newName.trim(),
-        deepClone
-      )
+        deepClone,
+      );
 
       // Show result info if deep clone
-      if (deepClone && (result.instancesCloned !== undefined || result.warnings)) {
+      if (
+        deepClone &&
+        (result.instancesCloned !== undefined || result.warnings)
+      ) {
         setCloneResult({
-          ...(result.instancesCloned !== undefined ? { instancesCloned: result.instancesCloned } : {}),
-          ...(result.warnings !== undefined ? { warnings: result.warnings } : {}),
-        })
+          ...(result.instancesCloned !== undefined
+            ? { instancesCloned: result.instancesCloned }
+            : {}),
+          ...(result.warnings !== undefined
+            ? { warnings: result.warnings }
+            : {}),
+        });
       }
 
-      onComplete(result.namespace)
-      resetForm()
+      onComplete(result.namespace);
+      resetForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to clone namespace')
+      setError(
+        err instanceof Error ? err.message : "Failed to clone namespace",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleOpenChange = (newOpen: boolean): void => {
     if (!newOpen) {
-      resetForm()
+      resetForm();
     }
-    onOpenChange(newOpen)
-  }
+    onOpenChange(newOpen);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -110,8 +119,8 @@ export function CloneNamespaceDialog({
           </DialogTitle>
           <DialogDescription>
             {deepClone
-              ? 'Create a complete copy including all instances and their storage data.'
-              : 'Create a new namespace with the same configuration settings.'}
+              ? "Create a complete copy including all instances and their storage data."
+              : "Create a new namespace with the same configuration settings."}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -148,7 +157,7 @@ export function CloneNamespaceDialog({
             <Label htmlFor="clone-ns-source">Source Namespace</Label>
             <Input
               id="clone-ns-source"
-              value={sourceNamespace?.name ?? ''}
+              value={sourceNamespace?.name ?? ""}
               disabled
               className="bg-muted"
             />
@@ -158,7 +167,7 @@ export function CloneNamespaceDialog({
             <Label htmlFor="clone-ns-class">Class Name</Label>
             <Input
               id="clone-ns-class"
-              value={sourceNamespace?.class_name ?? ''}
+              value={sourceNamespace?.class_name ?? ""}
               disabled
               className="bg-muted font-mono text-sm"
             />
@@ -174,7 +183,10 @@ export function CloneNamespaceDialog({
               autoFocus
               aria-describedby="clone-ns-new-name-hint"
             />
-            <p id="clone-ns-new-name-hint" className="text-xs text-muted-foreground">
+            <p
+              id="clone-ns-new-name-hint"
+              className="text-xs text-muted-foreground"
+            >
               Enter a unique name for the new namespace.
             </p>
           </div>
@@ -192,7 +204,7 @@ export function CloneNamespaceDialog({
               <div className="space-y-1">
                 <Label
                   htmlFor="clone-ns-deep"
-                  className={`cursor-pointer ${!adminHooksEnabled ? 'text-muted-foreground' : ''}`}
+                  className={`cursor-pointer ${!adminHooksEnabled ? "text-muted-foreground" : ""}`}
                 >
                   Deep Clone (include instances and storage)
                 </Label>
@@ -201,8 +213,8 @@ export function CloneNamespaceDialog({
                   className="text-xs text-muted-foreground"
                 >
                   {adminHooksEnabled
-                    ? 'Copies all instances and their storage data to the new namespace.'
-                    : 'Requires admin hooks to be enabled on the source namespace.'}
+                    ? "Copies all instances and their storage data to the new namespace."
+                    : "Requires admin hooks to be enabled on the source namespace."}
                 </p>
               </div>
             </div>
@@ -211,8 +223,9 @@ export function CloneNamespaceDialog({
               <div className="flex items-start gap-2 mt-2 p-2 bg-muted rounded text-xs">
                 <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-muted-foreground" />
                 <span className="text-muted-foreground">
-                  Deep clone copies instances sequentially. Large namespaces may take longer.
-                  If cloning fails, created data will be automatically cleaned up.
+                  Deep clone copies instances sequentially. Large namespaces may
+                  take longer. If cloning fails, created data will be
+                  automatically cleaned up.
                 </span>
               </div>
             )}
@@ -228,11 +241,10 @@ export function CloneNamespaceDialog({
           </Button>
           <Button onClick={() => void handleSubmit()} disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {deepClone ? 'Deep Clone' : 'Clone Namespace'}
+            {deepClone ? "Deep Clone" : "Clone Namespace"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

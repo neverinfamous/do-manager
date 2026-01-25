@@ -1,241 +1,278 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Plus, RefreshCw, Loader2, Box, Clock, Database, Bell, Download, Copy, Trash2, CheckSquare, Archive, Search, X, AlertTriangle, HardDrive, ArrowLeftRight, Pencil, LayoutGrid, LayoutList, ArrowRightLeft, Snowflake } from 'lucide-react'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  Plus,
+  RefreshCw,
+  Loader2,
+  Box,
+  Clock,
+  Database,
+  Bell,
+  Download,
+  Copy,
+  Trash2,
+  CheckSquare,
+  Archive,
+  Search,
+  X,
+  AlertTriangle,
+  HardDrive,
+  ArrowLeftRight,
+  Pencil,
+  LayoutGrid,
+  LayoutList,
+  ArrowRightLeft,
+  Snowflake,
+} from "lucide-react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card'
-import { Checkbox } from '../ui/checkbox'
-import { CreateInstanceDialog } from './CreateInstanceDialog'
-import { CloneInstanceDialog } from './CloneInstanceDialog'
-import { SelectionToolbar } from './SelectionToolbar'
-import { BatchDeleteDialog } from './BatchDeleteDialog'
-import { BatchBackupDialog } from './BatchBackupDialog'
-import { BatchDownloadDialog } from './BatchDownloadDialog'
-import { InstanceDiffDialog } from './InstanceDiffDialog'
-import { RenameInstanceDialog } from './RenameInstanceDialog'
-import { EditTagsDialog } from './EditTagsDialog'
-import { InstanceListView } from './InstanceListView'
-import { MigrateInstanceDialog } from './MigrateInstanceDialog'
-import { UnfreezeInstanceDialog } from './UnfreezeInstanceDialog'
-import { instanceApi } from '../../services/instanceApi'
-import { exportApi } from '../../services/exportApi'
-import { useSelection } from '../../hooks/useSelection'
-import { getStorageQuotaStatus } from '../../lib/storageUtils'
-import { getColorConfig } from '../../lib/instanceColors'
-import { InstanceColorPicker } from './InstanceColorPicker'
-import type { Namespace, Instance, InstanceColor } from '../../types'
+} from "../ui/card";
+import { Checkbox } from "../ui/checkbox";
+import { CreateInstanceDialog } from "./CreateInstanceDialog";
+import { CloneInstanceDialog } from "./CloneInstanceDialog";
+import { SelectionToolbar } from "./SelectionToolbar";
+import { BatchDeleteDialog } from "./BatchDeleteDialog";
+import { BatchBackupDialog } from "./BatchBackupDialog";
+import { BatchDownloadDialog } from "./BatchDownloadDialog";
+import { InstanceDiffDialog } from "./InstanceDiffDialog";
+import { RenameInstanceDialog } from "./RenameInstanceDialog";
+import { EditTagsDialog } from "./EditTagsDialog";
+import { InstanceListView } from "./InstanceListView";
+import { MigrateInstanceDialog } from "./MigrateInstanceDialog";
+import { UnfreezeInstanceDialog } from "./UnfreezeInstanceDialog";
+import { instanceApi } from "../../services/instanceApi";
+import { exportApi } from "../../services/exportApi";
+import { useSelection } from "../../hooks/useSelection";
+import { getStorageQuotaStatus } from "../../lib/storageUtils";
+import { getColorConfig } from "../../lib/instanceColors";
+import { InstanceColorPicker } from "./InstanceColorPicker";
+import type { Namespace, Instance, InstanceColor } from "../../types";
 
 interface InstanceListProps {
-  namespace: Namespace
-  onSelectInstance: (instance: Instance) => void
+  namespace: Namespace;
+  onSelectInstance: (instance: Instance) => void;
 }
 
-type InstanceViewMode = 'grid' | 'list'
+type InstanceViewMode = "grid" | "list";
 
 // Helper to get view mode from localStorage
 const getStoredViewMode = (): InstanceViewMode => {
   try {
-    const stored = localStorage.getItem('do-manager-instance-view-mode')
-    if (stored === 'grid' || stored === 'list') {
-      return stored
+    const stored = localStorage.getItem("do-manager-instance-view-mode");
+    if (stored === "grid" || stored === "list") {
+      return stored;
     }
   } catch {
     // localStorage not available
   }
-  return 'list' // Default to list view
-}
+  return "list"; // Default to list view
+};
 
 export function InstanceList({
   namespace,
   onSelectInstance,
 }: InstanceListProps): React.ReactElement {
-  const [instances, setInstances] = useState<Instance[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>('')
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [exportingId, setExportingId] = useState<string | null>(null)
-  const [cloneInstance, setCloneInstance] = useState<Instance | null>(null)
-  const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false)
-  const [showBatchBackupDialog, setShowBatchBackupDialog] = useState(false)
-  const [showBatchDownloadDialog, setShowBatchDownloadDialog] = useState(false)
-  const [showDiffDialog, setShowDiffDialog] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [renameInstance, setRenameInstance] = useState<Instance | null>(null)
-  const [editTagsInstance, setEditTagsInstance] = useState<Instance | null>(null)
-  const [migrateInstance, setMigrateInstance] = useState<Instance | null>(null)
-  const [unfreezeInstance, setUnfreezeInstance] = useState<Instance | null>(null)
-  const [viewMode, setViewMode] = useState<InstanceViewMode>(getStoredViewMode)
+  const [instances, setInstances] = useState<Instance[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [cloneInstance, setCloneInstance] = useState<Instance | null>(null);
+  const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
+  const [showBatchBackupDialog, setShowBatchBackupDialog] = useState(false);
+  const [showBatchDownloadDialog, setShowBatchDownloadDialog] = useState(false);
+  const [showDiffDialog, setShowDiffDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [renameInstance, setRenameInstance] = useState<Instance | null>(null);
+  const [editTagsInstance, setEditTagsInstance] = useState<Instance | null>(
+    null,
+  );
+  const [migrateInstance, setMigrateInstance] = useState<Instance | null>(null);
+  const [unfreezeInstance, setUnfreezeInstance] = useState<Instance | null>(
+    null,
+  );
+  const [viewMode, setViewMode] = useState<InstanceViewMode>(getStoredViewMode);
 
   // Toggle view mode with localStorage persistence
   const toggleViewMode = (): void => {
     setViewMode((prev) => {
-      const newMode = prev === 'grid' ? 'list' : 'grid'
+      const newMode = prev === "grid" ? "list" : "grid";
       try {
-        localStorage.setItem('do-manager-instance-view-mode', newMode)
+        localStorage.setItem("do-manager-instance-view-mode", newMode);
       } catch {
         // localStorage not available
       }
-      return newMode
-    })
-  }
+      return newMode;
+    });
+  };
 
   // Selection state
-  const selection = useSelection<Instance>()
+  const selection = useSelection<Instance>();
 
   // Filter instances based on search (includes name, object_id, and tags)
   const filteredInstances = useMemo(() => {
-    if (!searchTerm.trim()) return instances
-    const searchLower = searchTerm.toLowerCase()
-    return instances.filter(
-      (inst) => {
-        // Search name and object_id
-        if (inst.name?.toLowerCase().includes(searchLower)) return true
-        if (inst.object_id.toLowerCase().includes(searchLower)) return true
-        // Search tags
-        const tags = Array.isArray(inst.tags) ? inst.tags : []
-        return tags.some(tag => tag.toLowerCase().includes(searchLower))
-      }
-    )
-  }, [instances, searchTerm])
+    if (!searchTerm.trim()) return instances;
+    const searchLower = searchTerm.toLowerCase();
+    return instances.filter((inst) => {
+      // Search name and object_id
+      if (inst.name?.toLowerCase().includes(searchLower)) return true;
+      if (inst.object_id.toLowerCase().includes(searchLower)) return true;
+      // Search tags
+      const tags = Array.isArray(inst.tags) ? inst.tags : [];
+      return tags.some((tag) => tag.toLowerCase().includes(searchLower));
+    });
+  }, [instances, searchTerm]);
 
   const loadInstances = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true)
-      setError('')
+      setLoading(true);
+      setError("");
       // Always skip cache to ensure fresh has_alarm data after returning from StorageViewer
-      const data = await instanceApi.list(namespace.id, undefined, true)
-      setInstances(data.instances)
-      setTotal(data.total)
+      const data = await instanceApi.list(namespace.id, undefined, true);
+      setInstances(data.instances);
+      setTotal(data.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load instances')
+      setError(err instanceof Error ? err.message : "Failed to load instances");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [namespace.id])
+  }, [namespace.id]);
 
   const handleDelete = async (instance: Instance): Promise<void> => {
-    if (!confirm(`Remove tracking for "${instance.name ?? instance.object_id}"?`)) {
-      return
+    if (
+      !confirm(`Remove tracking for "${instance.name ?? instance.object_id}"?`)
+    ) {
+      return;
     }
     try {
-      await instanceApi.delete(instance.id)
-      setInstances((prev) => prev.filter((i) => i.id !== instance.id))
-      setTotal((prev) => prev - 1)
+      await instanceApi.delete(instance.id);
+      setInstances((prev) => prev.filter((i) => i.id !== instance.id));
+      setTotal((prev) => prev - 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete instance')
+      setError(
+        err instanceof Error ? err.message : "Failed to delete instance",
+      );
     }
-  }
+  };
 
   const handleCreateComplete = (instance: Instance): void => {
-    setInstances((prev) => [instance, ...prev])
-    setTotal((prev) => prev + 1)
-    setShowCreateDialog(false)
-  }
+    setInstances((prev) => [instance, ...prev]);
+    setTotal((prev) => prev + 1);
+    setShowCreateDialog(false);
+  };
 
   const handleExport = async (instance: Instance): Promise<void> => {
     try {
-      setExportingId(instance.id)
-      setError('')
-      await exportApi.downloadInstance(instance.id, instance.name ?? instance.object_id)
+      setExportingId(instance.id);
+      setError("");
+      await exportApi.downloadInstance(
+        instance.id,
+        instance.name ?? instance.object_id,
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to export instance')
+      setError(
+        err instanceof Error ? err.message : "Failed to export instance",
+      );
     } finally {
-      setExportingId(null)
+      setExportingId(null);
     }
-  }
+  };
 
   const handleCloneComplete = (instance: Instance): void => {
-    setInstances((prev) => [instance, ...prev])
-    setTotal((prev) => prev + 1)
-    setCloneInstance(null)
-  }
+    setInstances((prev) => [instance, ...prev]);
+    setTotal((prev) => prev + 1);
+    setCloneInstance(null);
+  };
 
   const handleRenameComplete = (updated: Instance): void => {
     setInstances((prev) =>
-      prev.map((inst) => (inst.id === updated.id ? updated : inst))
-    )
-    setRenameInstance(null)
-  }
+      prev.map((inst) => (inst.id === updated.id ? updated : inst)),
+    );
+    setRenameInstance(null);
+  };
 
   const handleTagsComplete = (updated: Instance): void => {
     setInstances((prev) =>
-      prev.map((inst) => (inst.id === updated.id ? updated : inst))
-    )
-    setEditTagsInstance(null)
-  }
+      prev.map((inst) => (inst.id === updated.id ? updated : inst)),
+    );
+    setEditTagsInstance(null);
+  };
 
   const handleMigrateComplete = (): void => {
     // Refresh instances list after migration
-    void loadInstances()
-    setMigrateInstance(null)
-  }
+    void loadInstances();
+    setMigrateInstance(null);
+  };
 
-  const handleColorChange = async (instanceId: string, color: InstanceColor): Promise<void> => {
+  const handleColorChange = async (
+    instanceId: string,
+    color: InstanceColor,
+  ): Promise<void> => {
     try {
-      const updated = await instanceApi.updateColor(instanceId, color)
+      const updated = await instanceApi.updateColor(instanceId, color);
       setInstances((prev) =>
-        prev.map((inst) => (inst.id === instanceId ? updated : inst))
-      )
+        prev.map((inst) => (inst.id === instanceId ? updated : inst)),
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update color')
+      setError(err instanceof Error ? err.message : "Failed to update color");
     }
-  }
+  };
 
   const handleSelectionChange = (instance: Instance): void => {
-    selection.toggle(instance.id)
-  }
+    selection.toggle(instance.id);
+  };
 
   const handleSelectAll = (): void => {
-    selection.selectAll(filteredInstances)
-  }
+    selection.selectAll(filteredInstances);
+  };
 
   const handleBatchDeleteComplete = (): void => {
     // Remove deleted instances from state
-    const deletedIds = selection.selectedIds
-    setInstances((prev) => prev.filter((i) => !deletedIds.has(i.id)))
-    setTotal((prev) => prev - deletedIds.size)
-    selection.clear()
-    setShowBatchDeleteDialog(false)
-  }
+    const deletedIds = selection.selectedIds;
+    setInstances((prev) => prev.filter((i) => !deletedIds.has(i.id)));
+    setTotal((prev) => prev - deletedIds.size);
+    selection.clear();
+    setShowBatchDeleteDialog(false);
+  };
 
   const handleBatchBackupComplete = (): void => {
-    selection.clear()
-    setShowBatchBackupDialog(false)
-  }
+    selection.clear();
+    setShowBatchBackupDialog(false);
+  };
 
   const handleBatchDownloadComplete = (): void => {
-    selection.clear()
-    setShowBatchDownloadDialog(false)
-  }
+    selection.clear();
+    setShowBatchDownloadDialog(false);
+  };
 
   useEffect(() => {
-    void loadInstances()
-  }, [loadInstances])
+    void loadInstances();
+  }, [loadInstances]);
 
   const formatDate = (dateString: string | null): string => {
-    if (!dateString) return 'Never'
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+    if (!dateString) return "Never";
+    return new Date(dateString).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const formatSize = (bytes: number | null): string => {
-    if (bytes === null) return 'Unknown'
-    if (bytes < 1024) return `${String(bytes)} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
+    if (bytes === null) return "Unknown";
+    if (bytes < 1024) return `${String(bytes)} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
-  const selectedInstances = selection.getSelectedItems(filteredInstances)
+  const selectedInstances = selection.getSelectedItems(filteredInstances);
 
   return (
     <div>
@@ -244,7 +281,7 @@ export function InstanceList({
         <div>
           <h3 className="text-xl font-semibold">Instances</h3>
           <p className="text-sm text-muted-foreground">
-            {total} tracked {total === 1 ? 'instance' : 'instances'}
+            {total} tracked {total === 1 ? "instance" : "instances"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -263,7 +300,9 @@ export function InstanceList({
             onClick={() => void loadInstances()}
             disabled={loading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button size="sm" onClick={() => setShowCreateDialog(true)}>
@@ -327,7 +366,9 @@ export function InstanceList({
       {instances.length > 0 && (
         <div className="flex items-center gap-2 mb-4">
           <div className="relative flex-1">
-            <label htmlFor="instance-filter" className="sr-only">Filter instances</label>
+            <label htmlFor="instance-filter" className="sr-only">
+              Filter instances
+            </label>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="instance-filter"
@@ -341,7 +382,7 @@ export function InstanceList({
                 variant="ghost"
                 size="sm"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                onClick={() => setSearchTerm('')}
+                onClick={() => setSearchTerm("")}
                 aria-label="Clear search"
               >
                 <X className="h-4 w-4" />
@@ -352,11 +393,19 @@ export function InstanceList({
             variant="outline"
             size="sm"
             onClick={toggleViewMode}
-            aria-label={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
-            title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+            aria-label={
+              viewMode === "grid"
+                ? "Switch to list view"
+                : "Switch to grid view"
+            }
+            title={
+              viewMode === "grid"
+                ? "Switch to list view"
+                : "Switch to grid view"
+            }
             className="flex items-center gap-2"
           >
-            {viewMode === 'grid' ? (
+            {viewMode === "grid" ? (
               <>
                 <LayoutList className="h-4 w-4" />
                 <span className="hidden sm:inline">List</span>
@@ -379,9 +428,9 @@ export function InstanceList({
             checked={selection.isAllSelected(filteredInstances)}
             onCheckedChange={(checked) => {
               if (checked === true) {
-                selection.selectAll(filteredInstances)
+                selection.selectAll(filteredInstances);
               } else {
-                selection.deselectAll()
+                selection.deselectAll();
               }
             }}
             aria-label="Select all instances"
@@ -435,23 +484,30 @@ export function InstanceList({
       )}
 
       {/* No matches state */}
-      {!loading && instances.length > 0 && filteredInstances.length === 0 && searchTerm && (
-        <div className="text-center py-8 border rounded-lg">
-          <Search className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-          <h4 className="font-semibold mb-1">No matches</h4>
-          <p className="text-sm text-muted-foreground mb-4">
-            No instances match "{searchTerm}"
-          </p>
-          <Button variant="outline" size="sm" onClick={() => setSearchTerm('')}>
-            Clear filter
-          </Button>
-        </div>
-      )}
+      {!loading &&
+        instances.length > 0 &&
+        filteredInstances.length === 0 &&
+        searchTerm && (
+          <div className="text-center py-8 border rounded-lg">
+            <Search className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+            <h4 className="font-semibold mb-1">No matches</h4>
+            <p className="text-sm text-muted-foreground mb-4">
+              No instances match "{searchTerm}"
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSearchTerm("")}
+            >
+              Clear filter
+            </Button>
+          </div>
+        )}
 
       {/* Instance List or Grid */}
       {!loading && filteredInstances.length > 0 && (
         <>
-          {viewMode === 'list' ? (
+          {viewMode === "list" ? (
             <InstanceListView
               instances={filteredInstances}
               selectedIds={selection.selectedIds}
@@ -470,12 +526,15 @@ export function InstanceList({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredInstances.map((instance) => {
-                const colorConfig = getColorConfig(instance.color)
+                const colorConfig = getColorConfig(instance.color);
                 return (
                   <Card
                     key={instance.id}
-                    className={`hover:shadow-md transition-shadow relative overflow-hidden ${selection.isSelected(instance.id) ? 'ring-2 ring-primary bg-primary/5' : ''
-                      }`}
+                    className={`hover:shadow-md transition-shadow relative overflow-hidden ${
+                      selection.isSelected(instance.id)
+                        ? "ring-2 ring-primary bg-primary/5"
+                        : ""
+                    }`}
                   >
                     {/* Color indicator bar */}
                     {colorConfig && (
@@ -484,17 +543,19 @@ export function InstanceList({
                         aria-hidden="true"
                       />
                     )}
-                    <CardHeader className={`pb-2 ${colorConfig ? 'pl-5' : ''}`}>
+                    <CardHeader className={`pb-2 ${colorConfig ? "pl-5" : ""}`}>
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                           <Checkbox
                             checked={selection.isSelected(instance.id)}
-                            onCheckedChange={() => handleSelectionChange(instance)}
+                            onCheckedChange={() =>
+                              handleSelectionChange(instance)
+                            }
                             aria-label={`Select ${instance.name ?? instance.object_id}`}
                           />
                           <div>
                             <CardTitle className="text-base">
-                              {instance.name ?? 'Unnamed Instance'}
+                              {instance.name ?? "Unnamed Instance"}
                             </CardTitle>
                             <CardDescription className="font-mono text-xs truncate max-w-[200px]">
                               {instance.object_id}
@@ -504,7 +565,9 @@ export function InstanceList({
                         <div className="flex items-center gap-1">
                           <InstanceColorPicker
                             value={instance.color}
-                            onChange={(color) => handleColorChange(instance.id, color)}
+                            onChange={(color) =>
+                              handleColorChange(instance.id, color)
+                            }
                           />
                           {instance.has_alarm === 1 && (
                             <span title="Has alarm">
@@ -514,43 +577,53 @@ export function InstanceList({
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className={colorConfig ? 'pl-5' : ''}>
+                    <CardContent className={colorConfig ? "pl-5" : ""}>
                       <div className="flex items-center gap-4 text-sm mb-3">
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Clock className="h-3.5 w-3.5" />
                           <span>{formatDate(instance.last_accessed)}</span>
                         </div>
-                        {instance.storage_size_bytes !== null && ((): React.ReactElement => {
-                          const storageStatus = getStorageQuotaStatus(instance.storage_size_bytes)
-                          const isHighStorage = storageStatus.level !== 'normal'
-                          const isCritical = storageStatus.level === 'critical'
+                        {instance.storage_size_bytes !== null &&
+                          ((): React.ReactElement => {
+                            const storageStatus = getStorageQuotaStatus(
+                              instance.storage_size_bytes,
+                            );
+                            const isHighStorage =
+                              storageStatus.level !== "normal";
+                            const isCritical =
+                              storageStatus.level === "critical";
 
-                          return (
-                            <div className={`flex items-center gap-1 ${isCritical
-                              ? 'text-red-500'
-                              : isHighStorage
-                                ? 'text-yellow-500'
-                                : 'text-muted-foreground'
-                              }`}>
-                              {isCritical ? (
-                                <AlertTriangle className="h-3.5 w-3.5" />
-                              ) : isHighStorage ? (
-                                <HardDrive className="h-3.5 w-3.5" />
-                              ) : (
-                                <Database className="h-3.5 w-3.5" />
-                              )}
-                              <span>{formatSize(instance.storage_size_bytes)}</span>
-                              {isHighStorage && (
-                                <span
-                                  className="text-xs font-medium"
-                                  title={`${storageStatus.percentUsed.toFixed(1)}% of 10GB DO limit`}
-                                >
-                                  ({storageStatus.percentUsed.toFixed(0)}%)
+                            return (
+                              <div
+                                className={`flex items-center gap-1 ${
+                                  isCritical
+                                    ? "text-red-500"
+                                    : isHighStorage
+                                      ? "text-yellow-500"
+                                      : "text-muted-foreground"
+                                }`}
+                              >
+                                {isCritical ? (
+                                  <AlertTriangle className="h-3.5 w-3.5" />
+                                ) : isHighStorage ? (
+                                  <HardDrive className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Database className="h-3.5 w-3.5" />
+                                )}
+                                <span>
+                                  {formatSize(instance.storage_size_bytes)}
                                 </span>
-                              )}
-                            </div>
-                          )
-                        })()}
+                                {isHighStorage && (
+                                  <span
+                                    className="text-xs font-medium"
+                                    title={`${storageStatus.percentUsed.toFixed(1)}% of 10GB DO limit`}
+                                  >
+                                    ({storageStatus.percentUsed.toFixed(0)}%)
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -618,7 +691,7 @@ export function InstanceList({
                       </div>
                     </CardContent>
                   </Card>
-                )
+                );
               })}
             </div>
           )}
@@ -711,5 +784,5 @@ export function InstanceList({
         onUnfreezeComplete={() => setUnfreezeInstance(null)}
       />
     </div>
-  )
+  );
 }
