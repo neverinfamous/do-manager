@@ -1,17 +1,12 @@
-import { createContext, useEffect, useState, type ReactNode } from "react";
+/**
+ * ThemeProvider component
+ *
+ * This file only exports the ThemeProvider component.
+ * Types and context are in theme-context.ts, hook is in useTheme.ts.
+ */
 
-type Theme = "light" | "dark" | "system";
-
-interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  resolvedTheme: "light" | "dark";
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const ThemeContext = createContext<ThemeContextType | undefined>(
-  undefined,
-);
+import { useEffect, useState, type ReactNode } from "react";
+import { ThemeContext, type Theme } from "./theme-context";
 
 interface ThemeProviderProps {
   children: ReactNode;

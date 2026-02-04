@@ -1,5 +1,6 @@
 import { exportApi, type ExportResponse } from "./exportApi";
 import type { Backup } from "./backupApi";
+import { logger } from "../lib/logger";
 import {
   downloadZip,
   generateTimestampedFilename,
@@ -67,8 +68,7 @@ async function logBatchExportInstances(
       body: JSON.stringify({ instanceIds, namespaceId, namespaceName }),
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("Failed to log batch export job:", err);
+    logger.error("Failed to log batch export job", err);
   }
 }
 
@@ -83,8 +83,7 @@ async function logBatchExportNamespaces(namespaceIds: string[]): Promise<void> {
       body: JSON.stringify({ namespaceIds }),
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("Failed to log batch export job:", err);
+    logger.error("Failed to log batch export job", err);
   }
 }
 
@@ -107,8 +106,7 @@ export async function logBatchDeleteKeys(params: {
       body: JSON.stringify(params),
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("Failed to log batch delete keys job:", err);
+    logger.error("Failed to log batch delete keys job", err);
   }
 }
 
@@ -130,8 +128,7 @@ export async function logBatchExportKeys(params: {
       body: JSON.stringify(params),
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("Failed to log batch export keys job:", err);
+    logger.error("Failed to log batch export keys job", err);
   }
 }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { logger } from "../../lib/logger";
 import {
   Search,
   Key,
@@ -90,8 +91,7 @@ export function GlobalSearch({
           setNamespaces(data.filter((ns) => ns.admin_hook_enabled === 1));
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error("Failed to load namespaces:", err);
+        logger.error("Failed to load namespaces", err);
       } finally {
         setLoadingNamespaces(false);
       }

@@ -3,6 +3,8 @@
  * Handles 429 (Too Many Requests), 503 (Service Unavailable), 504 (Gateway Timeout)
  */
 
+import { logger } from "./logger";
+
 /** Status codes that trigger retry */
 const RETRYABLE_STATUS_CODES = [429, 503, 504];
 
@@ -85,9 +87,7 @@ export async function fetchWithRetry(
       // Don't retry after last attempt
       if (attempt < maxRetries) {
         const delay = calculateBackoff(attempt, initialDelayMs, maxDelayMs);
-        // Log retry attempt (will be visible in browser console)
-        // eslint-disable-next-line no-console
-        console.warn(
+        logger.warn(
           `[RETRY] ${response.status} response, attempt ${String(attempt + 1)}/${String(maxRetries)}, ` +
             `waiting ${String(delay)}ms before retry`,
         );
@@ -99,8 +99,7 @@ export async function fetchWithRetry(
       // Don't retry network errors after last attempt
       if (attempt < maxRetries) {
         const delay = calculateBackoff(attempt, initialDelayMs, maxDelayMs);
-        // eslint-disable-next-line no-console
-        console.warn(
+        logger.warn(
           `[RETRY] Network error, attempt ${String(attempt + 1)}/${String(maxRetries)}, ` +
             `waiting ${String(delay)}ms before retry: ${lastError.message}`,
         );
@@ -111,15 +110,13 @@ export async function fetchWithRetry(
 
   // Return last response if we have one
   if (lastResponse) {
-    // eslint-disable-next-line no-console
-    console.error(
+    logger.error(
       `[RETRY_EXHAUSTED] Failed after ${String(maxRetries)} retries, returning last response`,
     );
     return lastResponse;
   }
 
   // Otherwise throw last error
-  // eslint-disable-next-line no-console
-  console.error(`[RETRY_EXHAUSTED] Failed after ${String(maxRetries)} retries`);
+  logger.error(`[RETRY_EXHAUSTED] Failed after ${String(maxRetries)} retries`);
   throw lastError ?? new Error("Fetch failed after retries");
 }

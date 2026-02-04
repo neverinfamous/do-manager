@@ -4,7 +4,7 @@
  * Simple dialog to check frozen status and unfreeze an instance.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Loader2, Snowflake, AlertTriangle } from "lucide-react";
 import { Button } from "../ui/button";
 import {
@@ -37,14 +37,7 @@ export function UnfreezeInstanceDialog({
   const [unfreezing, setUnfreezing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (open && instance) {
-      void checkFreezeStatus();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, instance]);
-
-  const checkFreezeStatus = async (): Promise<void> => {
+  const checkFreezeStatus = useCallback(async (): Promise<void> => {
     if (!instance) return;
     setLoading(true);
     setError(null);
@@ -59,7 +52,13 @@ export function UnfreezeInstanceDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }, [instance]);
+
+  useEffect(() => {
+    if (open && instance) {
+      void checkFreezeStatus();
+    }
+  }, [open, instance, checkFreezeStatus]);
 
   const handleUnfreeze = async (): Promise<void> => {
     if (!instance) return;

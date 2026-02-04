@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, lazy, Suspense } from "react";
+import { logger } from "./lib/logger";
 import {
   Box,
   History,
@@ -188,8 +189,7 @@ export default function App(): React.ReactElement {
           ...(key !== undefined && { initialEditKey: key }),
         });
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error("Failed to navigate to instance:", err);
+        logger.error("Failed to navigate to instance", err);
         // Could show a toast/error here, but for now just log it
       }
     },
