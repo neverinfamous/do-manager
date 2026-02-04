@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { logger } from "../../lib/logger";
 import {
   Trash2,
   AlertTriangle,
@@ -78,8 +79,7 @@ export function BatchDeleteDialog({
 
       setResults(deleteResults);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("Batch delete error:", err);
+      logger.error("Batch delete error", err);
     } finally {
       setIsDeleting(false);
     }

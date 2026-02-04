@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { logger } from "../../lib/logger";
 import {
   Box,
   Database,
@@ -158,8 +159,7 @@ export function InstanceListView({
         instance.name ?? instance.object_id,
       );
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to export instance:", err);
+      logger.error("Failed to export instance", err);
     } finally {
       setExportingId(null);
     }

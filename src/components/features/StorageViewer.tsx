@@ -6,6 +6,7 @@ import {
   lazy,
   Suspense,
 } from "react";
+import { logger } from "../../lib/logger";
 import {
   RefreshCw,
   Loader2,
@@ -122,8 +123,7 @@ export function StorageViewer({
       setTimeout(() => setCopiedKey(null), 2000);
     } catch {
       // Clipboard API not available, silently fail
-      // eslint-disable-next-line no-console
-      console.warn("Clipboard API not available");
+      logger.warn("Clipboard API not available");
     }
   };
 

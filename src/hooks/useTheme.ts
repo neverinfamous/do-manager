@@ -1,15 +1,11 @@
+/**
+ * useTheme hook for accessing theme context
+ */
+
 import { useContext } from "react";
-import { ThemeContext } from "../contexts/ThemeContext";
+import { ThemeContext, type ThemeContextType } from "../contexts/theme-context";
 
-type Theme = "light" | "dark" | "system";
-
-interface UseThemeReturn {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  resolvedTheme: "light" | "dark";
-}
-
-export function useTheme(): UseThemeReturn {
+export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
   if (context === undefined) {
     throw new Error("useTheme must be used within a ThemeProvider");

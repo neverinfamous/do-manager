@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { logger } from "../../lib/logger";
 import {
   Play,
   Loader2,
@@ -116,8 +117,7 @@ export function SqlConsole({
       const queries = await queriesApi.list(namespaceId);
       setSavedQueries(queries);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to load saved queries:", err);
+      logger.error("Failed to load saved queries", err);
     } finally {
       setLoadingSaved(false);
     }

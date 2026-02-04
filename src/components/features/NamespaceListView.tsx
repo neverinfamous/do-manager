@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { logger } from "../../lib/logger";
 import {
   Box,
   Copy,
@@ -132,8 +133,7 @@ export function NamespaceListView({
       setDownloadingId(namespace.id);
       await exportApi.downloadNamespace(namespace.id, namespace.name);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to download namespace config:", err);
+      logger.error("Failed to download namespace config", err);
     } finally {
       setDownloadingId(null);
     }

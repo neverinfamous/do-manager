@@ -120,6 +120,13 @@ export default tseslint.config(
       "no-console": "warn",
     },
   },
+  // Centralized logger is the one place where console usage is intentional
+  {
+    files: ["src/lib/logger.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
   // Worker configuration - allows console.log
   {
     extends: [
