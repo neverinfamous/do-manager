@@ -1,6 +1,6 @@
 # Cloudflare Durable Object Manager - Docker
 
-**Last Updated February 4, 2026**
+**Last Updated February 10, 2026**
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
