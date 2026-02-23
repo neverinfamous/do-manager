@@ -48,7 +48,7 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
 
   // Authentication
   const isLocalhost = isLocalDevelopment(request);
-  let userEmail: string | null = null;
+  let userEmail: string | null;
 
   if (isLocalhost) {
     logInfo("Localhost detected, skipping JWT validation", {
