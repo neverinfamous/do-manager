@@ -1,6 +1,6 @@
 # Cloudflare Durable Object Manager - Docker
 
-**Last Updated February 10, 2026**
+**Last Updated February 23, 2026**
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
@@ -17,7 +17,7 @@ Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage 
 
 ## Tech Stack
 
-**Frontend**: React 19.2.4 | Vite 7.3.1 | TypeScript 5.9.3 | Tailwind CSS 4.1.17 | shadcn/ui
+**Frontend**: React | Vite | TypeScript | Tailwind CSS | shadcn/ui
 
 **Backend**: Cloudflare Workers + D1 + R2 + Zero Trust
 
