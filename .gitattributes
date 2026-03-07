@@ -1,2 +1,4 @@
 # Auto detect text files and ensure LF line endings
 * text=auto eol=lf
+
+.github/workflows/*.lock.yml linguist-generated=true merge=ours

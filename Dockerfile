@@ -24,7 +24,7 @@ RUN npm install -g npm@latest
 # npm bundles vulnerable versions of glob, tar, and minimatch
 RUN cd /tmp && \
     npm pack glob@11.1.0 && \
-    npm pack tar@7.5.8 && \
+    npm pack tar@7.5.10 && \
     npm pack minimatch@10.2.4 && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/glob && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/tar && \
@@ -35,7 +35,7 @@ RUN cd /tmp && \
     (mkdir -p /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules && \
      cp -r package /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules/glob || true) && \
     rm -rf package && \
-    tar -xzf tar-7.5.8.tgz && \
+    tar -xzf tar-7.5.10.tgz && \
     mv package /usr/local/lib/node_modules/npm/node_modules/tar && \
     tar -xzf minimatch-10.2.4.tgz && \
     mv package /usr/local/lib/node_modules/npm/node_modules/minimatch && \
@@ -78,7 +78,7 @@ RUN npm install -g npm@latest
 # npm bundles vulnerable versions of glob, tar, and minimatch
 RUN cd /tmp && \
     npm pack glob@11.1.0 && \
-    npm pack tar@7.5.8 && \
+    npm pack tar@7.5.10 && \
     npm pack minimatch@10.2.4 && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/glob && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/tar && \
@@ -89,7 +89,7 @@ RUN cd /tmp && \
     (mkdir -p /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules && \
      cp -r package /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules/glob || true) && \
     rm -rf package && \
-    tar -xzf tar-7.5.8.tgz && \
+    tar -xzf tar-7.5.10.tgz && \
     mv package /usr/local/lib/node_modules/npm/node_modules/tar && \
     tar -xzf minimatch-10.2.4.tgz && \
     mv package /usr/local/lib/node_modules/npm/node_modules/minimatch && \
@@ -97,8 +97,8 @@ RUN cd /tmp && \
 
 # Install runtime dependencies only
 # Security Notes:
-# - Application dependencies: glob@11.1.0, tar@7.5.8, minimatch@10.2.4 (patched via package.json overrides)
-# - npm CLI dependencies: glob@11.1.0, tar@7.5.8, minimatch@10.2.4 (manually patched via P111)
+# - Application dependencies: glob@11.1.0, tar@7.5.10, minimatch@10.2.4 (patched via package.json overrides)
+# - npm CLI dependencies: glob@11.1.0, tar@7.5.10, minimatch@10.2.4 (manually patched via P111)
 # - minimatch ReDoS: GHSA-7r86-cg39-jmmj, GHSA-23c5-xmqv-rm74 (fixed >= 10.2.3)
 # - rollup path traversal: GHSA-mw96-cpmx-2vgc (fixed >= 4.59.0 via npm audit fix)
 # - busybox CVE-2025-46394 & CVE-2024-58251 fixed via apk upgrade
