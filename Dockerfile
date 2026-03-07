@@ -97,8 +97,8 @@ RUN cd /tmp && \
 
 # Install runtime dependencies only
 # Security Notes:
-# - Application dependencies: see package-lock.json (notably minimatch@10.2.4 patched via package.json overrides)
-# - npm CLI bundled dependencies: glob@13.0.6, tar@7.5.10, minimatch@10.2.4 (manually patched via P111)
+# - Application runtime dependencies: see package-lock.json (devDependencies, including any minimatch usage, are not installed due to `npm ci --omit=dev`)
+# - npm CLI bundled dependencies: glob@13.0.6, tar@7.5.10, minimatch@10.2.4 (npm's own deps, manually patched via P111)
 # - minimatch ReDoS: GHSA-7r86-cg39-jmmj, GHSA-23c5-xmqv-rm74 (fixed >= 10.2.3)
 # - rollup path traversal: GHSA-mw96-cpmx-2vgc (fixed >= 4.59.0 via npm audit fix)
 # - busybox CVE-2025-46394 & CVE-2024-58251 fixed via apk upgrade
