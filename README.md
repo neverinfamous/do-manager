@@ -12,7 +12,7 @@
 
 Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage Durable Object namespaces, instances, and storage. Supports automatic namespace discovery, instance inspection, key/value editing, Rich SQL Console,SQL for SQLite-backed DOs, batch operations, alarms, R2 backups, analytics, global search, and job history, with optional GitHub SSO.
 
-**[Live Demo](https://do.adamic.tech/)** • **[Wiki](https://github.com/neverinfamous/do-manager/wiki)** • **[Changelog](C:\Users\chris\Desktop\do-manager\CHANGELOG.md)** • **[Release Article](https://adamic.tech/articles/do-manager)**
+**[Live Demo](https://do.adamic.tech/)** • **[Wiki](https://github.com/neverinfamous/do-manager/wiki)** • **[Changelog](https://github.com/neverinfamous/do-manager/blob/main/CHANGELOG.md)** • **[Release Article](https://adamic.tech/articles/do-manager)**
 
 ## Tech Stack
 
