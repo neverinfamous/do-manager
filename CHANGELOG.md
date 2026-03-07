@@ -6,6 +6,10 @@ All notable changes to DO Manager.
 
 ## [Unreleased]
 
+---
+
+## [1.3.3] - 2026-03-07
+
 ### Changed
 
 - **Dependency Updates**
