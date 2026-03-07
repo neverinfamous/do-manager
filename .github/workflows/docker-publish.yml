@@ -2,7 +2,6 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
   pull_request:
     branches: [main]
@@ -266,7 +265,7 @@ jobs:
       deployments: write
 
     environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'production' || '' }}
+      name: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || '' }}
       url: https://hub.docker.com/r/writenotenow/do-manager
 
     steps:
@@ -313,8 +312,8 @@ jobs:
             latest=auto
           tags: |
             type=semver,pattern=v{{version}}
-            type=raw,value=v${{ steps.version.outputs.version }},enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=v${{ steps.version.outputs.version }},enable=${{ github.event_name != 'pull_request' }}
+            type=raw,value=latest,enable=${{ github.event_name != 'pull_request' }}
             type=sha,prefix=sha-,format=short
 
       - name: Create and push manifest
@@ -329,7 +328,7 @@ jobs:
 
       # Update Docker Hub description
       - name: Update Docker Hub Description
-        if: github.ref == 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: peter-evans/dockerhub-description@v5
         continue-on-error: true
         timeout-minutes: 5
@@ -341,7 +340,7 @@ jobs:
           short-description: "Cloudflare DO Manager – Instance Tools, SQL Access, Batch Ops, Global Search, Backups, GitHub SSO."
 
       - name: Deployment Summary
-        if: github.ref == 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           echo "✅ Successfully published Docker images to production"
           echo "🐳 Registry: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
