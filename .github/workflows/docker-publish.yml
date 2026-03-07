@@ -130,7 +130,7 @@ jobs:
 
       - name: Build and push platform image
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
@@ -192,7 +192,7 @@ jobs:
           echo "✅ Security patches verified in package-lock.json"
 
       - name: Build image for scanning
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
