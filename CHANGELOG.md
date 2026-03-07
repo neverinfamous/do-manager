@@ -6,6 +6,10 @@ All notable changes to DO Manager.
 
 ## [Unreleased]
 
+### Documentation
+
+- **Changelog Migrated:** Moved `Changelog.md` from the wiki repository into the main project root as `CHANGELOG.md`.
+
 ---
 
 ## [1.3.2] - 2026-03-06
