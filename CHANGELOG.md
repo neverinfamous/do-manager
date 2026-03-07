@@ -6,6 +6,11 @@ All notable changes to DO Manager.
 
 ## [Unreleased]
 
+### Changed
+
+- **Dependency Updates**
+  - Updated `glob` override and Dockerfile patch from `11.1.0` to `13.0.6`
+
 ### Documentation
 
 - **Changelog Migrated:** Moved `Changelog.md` from the wiki repository into the main project root as `CHANGELOG.md`.
