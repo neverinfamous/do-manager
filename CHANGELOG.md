@@ -168,7 +168,7 @@ All notable changes to DO Manager.
 
 ### Documentation
 
-- **Added** [Migration Guide](Migration-Guide) to wiki - Comprehensive documentation for the automated in-app migration system covering all 6 schema migrations
+- **Added** [Migration Guide](https://github.com/neverinfamous/do-manager/wiki/Migration-Guide) to wiki - Comprehensive documentation for the automated in-app migration system covering all 6 schema migrations
 
 ### Security
 
