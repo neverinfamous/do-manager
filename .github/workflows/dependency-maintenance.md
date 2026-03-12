@@ -46,7 +46,7 @@ You are maintaining the **do-manager** project — a Cloudflare Workers applicat
 
 - **Only act on actual command output.** Never guess package versions.
 - **If nothing is outdated and no Dockerfile patches are needed, exit cleanly.** Do not create a PR with no changes.
-- **Dockerfile `npm pack` patches must stay within the same major version line** as npm's bundled dependencies (e.g., glob@11.x, tar@7.x, minimatch@10.x).
+- **Dockerfile `npm pack` patches must stay within the same major version line** as npm's bundled dependencies (e.g., glob@13.x, tar@7.x, minimatch@10.x).
 - **Keep `package.json` overrides in sync with Dockerfile `npm pack` versions** — use **exact version pins** (e.g., `"10.2.4"` not `"^10.2.4"`) to prevent lockfile drift.
 
 ## Step 1: Check for Outdated Packages
