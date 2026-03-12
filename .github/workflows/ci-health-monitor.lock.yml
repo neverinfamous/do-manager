@@ -23,7 +23,7 @@
 #
 # Weekly audit of CI workflows for deprecations, outdated actions, and health issues
 #
-# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"ab1c7dcf8a03f5754d58c68791a24a2c0137f38100dde885f59fecff38b31960","compiler_version":"v0.57.2","strict":true}
+# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"51fe070f459d34dc16d4e1c07931fdd5c610cdb432b176bb5d62350feeb51fe0","compiler_version":"v0.57.2","strict":true}
 
 name: "CI Health Monitor"
 "on":

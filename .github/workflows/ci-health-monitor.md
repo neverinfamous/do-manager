@@ -5,7 +5,7 @@ labels: [maintenance, ci-cd]
 
 on:
   schedule:
-    - cron: "0 14 * * 3" # Every Wednesday at 9am EST (14:00 UTC)
+    - cron: "0 14 * * 3" # Every Wednesday at 14:00 UTC
   workflow_dispatch:
 
 engine:
@@ -59,6 +59,8 @@ Use the GitHub MCP server to check recent workflow runs (last 7 days):
 3. Any runs that are abnormally slow (>2x their usual duration)?
 
 ## Step 3: Report
+
+Before creating a new issue, check if an existing open issue with the `[ci-health]` prefix already exists. If so, add a comment to that issue instead of creating a duplicate. Only create a new issue if none exists.
 
 ### If issues are found:
 

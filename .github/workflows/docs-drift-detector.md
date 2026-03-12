@@ -5,7 +5,7 @@ labels: [documentation, automation]
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, ready_for_review]
     paths: ['src/**', 'worker/**', 'package.json', 'Dockerfile', 'vite.config.ts', 'tsconfig*.json']
 
 engine:
@@ -21,6 +21,7 @@ permissions: read-all
 safe-outputs:
   add-comment:
     max: 3
+    discussions: false
   noop:
     max: 1
 
@@ -79,7 +80,7 @@ Compare `README.md` and `DOCKER_README.md` for sections that should match:
 
 ### If drift is found:
 
-Create a pull request review comment with your findings organized as:
+Use the `add-comment` tool to post a PR conversation comment with your findings organized as:
 
 ```
 ## 📋 Documentation Drift Report

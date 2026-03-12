@@ -23,7 +23,7 @@
 #
 # Audit README and DOCKER_README for consistency and accuracy on every code PR
 #
-# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"b2fbe0e4d3b6263c3003a01815e678fd8b533af0373735e58c986e4913794e37","compiler_version":"v0.57.2","strict":true}
+# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"b4a3c31b225f5a7baa512085d7883120b79a01fc48b9c51c679b1b5951d7e938","compiler_version":"v0.57.2","strict":true}
 
 name: "Documentation Drift Detector"
 "on":
@@ -37,7 +37,7 @@ name: "Documentation Drift Detector"
     - tsconfig*.json
     types:
     - opened
-    - synchronize
+    - ready_for_review
 
 permissions: {}
 
@@ -958,7 +958,6 @@ jobs:
     runs-on: ubuntu-slim
     permissions:
       contents: read
-      discussions: write
       issues: write
       pull-requests: write
     concurrency:
@@ -1083,7 +1082,6 @@ jobs:
     runs-on: ubuntu-slim
     permissions:
       contents: read
-      discussions: write
       issues: write
       pull-requests: write
     timeout-minutes: 15
