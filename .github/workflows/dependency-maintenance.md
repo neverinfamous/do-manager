@@ -1,5 +1,5 @@
 ---
-description: "Automated batched dependency maintenance — npm, Docker transitive deps, and validation"
+description: "Automated dependency maintenance, version bump, and deploy via PR with auto-merge"
 private: true
 labels: [dependencies, automation, maintenance]
 
@@ -38,16 +38,16 @@ timeout-minutes: 30
 concurrency: dependency-maintenance
 ---
 
-# Dependency Maintenance Agent
+# Dependency Maintenance & Deploy Agent
 
-You are maintaining the **do-manager** project — a Cloudflare Workers application with a React frontend, built with Node.js 24. Your job is to batch-update all dependencies across npm, Docker, and system layers, run validation, and create a single PR with all changes.
+You are maintaining the **do-manager** project — a Cloudflare Workers application with a React frontend, built with Node.js 24. Your job is to batch-update all dependencies, bump the version, run validation, and create a PR with auto-merge enabled. A separate post-merge workflow handles tagging and release creation.
 
 ## Important Rules
 
 - **Only act on actual command output.** Never guess package versions.
 - **If nothing is outdated and no Dockerfile patches are needed, exit cleanly.** Do not create a PR with no changes.
-- **Dockerfile `npm pack` patches must stay within the same major version line** as npm's bundled dependencies (e.g., glob@11.x, tar@7.x, minimatch@10.x).
-- **Keep `package.json` overrides in sync with Dockerfile `npm pack` versions** (the P111 lifecycle sync pattern).
+- **Dockerfile `npm pack` patches must stay within the same major version line** as npm's bundled dependencies (e.g., glob@13.x, tar@7.x, minimatch@10.x).
+- **Keep `package.json` overrides in sync with Dockerfile `npm pack` versions** — use **exact version pins** (e.g., `"10.2.4"` not `"^10.2.4"`) to prevent lockfile drift.
 
 ## Step 1: Check for Outdated Packages
 
@@ -57,23 +57,40 @@ Run `npm outdated --json` to see what's available. If nothing is outdated, note 
 
 1. Run `npm update` to update packages within their semver ranges.
 2. For packages where `wanted` equals `current` but `latest` is newer (beyond the caret range), install them explicitly: `npm install <package>@latest` for each.
-3. Run `npm audit`. If vulnerabilities are found, run `npm audit fix`. If unfixable, check if `overrides` in `package.json` can pin transitive deps to patched versions.
+3. **`0.x` caret-range edge case**: `npm update` respects semver but **will not cross minor boundaries for `0.x` packages** (e.g., `^0.575.0` won't resolve `0.577.0` because caret on `0.x` only allows patch bumps). Update the version range in `package.json` and run `npm install`.
+4. **Skip intentionally pinned packages** where "Latest" on npm is actually a downgrade or incompatible. Common cases:
+   - Pre-release/canary pins (e.g., `eslint-plugin-react-hooks` canary for ESLint 10 peer dependency support)
+   - Exact-version pins where `Current` equals `Wanted` but differs from `Latest`
+5. Run `npm audit`. If vulnerabilities are found, run `npm audit fix`. If unfixable via audit, check if `overrides` in `package.json` can pin transitive deps to patched versions.
+
+After excluding intentional pins, `npm outdated` should show only expected pins (or nothing).
 
 ## Step 3: Audit Dockerfile Transitive Dependencies
 
-Parse the project's `Dockerfile` for all `npm pack <package>@<version>` lines. These are manually patched npm-bundled packages. For each package found:
+> **This is the critical step that prevents Docker Scout blocks at deploy time.**
+
+Parse the project's `Dockerfile` for all `npm pack <package>@<version>` lines. These are manually patched npm-bundled packages (the P111 lifecycle pattern). For each package found:
 
 1. Determine the major version line being used (e.g., `tar@7.5.8` → major line 7).
 2. Check the latest version in that major line: `npm view <package>@<major> version` (e.g., `npm view tar@7 version`).
-3. If a newer patch/minor version exists in the same major line, update **both**:
+3. If a newer patch/minor version exists in the same major line, update **all of**:
    - The `npm pack <package>@<new_version>` lines in **both** Dockerfile stages (builder + runtime)
-   - The corresponding `overrides` entry in `package.json`
-   - The security notes comment block in the Dockerfile
+   - The corresponding `overrides` entry in `package.json` (use exact version pins)
+   - The `# Security Notes:` comment block in the Dockerfile
 4. After updating overrides, run `npm install --package-lock-only` to sync the lockfile.
 
-Common packages to check: `glob`, `tar`, `minimatch`.
+**Security Notes block**: These comments must accurately reflect what ships in the runtime image. Distinguish between:
+- **npm CLI bundled dependencies** — packages patched via P111. List exact versions.
+- **Application runtime dependencies** — refer to `package-lock.json` rather than listing inline.
+- **Precautionary overrides** — if an override targets a devDependency-only package, do not list it as a runtime dependency.
 
-## Step 4: Validate
+Common packages to check: `glob`, `tar`, `minimatch`, `brace-expansion`.
+
+## Step 4: Check Alpine System Packages
+
+If the Dockerfile uses `--repository=https://dl-cdn.alpinelinux.org/alpine/edge/main` for specific packages (e.g., `curl`, `libexpat`, `zlib`), verify these are still the latest by checking Alpine edge package versions. No action needed unless a new CVE is published for an already-pinned package.
+
+## Step 5: Validate
 
 Run all validation gates. **All must pass before proceeding:**
 
@@ -85,18 +102,47 @@ npx prettier --write .
 
 If lint or typecheck fails, attempt to fix the issues. If unfixable, report the errors in the PR description and create the PR anyway (as draft) so the maintainer can review.
 
-## Step 5: Update Dates
+## Step 6: npm Audit Report
 
-Update the "Last Updated" date in `README.md` and `DOCKER_README.md` to today's date in the format `Month Day, Year` (e.g., `March 10, 2026`).
+Run `npm audit` one final time and capture the output. Include the result (clean or vulnerability count) in the PR description.
 
-**Do NOT modify `CHANGELOG.md`** — the changelog is maintained in the wiki and will be updated separately.
+## Step 7: Version Bump
 
-## Step 6: Commit and Create PR
+Read the current version from `package.json`. Bump the **patch** version (e.g., `1.2.3` → `1.2.4`). Dependency-only updates are always patch bumps.
+
+Update version references in:
+- `package.json` (`"version"` field)
+- Run `npm install --package-lock-only` to sync `package-lock.json`
+- `README.md` (version badge if present, "Last Updated" date)
+- `DOCKER_README.md` (version badge if present, "Last Updated" date, Available Tags table)
+- `Dockerfile` (`LABEL version=` if present)
+
+**Verify no version references were missed.** Search for the OLD version number across the project (excluding `node_modules`, `CHANGELOG.md`, `releases/`, and `package-lock.json`). If any matches appear, update them.
+
+## Step 8: Update CHANGELOG and Create Release Notes
+
+1. Add dependency updates to `CHANGELOG.md` under `## [Unreleased]`:
+   - Under `### Security` for CVE/advisory fixes
+   - Under `### Changed` → `**Dependency Updates**` for routine version bumps
+   - **Do NOT create duplicate section headers** — check if sections already exist first
+2. Convert `## [Unreleased]` → `## [X.Y.Z] - YYYY-MM-DD` and add a fresh empty `## [Unreleased]` above it.
+3. Update reference link definitions at the bottom of `CHANGELOG.md`.
+4. Create `releases/vX.Y.Z.md` with condensed highlights:
+   - Highlights (top 3-5 bullet points)
+   - Categorized sections (Security, Changed)
+   - Footer with compare link
+
+## Step 9: Commit and Create PR
 
 1. Stage all changes: `git add -A`
-2. Commit with message: `chore: update dependencies and security patches`
+2. Commit with message: `vX.Y.Z - Dependency updates and security patches`
 3. Create the PR via safe-output with a description that includes:
+   - The new version number
    - A **summary table** of all version changes (package | from | to)
    - Which Dockerfile patches were updated (if any)
-   - Whether `npm audit` found and fixed any vulnerabilities
+   - Alpine package status
+   - `npm audit` results
    - Validation results (lint, typecheck, prettier)
+   - CHANGELOG entries added
+
+The PR will be created with auto-merge enabled. Once CI checks pass and Copilot review completes, it will auto-merge. A separate `auto-release.yml` workflow will then create the git tag and GitHub release, which triggers the Docker publish pipeline.
