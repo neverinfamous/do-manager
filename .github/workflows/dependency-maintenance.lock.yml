@@ -21,11 +21,11 @@
 #
 # For more information: https://github.github.com/gh-aw/introduction/overview/
 #
-# Automated batched dependency maintenance — npm, Docker transitive deps, Alpine packages, and validation
+# Automated dependency maintenance, version bump, and deploy via PR with auto-merge
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"fb5ffcd14715a91d1946b8bd9d806e63acbbd568f4ba86227a82f37386471f25","compiler_version":"v0.54.0"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"a5ad3b7cf329b4a719c5644970d67c5de75aa614d2d9e3c9ff404c19d6cfb5c0","compiler_version":"v0.54.0"}
 
-name: "Dependency Maintenance Agent"
+name: "Dependency Maintenance & Deploy Agent"
 "on":
   schedule:
   - cron: "0 14 * * 1"
@@ -35,7 +35,7 @@ permissions: {}
 
 concurrency: dependency-maintenance
 
-run-name: "Dependency Maintenance Agent"
+run-name: "Dependency Maintenance & Deploy Agent"
 
 jobs:
   activation:
@@ -61,7 +61,7 @@ jobs:
           GH_AW_INFO_VERSION: ""
           GH_AW_INFO_AGENT_VERSION: "latest"
           GH_AW_INFO_CLI_VERSION: "v0.54.0"
-          GH_AW_INFO_WORKFLOW_NAME: "Dependency Maintenance Agent"
+          GH_AW_INFO_WORKFLOW_NAME: "Dependency Maintenance & Deploy Agent"
           GH_AW_INFO_EXPERIMENTAL: "false"
           GH_AW_INFO_SUPPORTS_TOOLS_ALLOWLIST: "true"
           GH_AW_INFO_STAGED: "false"
@@ -868,8 +868,8 @@ jobs:
         if: always() && steps.detection_guard.outputs.run_detection == 'true'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          WORKFLOW_NAME: "Dependency Maintenance Agent"
-          WORKFLOW_DESCRIPTION: "Automated batched dependency maintenance — npm, Docker transitive deps, Alpine packages, and validation"
+          WORKFLOW_NAME: "Dependency Maintenance & Deploy Agent"
+          WORKFLOW_DESCRIPTION: "Automated dependency maintenance, version bump, and deploy via PR with auto-merge"
           HAS_PATCH: ${{ steps.collect_output.outputs.has_patch }}
         with:
           script: |
@@ -992,7 +992,7 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
           GH_AW_NOOP_MAX: "1"
-          GH_AW_WORKFLOW_NAME: "Dependency Maintenance Agent"
+          GH_AW_WORKFLOW_NAME: "Dependency Maintenance & Deploy Agent"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1005,7 +1005,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Dependency Maintenance Agent"
+          GH_AW_WORKFLOW_NAME: "Dependency Maintenance & Deploy Agent"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1018,7 +1018,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Dependency Maintenance Agent"
+          GH_AW_WORKFLOW_NAME: "Dependency Maintenance & Deploy Agent"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_AGENT_CONCLUSION: ${{ needs.agent.result }}
           GH_AW_WORKFLOW_ID: "dependency-maintenance"
@@ -1041,7 +1041,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Dependency Maintenance Agent"
+          GH_AW_WORKFLOW_NAME: "Dependency Maintenance & Deploy Agent"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_AGENT_CONCLUSION: ${{ needs.agent.result }}
           GH_AW_NOOP_MESSAGE: ${{ steps.noop.outputs.noop_message }}
@@ -1058,7 +1058,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Dependency Maintenance Agent"
+          GH_AW_WORKFLOW_NAME: "Dependency Maintenance & Deploy Agent"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
@@ -1084,7 +1084,7 @@ jobs:
       GH_AW_ENGINE_ID: "copilot"
       GH_AW_ENGINE_MODEL: "claude-opus-4-20250514"
       GH_AW_WORKFLOW_ID: "dependency-maintenance"
-      GH_AW_WORKFLOW_NAME: "Dependency Maintenance Agent"
+      GH_AW_WORKFLOW_NAME: "Dependency Maintenance & Deploy Agent"
     outputs:
       code_push_failure_count: ${{ steps.process_safe_outputs.outputs.code_push_failure_count }}
       code_push_failure_errors: ${{ steps.process_safe_outputs.outputs.code_push_failure_errors }}

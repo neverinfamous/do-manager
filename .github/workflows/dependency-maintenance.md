@@ -1,5 +1,5 @@
 ---
-description: "Automated batched dependency maintenance — npm, Docker transitive deps, Alpine packages, and validation"
+description: "Automated dependency maintenance, version bump, and deploy via PR with auto-merge"
 private: true
 labels: [dependencies, automation, maintenance]
 
@@ -38,9 +38,9 @@ timeout-minutes: 30
 concurrency: dependency-maintenance
 ---
 
-# Dependency Maintenance Agent
+# Dependency Maintenance & Deploy Agent
 
-You are maintaining the **do-manager** project — a Cloudflare Workers application with a React frontend, built with Node.js 24. Your job is to batch-update all dependencies across npm, Docker, and system layers, run validation, and create a single PR with all changes.
+You are maintaining the **do-manager** project — a Cloudflare Workers application with a React frontend, built with Node.js 24. Your job is to batch-update all dependencies, bump the version, run validation, and create a PR with auto-merge enabled. A separate post-merge workflow handles tagging and release creation.
 
 ## Important Rules
 
@@ -104,24 +104,45 @@ If lint or typecheck fails, attempt to fix the issues. If unfixable, report the 
 
 ## Step 6: npm Audit Report
 
-Run `npm audit` one final time and capture the output. Include the result (clean or vulnerability count) in the PR description. If vulnerabilities remain, document which packages are affected and whether they are fixable.
+Run `npm audit` one final time and capture the output. Include the result (clean or vulnerability count) in the PR description.
 
-## Step 7: Update Documentation
+## Step 7: Version Bump
 
-1. Add dependency updates to the `## [Unreleased]` section of `CHANGELOG.md`:
+Read the current version from `package.json`. Bump the **patch** version (e.g., `1.2.3` → `1.2.4`). Dependency-only updates are always patch bumps.
+
+Update version references in:
+- `package.json` (`"version"` field)
+- Run `npm install --package-lock-only` to sync `package-lock.json`
+- `README.md` (version badge if present, "Last Updated" date)
+- `DOCKER_README.md` (version badge if present, "Last Updated" date, Available Tags table)
+- `Dockerfile` (`LABEL version=` if present)
+
+**Verify no version references were missed.** Search for the OLD version number across the project (excluding `node_modules`, `CHANGELOG.md`, `releases/`, and `package-lock.json`). If any matches appear, update them.
+
+## Step 8: Update CHANGELOG and Create Release Notes
+
+1. Add dependency updates to `CHANGELOG.md` under `## [Unreleased]`:
    - Under `### Security` for CVE/advisory fixes
    - Under `### Changed` → `**Dependency Updates**` for routine version bumps
-   - **Do NOT create duplicate section headers** — check if `### Security` or `### Changed` already exist under `[Unreleased]` first.
-2. Update the "Last Updated" date in `README.md` and `DOCKER_README.md` to today's date in the format `Month Day, Year` (e.g., `March 10, 2026`).
+   - **Do NOT create duplicate section headers** — check if sections already exist first
+2. Convert `## [Unreleased]` → `## [X.Y.Z] - YYYY-MM-DD` and add a fresh empty `## [Unreleased]` above it.
+3. Update reference link definitions at the bottom of `CHANGELOG.md`.
+4. Create `releases/vX.Y.Z.md` with condensed highlights:
+   - Highlights (top 3-5 bullet points)
+   - Categorized sections (Security, Changed)
+   - Footer with compare link
 
-## Step 8: Commit and Create PR
+## Step 9: Commit and Create PR
 
 1. Stage all changes: `git add -A`
-2. Commit with message: `chore: update dependencies and security patches`
+2. Commit with message: `vX.Y.Z - Dependency updates and security patches`
 3. Create the PR via safe-output with a description that includes:
+   - The new version number
    - A **summary table** of all version changes (package | from | to)
    - Which Dockerfile patches were updated (if any)
    - Alpine package status
-   - `npm audit` results (clean or remaining vulnerabilities)
+   - `npm audit` results
    - Validation results (lint, typecheck, prettier)
    - CHANGELOG entries added
+
+The PR will be created with auto-merge enabled. Once CI checks pass and Copilot review completes, it will auto-merge. A separate `auto-release.yml` workflow will then create the git tag and GitHub release, which triggers the Docker publish pipeline.
