@@ -44,3 +44,12 @@ updates:
         patterns:
           - "actions/*"
           - "github/*"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "docker"
