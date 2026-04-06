@@ -21,15 +21,17 @@ RUN apk upgrade --no-cache && \
 RUN npm install -g npm@latest
 
 # Patch npm's own dependencies (P111 - keep versions in sync with package.json overrides)
-# npm bundles vulnerable versions of glob, tar, and minimatch
+# npm bundles vulnerable versions of glob, tar, minimatch, and picomatch
 RUN cd /tmp && \
     npm pack glob@13.0.6 && \
     npm pack tar@7.5.11 && \
     npm pack minimatch@10.2.4 && \
+    npm pack picomatch@4.0.4 && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/glob && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/tar && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/minimatch && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules/glob && \
+    rm -rf /usr/local/lib/node_modules/npm/node_modules/tinyglobby/node_modules/picomatch && \
     tar -xzf glob-13.0.6.tgz && \
     cp -r package /usr/local/lib/node_modules/npm/node_modules/glob && \
     (mkdir -p /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules && \
@@ -39,6 +41,9 @@ RUN cd /tmp && \
     mv package /usr/local/lib/node_modules/npm/node_modules/tar && \
     tar -xzf minimatch-10.2.4.tgz && \
     mv package /usr/local/lib/node_modules/npm/node_modules/minimatch && \
+    tar -xzf picomatch-4.0.4.tgz && \
+    mkdir -p /usr/local/lib/node_modules/npm/node_modules/tinyglobby/node_modules && \
+    mv package /usr/local/lib/node_modules/npm/node_modules/tinyglobby/node_modules/picomatch && \
     rm -rf /tmp/*
 
 # Install build dependencies
@@ -75,15 +80,17 @@ RUN apk upgrade --no-cache && \
 RUN npm install -g npm@latest
 
 # Patch npm's own dependencies (P111 - keep versions in sync with package.json overrides)
-# npm bundles vulnerable versions of glob, tar, and minimatch
+# npm bundles vulnerable versions of glob, tar, minimatch, and picomatch
 RUN cd /tmp && \
     npm pack glob@13.0.6 && \
     npm pack tar@7.5.11 && \
     npm pack minimatch@10.2.4 && \
+    npm pack picomatch@4.0.4 && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/glob && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/tar && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/minimatch && \
     rm -rf /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules/glob && \
+    rm -rf /usr/local/lib/node_modules/npm/node_modules/tinyglobby/node_modules/picomatch && \
     tar -xzf glob-13.0.6.tgz && \
     cp -r package /usr/local/lib/node_modules/npm/node_modules/glob && \
     (mkdir -p /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules && \
@@ -93,6 +100,9 @@ RUN cd /tmp && \
     mv package /usr/local/lib/node_modules/npm/node_modules/tar && \
     tar -xzf minimatch-10.2.4.tgz && \
     mv package /usr/local/lib/node_modules/npm/node_modules/minimatch && \
+    tar -xzf picomatch-4.0.4.tgz && \
+    mkdir -p /usr/local/lib/node_modules/npm/node_modules/tinyglobby/node_modules && \
+    mv package /usr/local/lib/node_modules/npm/node_modules/tinyglobby/node_modules/picomatch && \
     rm -rf /tmp/*
 
 # Install runtime dependencies only

@@ -103,9 +103,7 @@ export function StorageViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("keys");
-  const [editingKey, setEditingKey] = useState(
-    initialEditKey ?? null,
-  );
+  const [editingKey, setEditingKey] = useState(initialEditKey ?? null);
   const [showAddKey, setShowAddKey] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [keySearch, setKeySearch] = useState("");
