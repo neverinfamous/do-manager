@@ -9,7 +9,8 @@ on:
 env:
   REGISTRY: docker.io
   IMAGE_NAME: writenotenow/do-manager
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Force JavaScript-based GitHub Actions in this workflow to run on Node 24.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
   contents: read
