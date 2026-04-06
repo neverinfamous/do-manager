@@ -63,7 +63,7 @@ export function GlobalSearch({
     "keys",
   );
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
 
   // Results state
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -72,8 +72,8 @@ export function GlobalSearch({
   // Filter state
   const [showFilters, setShowFilters] = useState(false);
   const [namespaces, setNamespaces] = useState<Namespace[]>([]);
-  const [selectedNamespaces, setSelectedNamespaces] = useState<Set<string>>(
-    new Set(),
+  const [selectedNamespaces, setSelectedNamespaces] = useState(
+    new Set<string>(),
   );
   const [loadingNamespaces, setLoadingNamespaces] = useState(false);
 
