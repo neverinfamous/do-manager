@@ -80,7 +80,7 @@ export function InstanceList({
   const [instances, setInstances] = useState<Instance[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [cloneInstance, setCloneInstance] = useState<Instance | null>(null);

@@ -40,7 +40,6 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     /* Path Aliases */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }

@@ -26,7 +26,7 @@ export function MetricsDashboard({
 }: MetricsDashboardProps): React.ReactElement {
   const [metrics, setMetrics] = useState<MetricsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [days, setDays] = useState(7);
 
   const loadMetrics = useCallback(async (): Promise<void> => {

@@ -13,25 +13,26 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // React core
-          "react-vendor": ["react", "react-dom"],
-          // UI framework
-          "radix-ui": [
-            "@radix-ui/react-checkbox",
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-label",
-            "@radix-ui/react-progress",
-            "@radix-ui/react-select",
-            "@radix-ui/react-slot",
-            "@radix-ui/react-tabs",
-          ],
-          // Icons
-          lucide: ["lucide-react"],
-          // SQL editor dependencies
-          "sql-tools": ["sql-formatter", "prismjs"],
-          // ZIP library for batch downloads
-          fflate: ["fflate"],
+        manualChunks: (id) => {
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/")
+          ) {
+            return "react-vendor";
+          }
+          if (id.includes("@radix-ui")) {
+            return "radix-ui";
+          }
+          if (id.includes("lucide-react")) {
+            return "lucide";
+          }
+          if (id.includes("sql-formatter") || id.includes("prismjs")) {
+            return "sql-tools";
+          }
+          if (id.includes("node_modules/fflate/")) {
+            return "fflate";
+          }
+          return undefined;
         },
       },
     },

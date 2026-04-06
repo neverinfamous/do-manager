@@ -51,7 +51,7 @@ export function NamespaceList({
 }: NamespaceListProps): React.ReactElement {
   const [namespaces, setNamespaces] = useState<Namespace[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [discovering, setDiscovering] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);

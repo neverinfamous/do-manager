@@ -42,7 +42,7 @@ import { ALL_WEBHOOK_EVENTS, WEBHOOK_EVENT_LABELS } from "../../types/webhook";
 export function WebhookManager(): React.ReactElement {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
 
   // Dialog states
   const [showCreateDialog, setShowCreateDialog] = useState(false);

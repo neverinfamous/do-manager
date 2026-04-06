@@ -1,17 +1,15 @@
 # Cloudflare Durable Object Manager - Docker
 
-**Last Updated March 12, 2026**
-
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
 [![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-![Version](https://img.shields.io/badge/version-v1.3.3-green)
+[![Version](https://img.shields.io/github/v/release/neverinfamous/do-manager?label=version&color=green)](https://github.com/neverinfamous/do-manager/releases)
 ![Status](https://img.shields.io/badge/status-Production%2FStable-brightgreen)
 [![Security](https://img.shields.io/badge/Security-Enhanced-green.svg)](https://github.com/neverinfamous/do-manager/blob/main/SECURITY.md)
 [![CodeQL](https://img.shields.io/badge/CodeQL-Passing-brightgreen.svg)](https://github.com/neverinfamous/do-manager/security/code-scanning)
 [![Type Safety](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://github.com/neverinfamous/do-manager)
 
-Cloudflare Durable Object Manager: Full-featured, self-hosted web app to manage Durable Object namespaces, instances, and storage. Supports automatic namespace discovery, instance inspection, key/value editing, SQL for SQLite-backed DOs, batch operations, rich SQL Console, alarms, R2 backups, analytics, global search, and job history, with optional GitHub SSO.
+Manage Cloudflare Durable Objects, track instances, and modify SQLite/KV storage in a web interface.
 
 **[Live Demo](https://do.adamic.tech/)** • **[GitHub](https://github.com/neverinfamous/do-manager)** • **[Wiki](https://github.com/neverinfamous/do-manager/wiki)** • **[Changelog](https://github.com/neverinfamous/do-manager/blob/main/CHANGELOG.md)** • **[Release Article](https://adamic.tech/articles/do-manager)**
 
@@ -337,7 +335,7 @@ docker compose pull && docker compose up -d
 | Tag          | Description                                   |
 | ------------ | --------------------------------------------- |
 | `latest`     | Latest stable release                         |
-| `v1.3.3`     | Specific version (recommended for production) |
+| `vX.Y.Z`     | Specific version (recommended for production) |
 | `sha-XXXXXX` | Commit SHA for reproducible builds            |
 
 ---

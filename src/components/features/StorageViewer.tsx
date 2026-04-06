@@ -101,18 +101,16 @@ export function StorageViewer({
 }: StorageViewerProps): React.ReactElement {
   const [storage, setStorage] = useState<StorageListResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("keys");
-  const [editingKey, setEditingKey] = useState<string | null>(
-    initialEditKey ?? null,
-  );
+  const [editingKey, setEditingKey] = useState(initialEditKey ?? null);
   const [showAddKey, setShowAddKey] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [keySearch, setKeySearch] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Multi-select state for keys
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [selectedKeys, setSelectedKeys] = useState(new Set<string>());
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [batchExporting, setBatchExporting] = useState(false);
 

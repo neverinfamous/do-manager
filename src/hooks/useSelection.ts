@@ -32,7 +32,7 @@ export interface SelectionState<T extends { id: string }> {
  * @template T - Item type with required `id` field
  */
 export function useSelection<T extends { id: string }>(): SelectionState<T> {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState(new Set<string>());
 
   const count = useMemo(() => selectedIds.size, [selectedIds]);
 
