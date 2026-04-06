@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: "0 0 * * 1" # Weekly Monday midnight UTC
 
+env:
+  # Force JavaScript-based GitHub Actions in this workflow to run on Node 24.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   analyze:
     name: Analyze
@@ -25,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
