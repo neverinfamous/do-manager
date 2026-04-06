@@ -37,7 +37,7 @@ export function BackupManager({
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [restoreDialog, setRestoreDialog] = useState<Backup | null>(null);
   const [restoring, setRestoring] = useState(false);
 

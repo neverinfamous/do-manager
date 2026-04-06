@@ -58,7 +58,7 @@ export function InstanceDiffDialog({
   namespaceName,
 }: InstanceDiffDialogProps): React.ReactElement {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [diff, setDiff] = useState<DiffResult | null>(null);
   const [activeTab, setActiveTab] = useState("summary");
 

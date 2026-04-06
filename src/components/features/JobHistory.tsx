@@ -21,7 +21,7 @@ import type { Job } from "../../types";
 export function JobHistory(): React.ReactElement {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
 
   const loadJobs = async (): Promise<void> => {
     try {

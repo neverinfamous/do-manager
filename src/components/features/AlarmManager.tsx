@@ -34,7 +34,7 @@ export function AlarmManager({
 }: AlarmManagerProps): React.ReactElement {
   const [alarm, setAlarm] = useState<AlarmResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [showSetDialog, setShowSetDialog] = useState(false);
 
   const loadAlarm = useCallback(async (): Promise<void> => {

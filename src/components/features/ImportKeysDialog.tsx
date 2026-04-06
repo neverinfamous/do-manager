@@ -54,13 +54,13 @@ export function ImportKeysDialog({
   onSuccess,
 }: ImportKeysDialogProps): React.ReactElement {
   const [state, setState] = useState<ImportState>("idle");
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [parsedData, setParsedData] = useState<ParsedImportData | null>(null);
   const [mergeMode, setMergeMode] = useState<"merge" | "replace">("merge");
-  const [importedCount, setImportedCount] = useState<number>(0);
-  const [selectedFileName, setSelectedFileName] = useState<string>("");
+  const [importedCount, setImportedCount] = useState(0);
+  const [selectedFileName, setSelectedFileName] = useState("");
   const [inputMode, setInputMode] = useState<"file" | "paste">("file");
-  const [pastedJson, setPastedJson] = useState<string>("");
+  const [pastedJson, setPastedJson] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Real-time JSON validation for paste mode

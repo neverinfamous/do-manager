@@ -74,7 +74,7 @@ export function SqlConsole({
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SqlResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [history, setHistory] = useState<string[]>([]);
 
   // Validation state
