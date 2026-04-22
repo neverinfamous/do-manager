@@ -50,8 +50,10 @@ export function EditTagsDialog({
       } else if (Array.isArray(instance.tags)) {
         parsedTags = instance.tags;
       }
-      setTags(parsedTags);
-      setError("");
+      queueMicrotask(() => {
+        setTags(parsedTags);
+        setError("");
+      });
     }
   }, [instance]);
 

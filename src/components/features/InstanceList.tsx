@@ -252,7 +252,9 @@ export function InstanceList({
   };
 
   useEffect(() => {
-    void loadInstances();
+    queueMicrotask(() => {
+      void loadInstances();
+    });
   }, [loadInstances]);
 
   const formatDate = (dateString: string | null): string => {

@@ -124,7 +124,9 @@ export function SqlConsole({
   }, [namespaceId]);
 
   useEffect(() => {
-    void loadSavedQueries();
+    queueMicrotask(() => {
+      void loadSavedQueries();
+    });
   }, [loadSavedQueries]);
 
   const handleSavedQuerySelect = (queryId: string): void => {

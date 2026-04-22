@@ -56,7 +56,9 @@ export function UnfreezeInstanceDialog({
 
   useEffect(() => {
     if (open && instance) {
-      void checkFreezeStatus();
+      queueMicrotask(() => {
+        void checkFreezeStatus();
+      });
     }
   }, [open, instance, checkFreezeStatus]);
 

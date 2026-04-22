@@ -77,7 +77,9 @@ export function InstanceDiffDialog({
       setError(
         err instanceof Error ? err.message : "Failed to compare instances",
       );
-      setDiff(null);
+      queueMicrotask(() => {
+          setDiff(null);
+        });
     } finally {
       setLoading(false);
     }
@@ -86,8 +88,10 @@ export function InstanceDiffDialog({
   // Reset when dialog opens with new instances
   useEffect(() => {
     if (open && canCompare) {
-      setDiff(null);
-      setError("");
+      queueMicrotask(() => {
+        setDiff(null);
+        setError("");
+      });
     }
   }, [open, canCompare]);
 

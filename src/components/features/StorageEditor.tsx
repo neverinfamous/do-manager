@@ -201,7 +201,9 @@ export function StorageEditor({
 
   useEffect(() => {
     if (keyName !== null) {
-      void loadValue();
+      queueMicrotask(() => {
+        void loadValue();
+      });
     }
   }, [keyName, loadValue]);
 

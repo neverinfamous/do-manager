@@ -127,13 +127,14 @@ export function StorageViewer({
 
   // Filter keys based on search term (must be defined before selection helpers)
   const filteredKeys = useMemo(() => {
-    if (!storage?.keys) return [];
-    if (!keySearch.trim()) return storage.keys;
+    const keys = storage?.keys;
+    if (!keys) return [];
+    if (!keySearch.trim()) return keys;
     const searchLower = keySearch.toLowerCase();
-    return storage.keys.filter((key) =>
+    return keys.filter((key) =>
       key.toLowerCase().includes(searchLower),
     );
-  }, [storage?.keys, keySearch]);
+  }, [storage, keySearch]);
 
   // Selection helpers
   const toggleKeySelection = useCallback((key: string) => {
@@ -322,7 +323,9 @@ export function StorageViewer({
   };
 
   useEffect(() => {
-    void loadStorage();
+    queueMicrotask(() => {
+      void loadStorage();
+    });
   }, [loadStorage]);
 
   return (

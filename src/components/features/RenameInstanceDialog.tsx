@@ -34,7 +34,9 @@ export function RenameInstanceDialog({
   // Pre-fill with current name when dialog opens
   useEffect(() => {
     if (open && instance) {
-      setNewName(instance.name ?? instance.object_id);
+      queueMicrotask(() => {
+        setNewName(instance.name ?? instance.object_id);
+      });
     }
   }, [open, instance]);
 

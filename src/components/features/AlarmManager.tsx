@@ -28,6 +28,7 @@ interface AlarmManagerProps {
 }
 
 export function AlarmManager({
+
   instanceId,
   instanceName,
   onAlarmChange,
@@ -36,6 +37,11 @@ export function AlarmManager({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showSetDialog, setShowSetDialog] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const loadAlarm = useCallback(async (): Promise<void> => {
     try {
@@ -64,7 +70,9 @@ export function AlarmManager({
   };
 
   useEffect(() => {
-    void loadAlarm();
+    queueMicrotask(() => {
+      void loadAlarm();
+    });
   }, [loadAlarm]);
 
   const formatAlarmTime = (timestamp: number): string => {
@@ -80,7 +88,8 @@ export function AlarmManager({
   };
 
   const getTimeUntilAlarm = (timestamp: number): string => {
-    const now = Date.now();
+    // use component state for purity
+    // const _now = Date.now();
     const diff = timestamp - now;
 
     if (diff <= 0) return "Overdue";
@@ -215,9 +224,11 @@ function SetAlarmDialog({
   useEffect(() => {
     if (open) {
       const future = new Date(Date.now() + 3600000);
-      setDate(future.toISOString().split("T")[0] ?? "");
-      setTime(future.toTimeString().slice(0, 5));
-      setError("");
+      queueMicrotask(() => {
+        setDate(future.toISOString().split("T")[0] ?? "");
+        setTime(future.toTimeString().slice(0, 5));
+        setError("");
+      });
     }
   }, [open]);
 

@@ -45,7 +45,9 @@ export function MetricsDashboard({
   }, [namespaceId, days]);
 
   useEffect(() => {
-    void loadMetrics();
+    queueMicrotask(() => {
+      void loadMetrics();
+    });
   }, [loadMetrics]);
 
   const formatNumber = (num: number): string => {

@@ -294,7 +294,7 @@ export async function batchExportNamespaces(
   downloadZip(
     entries,
     zipFilename,
-    manifest as unknown as Record<string, unknown>,
+    manifest,
   );
 
   // Log the batch export job
