@@ -77,9 +77,7 @@ export function InstanceDiffDialog({
       setError(
         err instanceof Error ? err.message : "Failed to compare instances",
       );
-      queueMicrotask(() => {
-          setDiff(null);
-        });
+      setDiff(null);
     } finally {
       setLoading(false);
     }

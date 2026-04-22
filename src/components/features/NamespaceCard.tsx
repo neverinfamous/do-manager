@@ -21,7 +21,7 @@ import { Checkbox } from "../ui/checkbox";
 import { InstanceColorPicker } from "./InstanceColorPicker";
 import { exportApi } from "../../services/exportApi";
 import { getColorConfig } from "../../lib/instanceColors";
-import type { Namespace, NamespaceColor} from "../../types";
+import type { Namespace, NamespaceColor } from "../../types";
 
 interface NamespaceCardProps {
   namespace: Namespace;
@@ -125,9 +125,7 @@ export function NamespaceCard({
           {onColorChange && (
             <InstanceColorPicker
               value={namespace.color}
-              onChange={(color) =>
-                onColorChange(namespace.id, color)
-              }
+              onChange={(color) => onColorChange(namespace.id, color)}
             />
           )}
         </div>

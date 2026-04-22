@@ -131,9 +131,7 @@ export function StorageViewer({
     if (!keys) return [];
     if (!keySearch.trim()) return keys;
     const searchLower = keySearch.toLowerCase();
-    return keys.filter((key) =>
-      key.toLowerCase().includes(searchLower),
-    );
+    return keys.filter((key) => key.toLowerCase().includes(searchLower));
   }, [storage, keySearch]);
 
   // Selection helpers

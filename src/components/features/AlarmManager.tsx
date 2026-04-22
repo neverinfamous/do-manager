@@ -28,7 +28,6 @@ interface AlarmManagerProps {
 }
 
 export function AlarmManager({
-
   instanceId,
   instanceName,
   onAlarmChange,
@@ -89,7 +88,6 @@ export function AlarmManager({
 
   const getTimeUntilAlarm = (timestamp: number): string => {
     // use component state for purity
-    // const _now = Date.now();
     const diff = timestamp - now;
 
     if (diff <= 0) return "Overdue";

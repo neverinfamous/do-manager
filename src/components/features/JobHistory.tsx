@@ -75,9 +75,7 @@ export function JobHistory(): React.ReactElement {
   const formatDuration = (job: Job): string => {
     if (!job.started_at) return "-";
     const start = new Date(job.started_at).getTime();
-    const end = job.completed_at
-      ? new Date(job.completed_at).getTime()
-      : now;
+    const end = job.completed_at ? new Date(job.completed_at).getTime() : now;
     const duration = Math.round((end - start) / 1000);
     if (duration < 60) return `${String(duration)}s`;
     if (duration < 3600) return `${String(Math.round(duration / 60))}m`;

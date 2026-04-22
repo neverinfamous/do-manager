@@ -89,8 +89,8 @@ export function MigrateInstanceDialog({
   useEffect(() => {
     if (sourceInstance) {
       queueMicrotask(() => {
-      setTargetInstanceName(sourceInstance.name ?? sourceInstance.object_id);
-    });
+        setTargetInstanceName(sourceInstance.name ?? sourceInstance.object_id);
+      });
     }
   }, [sourceInstance]);
 
