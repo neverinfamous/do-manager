@@ -15,7 +15,7 @@ import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { InstanceColorPicker } from "./InstanceColorPicker";
 import { exportApi } from "../../services/exportApi";
-import type { Namespace, NamespaceColor, InstanceColor } from "../../types";
+import type { Namespace, NamespaceColor } from "../../types";
 
 type SortField = "name" | "created_at" | "instance_count";
 type SortDirection = "asc" | "desc";
@@ -271,10 +271,8 @@ export function NamespaceListView({
                 <td className="px-3 py-2">
                   {onColorChange && (
                     <InstanceColorPicker
-                      value={namespace.color as InstanceColor}
-                      onChange={(color) =>
-                        onColorChange(namespace.id, color as NamespaceColor)
-                      }
+                      value={namespace.color}
+                      onChange={(color) => onColorChange(namespace.id, color)}
                     />
                   )}
                 </td>

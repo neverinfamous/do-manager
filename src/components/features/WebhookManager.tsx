@@ -76,7 +76,9 @@ export function WebhookManager(): React.ReactElement {
   }, []);
 
   useEffect(() => {
-    void loadWebhooks();
+    queueMicrotask(() => {
+      void loadWebhooks();
+    });
   }, [loadWebhooks]);
 
   const resetForm = (): void => {

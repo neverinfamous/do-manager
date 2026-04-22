@@ -79,14 +79,18 @@ export function MigrateInstanceDialog({
   // Load namespaces when dialog opens
   useEffect(() => {
     if (open) {
-      void loadNamespaces();
+      queueMicrotask(() => {
+        void loadNamespaces();
+      });
     }
   }, [open, loadNamespaces]);
 
   // Reset target instance name when source changes
   useEffect(() => {
     if (sourceInstance) {
-      setTargetInstanceName(sourceInstance.name ?? sourceInstance.object_id);
+      queueMicrotask(() => {
+        setTargetInstanceName(sourceInstance.name ?? sourceInstance.object_id);
+      });
     }
   }, [sourceInstance]);
 

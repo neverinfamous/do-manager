@@ -37,9 +37,11 @@ export function NamespaceSettingsDialog({
 
   useEffect(() => {
     if (namespace) {
-      setName(namespace.name);
-      setEndpointUrl(namespace.endpoint_url ?? "");
-      setStorageBackend(namespace.storage_backend);
+      queueMicrotask(() => {
+        setName(namespace.name);
+        setEndpointUrl(namespace.endpoint_url ?? "");
+        setStorageBackend(namespace.storage_backend);
+      });
     }
   }, [namespace]);
 

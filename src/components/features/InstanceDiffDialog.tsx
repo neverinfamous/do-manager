@@ -86,8 +86,10 @@ export function InstanceDiffDialog({
   // Reset when dialog opens with new instances
   useEffect(() => {
     if (open && canCompare) {
-      setDiff(null);
-      setError("");
+      queueMicrotask(() => {
+        setDiff(null);
+        setError("");
+      });
     }
   }, [open, canCompare]);
 

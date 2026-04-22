@@ -291,11 +291,7 @@ export async function batchExportNamespaces(
 
   // Create and download ZIP
   const zipFilename = generateTimestampedFilename("namespace-configs", "zip");
-  downloadZip(
-    entries,
-    zipFilename,
-    manifest as unknown as Record<string, unknown>,
-  );
+  downloadZip(entries, zipFilename, manifest);
 
   // Log the batch export job
   const successfulIds = results.filter((r) => r.success).map((r) => r.id);

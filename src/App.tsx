@@ -78,13 +78,8 @@ export default function App(): React.ReactElement {
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [migrationSuccess, setMigrationSuccess] = useState(false);
 
-  // Check migration status on mount
-  useEffect(() => {
-    void checkMigrationStatus();
-  }, []);
-
   // Check migration status
-  const checkMigrationStatus = async (): Promise<void> => {
+  const checkMigrationStatus = useCallback(async (): Promise<void> => {
     try {
       const status = await migrationApi.getStatus();
       setMigrationStatus(status);
@@ -92,7 +87,14 @@ export default function App(): React.ReactElement {
     } catch {
       // Silently handle migration check failures - don't block the app
     }
-  };
+  }, []);
+
+  // Check migration status on mount
+  useEffect(() => {
+    queueMicrotask(() => {
+      void checkMigrationStatus();
+    });
+  }, [checkMigrationStatus]);
 
   // Apply pending migrations
   const handleApplyMigrations = async (): Promise<void> => {

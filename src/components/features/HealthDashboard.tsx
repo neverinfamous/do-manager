@@ -38,6 +38,11 @@ export function HealthDashboard(): React.ReactElement {
   const [health, setHealth] = useState<HealthSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [nowDate, setNowDate] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNowDate(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const loadHealth = useCallback(async (): Promise<void> => {
     try {
@@ -55,7 +60,9 @@ export function HealthDashboard(): React.ReactElement {
   }, []);
 
   useEffect(() => {
-    void loadHealth();
+    queueMicrotask(() => {
+      void loadHealth();
+    });
   }, [loadHealth]);
 
   const formatBytes = (bytes: number): string => {
@@ -77,7 +84,8 @@ export function HealthDashboard(): React.ReactElement {
 
   const formatTimeUntil = (dateString: string): string => {
     const target = new Date(dateString).getTime();
-    const now = Date.now();
+    /* using now from state */
+    const now = nowDate.getTime();
     const diff = target - now;
 
     if (diff < 0) return "Overdue";
@@ -93,7 +101,8 @@ export function HealthDashboard(): React.ReactElement {
 
   const formatTimeSince = (dateString: string): string => {
     const target = new Date(dateString).getTime();
-    const now = Date.now();
+    /* using now from state */
+    const now = nowDate.getTime();
     const diff = now - target;
 
     if (diff < 0) return "Just now";

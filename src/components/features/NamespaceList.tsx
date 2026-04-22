@@ -218,7 +218,9 @@ export function NamespaceList({
   };
 
   useEffect(() => {
-    void loadNamespaces();
+    queueMicrotask(() => {
+      void loadNamespaces();
+    });
   }, []);
 
   const selectedNamespaces = selection.getSelectedItems(filteredNamespaces);

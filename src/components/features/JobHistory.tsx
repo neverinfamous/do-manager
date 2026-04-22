@@ -22,6 +22,11 @@ export function JobHistory(): React.ReactElement {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const loadJobs = async (): Promise<void> => {
     try {
@@ -37,7 +42,9 @@ export function JobHistory(): React.ReactElement {
   };
 
   useEffect(() => {
-    void loadJobs();
+    queueMicrotask(() => {
+      void loadJobs();
+    });
   }, []);
 
   const getStatusIcon = (status: Job["status"]): React.ReactElement => {
@@ -68,9 +75,7 @@ export function JobHistory(): React.ReactElement {
   const formatDuration = (job: Job): string => {
     if (!job.started_at) return "-";
     const start = new Date(job.started_at).getTime();
-    const end = job.completed_at
-      ? new Date(job.completed_at).getTime()
-      : Date.now();
+    const end = job.completed_at ? new Date(job.completed_at).getTime() : now;
     const duration = Math.round((end - start) / 1000);
     if (duration < 60) return `${String(duration)}s`;
     if (duration < 3600) return `${String(Math.round(duration / 60))}m`;

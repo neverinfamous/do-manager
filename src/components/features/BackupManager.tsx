@@ -97,7 +97,9 @@ export function BackupManager({
   };
 
   useEffect(() => {
-    void loadBackups();
+    queueMicrotask(() => {
+      void loadBackups();
+    });
   }, [loadBackups]);
 
   const formatDate = (dateString: string): string => {

@@ -108,9 +108,7 @@ export const importApi = {
         result.exportedAt = obj["exportedAt"];
       }
       if (obj["instance"] && typeof obj["instance"] === "object") {
-        result.sourceInstance = obj["instance"] as NonNullable<
-          ParsedImportData["sourceInstance"]
-        >;
+        result.sourceInstance = obj["instance"];
       }
       return result;
     }
