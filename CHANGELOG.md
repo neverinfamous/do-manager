@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/neverinfamous/do-manager/compare/v1.3.5...HEAD)
+## [Unreleased](https://github.com/neverinfamous/do-manager/compare/v1.3.6...HEAD)
+
+## [1.3.6](https://github.com/neverinfamous/do-manager/releases/tag/v1.3.6) - 2026-05-05
+
+### Changed
+
+- **Dependency Updates**:
+  - Updated npm packages: `@cloudflare/workers-types`, `eslint`, `globals`, `jose`, `lucide-react`, `postcss`, `typescript-eslint`, `vite`, `wrangler`.
+  - Updated Docker build-time dependencies (`tar` to `7.5.14`).
 
 ## [1.3.5](https://github.com/neverinfamous/do-manager/releases/tag/v1.3.5) - 2026-04-22
 
@@ -150,7 +158,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented multi-select Batch downloading, exporting, and backups.
 - Included Job Tracking, Webhooks, Alarms visualization, and Enterprise Zero-Trust compliance.
 
-[Unreleased]: https://github.com/neverinfamous/do-manager/compare/v1.3.5...HEAD
+[Unreleased]: https://github.com/neverinfamous/do-manager/compare/v1.3.6...HEAD
+[1.3.6]: https://github.com/neverinfamous/do-manager/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/neverinfamous/do-manager/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/neverinfamous/do-manager/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/neverinfamous/do-manager/compare/v1.3.2...v1.3.3
