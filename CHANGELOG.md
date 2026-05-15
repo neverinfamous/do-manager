@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/neverinfamous/do-manager/compare/v1.3.6...HEAD)
+## [Unreleased](https://github.com/neverinfamous/do-manager/compare/v1.3.7...HEAD)
+
+## [1.3.7](https://github.com/neverinfamous/do-manager/releases/tag/v1.3.7) - 2026-05-15
+
+### Changed
+
+- **Dependency Updates**
+  - Bumped npm packages (@cloudflare/workers-types, @tailwindcss/postcss, @types/node, @vitejs/plugin-react, lucide-react, react, react-dom, sql-formatter, tailwind-merge, tailwindcss, typescript-eslint, vite, wrangler)
+  - Bumped node from 24-alpine to 26-alpine in Dockerfile
+  - Bumped GitHub Actions group (checkout@v6, setup-node@v6, upload-artifact@v7, download-artifact@v8)
 
 ## [1.3.6](https://github.com/neverinfamous/do-manager/releases/tag/v1.3.6) - 2026-05-05
 
@@ -158,7 +167,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented multi-select Batch downloading, exporting, and backups.
 - Included Job Tracking, Webhooks, Alarms visualization, and Enterprise Zero-Trust compliance.
 
-[Unreleased]: https://github.com/neverinfamous/do-manager/compare/v1.3.6...HEAD
+[Unreleased]: https://github.com/neverinfamous/do-manager/compare/v1.3.7...HEAD
+[1.3.7]: https://github.com/neverinfamous/do-manager/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/neverinfamous/do-manager/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/neverinfamous/do-manager/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/neverinfamous/do-manager/compare/v1.3.3...v1.3.4
