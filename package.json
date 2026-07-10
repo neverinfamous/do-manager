@@ -65,12 +65,5 @@
     "eslint-plugin-react-hooks": {
       "eslint": "$eslint"
     }
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "sharp",
-      "workerd"
-    ]
   }
 }
