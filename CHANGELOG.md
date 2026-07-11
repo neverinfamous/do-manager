@@ -1,181 +1,46 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project are documented in this file.
+This changelog is auto-generated from Git history using [lib-git-history](https://github.com/neverinfamous/adamic).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.3.4]
 
-## [Unreleased](https://github.com/neverinfamous/do-manager/compare/v1.3.7...HEAD)
+### Features
 
-## [1.3.7](https://github.com/neverinfamous/do-manager/releases/tag/v1.3.7) - 2026-05-15
+- add docs-drift-detector and ci-health-monitor agentic workflows (#71) by **Chris LeRoux** (with Chris & Mike) ([30515e8](https://github.com/neverinfamous/do-manager/commit/30515e87e5218960f8ed0f72bcefaeeb8bb9334f))
+- add docs-drift-detector and ci-health-monitor agentic workflows by **Chris & Mike** ([98ad6a4](https://github.com/neverinfamous/do-manager/commit/98ad6a4334e18fce11e7247b76aa08df6375a880))
+- full automated dependency + version bump + deploy pipeline (#70) by **Chris LeRoux** (with Chris & Mike) ([b90ed47](https://github.com/neverinfamous/do-manager/commit/b90ed475d784f450a42ab7f8122183cb8d9da028))
+- full automated dependency + version bump + deploy pipeline by **Chris & Mike** ([8f60fbf](https://github.com/neverinfamous/do-manager/commit/8f60fbf4cae182fef28c662ec7247b2a43b3fc8b))
 
-### Changed
+### Bug Fixes
 
-- **Dependency Updates**
-  - Bumped npm packages (@cloudflare/workers-types, @tailwindcss/postcss, @types/node, @vitejs/plugin-react, lucide-react, react, react-dom, sql-formatter, tailwind-merge, tailwindcss, typescript-eslint, vite, wrangler)
-  - Bumped node from 24-alpine to 26-alpine in Dockerfile
-  - Bumped GitHub Actions group (checkout@v6, setup-node@v6, upload-artifact@v7, download-artifact@v8)
+- address Copilot review - trigger types, scope, dedup, prompt wording by **Chris & Mike** ([94f9241](https://github.com/neverinfamous/do-manager/commit/94f92418d41afa3626e5844b89cc50a29802fde0))
+- address Copilot review feedback - contains condition, glob@13.x example by **Chris & Mike** ([5ec84ff](https://github.com/neverinfamous/do-manager/commit/5ec84ff3eeeeeff51b3a41b4460ac93860e7ddee))
+- force Node.js 24 for gitleaks-action to suppress deprecation warning by **Chris & Mike** ([fb106b1](https://github.com/neverinfamous/do-manager/commit/fb106b10e18447e60cadd0c10290944a87ce9084))
+- address Copilot review feedback on v1.3.3 (#65) by **Chris LeRoux** (with Chris & Mike) ([3eb161c](https://github.com/neverinfamous/do-manager/commit/3eb161c53eeab000319571096de0376cc42f6308))
+- clarify Dockerfile security notes per Copilot review by **Chris & Mike** ([b1552d5](https://github.com/neverinfamous/do-manager/commit/b1552d5efca4491c8dd531ea86e04d1364434f29))
+- address Copilot review feedback on v1.3.3 PR by **Chris & Mike** ([1aad596](https://github.com/neverinfamous/do-manager/commit/1aad596a320f8b9e553d12e903c89f00d212905c))
 
-## [1.3.6](https://github.com/neverinfamous/do-manager/releases/tag/v1.3.6) - 2026-05-05
+## [v1.3.3]
 
-### Changed
+### Features
 
-- **Dependency Updates**:
-  - Updated npm packages: `@cloudflare/workers-types`, `eslint`, `globals`, `jose`, `lucide-react`, `postcss`, `typescript-eslint`, `vite`, `wrangler`.
-  - Updated Docker build-time dependencies (`tar` to `7.5.14`).
+- add agentic dependency maintenance workflow with Copilot engine (Opus 4) by **Chris & Mike** ([55c67a2](https://github.com/neverinfamous/do-manager/commit/55c67a2292beffe63d1a9046ccd2d47b1ef2d5f8))
 
-## [1.3.5](https://github.com/neverinfamous/do-manager/releases/tag/v1.3.5) - 2026-04-22
+### Bug Fixes
 
-### Added
+- prevent duplicate Docker builds, fix tag conditions, and pin minimatch override by **Chris & Mike** ([cd29cb6](https://github.com/neverinfamous/do-manager/commit/cd29cb68e3b3f8adce8ea4af592df5b4f0c88444))
+- align minimatch override to ^10.2.4 for P111 sync accuracy by **Chris & Mike** ([541ff7d](https://github.com/neverinfamous/do-manager/commit/541ff7dfa76f9aab54d380826996c2bacf0caff1))
 
-- P111: Implemented npm CLI dependency patching (`tar`, `minimatch`) in Docker builder and runtime stages.
-- Added `queueMicrotask` batching for asynchronous data fetching within `useEffect` bodies across 16 feature components to resolve `react-hooks/set-state-in-effect` anti-patterns.
-- Added component-level `now` state synchronization to `AlarmManager`, `JobHistory`, and `HealthDashboard` to ensure strict render purity (resolving `Date.now()` impurity lint errors).
+## [v1.1.0]
 
-### Fixed
+### Bug Fixes
 
-- Fixed `react-hooks/preserve-manual-memoization` warning in `StorageViewer.tsx` by correcting dependency assertions.
-- Fixed unused variable warnings in namespace and list components.
+- add wrangler.jsonc for Cloudflare Workers Git integration by **Temp** ([8990142](https://github.com/neverinfamous/do-manager/commit/8990142b3ab92c14dfc4d1fd2dbb8419c91c6ff3))
+- update workflow to use main branch and new short description by **Temp** ([7a488d5](https://github.com/neverinfamous/do-manager/commit/7a488d5288e76e1902baafde23606de31d77c3e8))
 
-### Security
+## [v1.0.0]
 
-- Pinned `tar` to `7.5.13` and `minimatch` to `10.2.5` via `overrides` in `package.json` to resolve downstream vulnerabilities.
+### Features
 
-## [1.3.4](https://github.com/neverinfamous/do-manager/releases/tag/v1.3.4) - 2026-04-06
-
-### CI/CD
-
-- **CI Health:** Updated Docker actions to native Node 24 runtimes to comply with the upcoming June 2026 deprecation deadline.
-- **CI Health:** Pinned `trufflesecurity/trufflehog` exactly to `@v3.94.2` to avoid floating reference risks.
-- **CI Health:** Added `docker` package ecosystem to Dependabot configuration.
-- **Workflows:** Removed failing agentic maintenance workflows (docs drift, dependency maintenance, ci health, agentics-maintenance) to prevent CI pipeline blocking.
-
-### Documentation
-
-- **Doc Audit:** Refined repository documentation, fixed Docker Hub character limits on DOCKER_README.md, and created .env.example.
-
-### Changed
-
-- **Dependency Updates:** Updated npm dependencies to their latest wanted/latest compatible versions.
-
-### Security
-
-- **Dependabot:** Fixed Prototype Pollution via parse() in NodeJS flatted.
-- **Dependabot:** Fixed malicious WebSocket 64-bit length overflow parsing and client crash issue in Undici.
-- **Dependabot:** Fixed HTTP Request/Response Smuggling issue in Undici.
-- **Dependabot:** Fixed CRLF injection in undici via the `upgrade` option.
-- **Dependabot:** Fixed method injection in POSIX character classes causing incorrect glob matching in picomatch.
-
-## [1.3.3] - 2026-03-07
-
-### Changed
-
-- Updated `glob` override and Dockerfile patch from `11.1.0` to `13.0.6`.
-- **Documentation:** Migrated changelog from the wiki into the main project root.
-
-## [1.3.2] - 2026-03-06
-
-### Fixed
-
-- **CI/CD:** Docker publish triggers now only run on tag pushes (`v*`), preventing duplicate builds.
-
-### Security
-
-- Pinned `minimatch` override exactly to `10.2.4` to prevent lockfile drift from Dockerfile patch version.
-
-## [1.3.1] - 2026-03-06
-
-### Added
-
-- Automated GitHub Agentic Workflow for batched dependency maintenance.
-- Added `.dockerignore` to optimize Docker build context transfer size.
-
-### Changed
-
-- Upgraded Node.js baseline to v24 LTS across Docker, GitHub Actions, and `package.json`.
-- Upgraded ESLint to v10 and removed all `eslint-disable` comments to achieve 100% zero-suppression.
-- Suppressed Dependabot npm PR thresholds and removed auto-merge workflow in favor of batched updates.
-- Refactored frontend and backend for maximum ESLint/TypeScript strictness.
-- Updated multiple dependencies including `@cloudflare/workers-types`, `tailwindcss`, `eslint`, and `wrangler`.
-
-### Security
-
-- Resolved `minimatch` ReDoS vulnerabilities (GHSA-3ppc-4f35-3m26, GHSA-7r86-cg39-jmmj) via overrides and Docker patching.
-- Resolved `rollup` path traversal (GHSA-mw96-cpmx-2vgc) via update to `4.59.0`.
-- Resolved `tar` path traversal (CVE-2026-26960) via override to `7.5.10`.
-
-## [1.3.0] - 2026-01-08
-
-### Added
-
-- **Granular Webhook Events:** Added 7 new event types for fine-grained DO notifications (`storage_create`, `instance_delete`, etc.).
-- **Enhanced Metrics Dashboard:** Complete rewrite using Cloudflare's GraphQL API for all 4 DO datasets with latency percentiles.
-
-### Changed
-
-- Updated multiple dependencies including `wrangler`, `vite`, `typescript-eslint`, and `@cloudflare/workers-types`.
-
-## [1.2.0] - 2026-01-05
-
-### Added
-
-- **Instance Migration:** Migrate instances between namespaces with full data transfer, alarm synchronization, and copy/freeze/delete modes.
-- Added freeze/unfreeze endpoints to `do-manager-admin-hooks` (returns 423 Locked on writes).
-
-### Fixed
-
-- Fixed authentication bypass detection when running `wrangler dev` with custom routes.
-
-## [1.1.0] - 2025-12-10
-
-### Added
-
-- **Automated Database Migrations:** In-app schema upgrade system with legacy detection and UI flow.
-- Added List/Grid view toggle with sortable columns and status badges.
-- Added Deep Clone Namespace functionality utilizing atomic two-phase cloning.
-- Added 27-color palette for namespaces and instance color tags.
-- Added tag-based searching for global and namespace-level instance organization.
-- Added centralized JSON pasting support to Import Keys dialog.
-- Added fully-typed centralized Error Logging System unified across 18 routing modules.
-- **Documentation:** Added Migration Guide to the wiki covering automated schema migrations.
-
-### Changed
-
-- **SQL Console:** Added syntax highlighting, real-time validation, tooltip documentation, and formatting via Prism and sql-formatter.
-- **Performance:** Optimized backend search parallelization, dropping latencies by ~60%.
-- **Performance:** Implemented frontend intelligent 5-minute caching with Stale-While-Revalidate pattern.
-- **Performance:** Reduced main production bundle size by 48% (702 KB to 364 KB) via chunking and lazy-loading.
-- Enabled absolute maximum TypeScript and ESLint `strictTypeChecked` strictness across all repositories.
-
-### Fixed
-
-- Fixed Alarm tracking bugs where `delete_alarm` and completions were not accurately recorded in the dashboard.
-
-### Security
-
-- Resolved `c-ares` vulnerability (CVE-2025-62408) by patching the Docker image.
-
-## [1.0.0] - 2025-11-29
-
-### Added
-
-- Initial public release of DO Manager.
-- Implemented Namespace and Instance tracking/discovery.
-- Implemented KV & SQLite DO storage engines viewing and diffing.
-- Implemented SQL Console for executing real-time data migrations and interactions.
-- Implemented `do-manager-admin-hooks` npm package.
-- Implemented multi-select Batch downloading, exporting, and backups.
-- Included Job Tracking, Webhooks, Alarms visualization, and Enterprise Zero-Trust compliance.
-
-[Unreleased]: https://github.com/neverinfamous/do-manager/compare/v1.3.7...HEAD
-[1.3.7]: https://github.com/neverinfamous/do-manager/compare/v1.3.6...v1.3.7
-[1.3.6]: https://github.com/neverinfamous/do-manager/compare/v1.3.5...v1.3.6
-[1.3.5]: https://github.com/neverinfamous/do-manager/compare/v1.3.4...v1.3.5
-[1.3.4]: https://github.com/neverinfamous/do-manager/compare/v1.3.3...v1.3.4
-[1.3.3]: https://github.com/neverinfamous/do-manager/compare/v1.3.2...v1.3.3
-[1.3.2]: https://github.com/neverinfamous/do-manager/compare/v1.3.1...v1.3.2
-[1.3.1]: https://github.com/neverinfamous/do-manager/compare/v1.3.0...v1.3.1
-[1.3.0]: https://github.com/neverinfamous/do-manager/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/neverinfamous/do-manager/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/neverinfamous/do-manager/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/neverinfamous/do-manager/releases/tag/v1.0.0
+- add Docker deployment infrastructure by **Temp** ([529ddc3](https://github.com/neverinfamous/do-manager/commit/529ddc3d3e7ca180037a16c2a356d2d49dd4ffa6))
