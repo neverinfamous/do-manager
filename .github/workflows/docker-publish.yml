@@ -102,7 +102,6 @@ jobs:
       - name: Log in to Docker Hub
         if: github.event_name != 'pull_request'
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
-        continue-on-error: true
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.DOCKER_USERNAME }}

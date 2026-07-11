@@ -69,4 +69,3 @@ jobs:
 
       - name: Run pnpm audit
         run: pnpm audit
-        continue-on-error: true
