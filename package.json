@@ -53,7 +53,8 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.63.0",
     "vite": "^8.1.4",
-    "wrangler": "^4.110.0"
+    "wrangler": "^4.110.0",
+    "zod": "^4.4.3"
   },
   "overrides": {
     "esbuild": "^0.28.0",
