@@ -26,10 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+        uses: pnpm/action-setup@v4
         with:
           version: 9
 
@@ -54,19 +54,19 @@ jobs:
       security-events: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@641a925cfafe92d0fdf8b239ba4053e3f8d99d6d
+        uses: github/codeql-action/init@v4
         with:
           languages: "javascript-typescript"
           queries: security-extended,security-and-quality
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@641a925cfafe92d0fdf8b239ba4053e3f8d99d6d
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@641a925cfafe92d0fdf8b239ba4053e3f8d99d6d
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:javascript-typescript"
 
@@ -94,7 +94,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
@@ -171,26 +171,26 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
 
-      - name: Verify package-lock.json has security fixes
+      - name: Verify pnpm-lock.yaml has security fixes
         run: |
-          echo "🔍 Verifying security patches in package-lock.json..."
-          CROSS_SPAWN_VERSION=$(grep -A 2 '"node_modules/cross-spawn"' package-lock.json | grep '"version"' | cut -d'"' -f4)
-          echo "cross-spawn version: $CROSS_SPAWN_VERSION"
-          if [ "$CROSS_SPAWN_VERSION" != "7.0.6" ] && [ "$CROSS_SPAWN_VERSION" != "7.0.5" ]; then
-            echo "❌ ERROR: cross-spawn version $CROSS_SPAWN_VERSION is vulnerable (need >= 7.0.5)"
+          echo "🔍 Verifying security patches in pnpm-lock.yaml..."
+          if grep -E "^  /cross-spawn@(7\.0\.[5-9]|7\.[1-9]|8|9)" pnpm-lock.yaml > /dev/null; then
+            echo "✅ cross-spawn version is secure"
+          else
+            echo "❌ ERROR: cross-spawn version is vulnerable (need >= 7.0.5)"
             exit 1
           fi
-          BRACE_EXP_VERSION=$(grep -A 2 '"node_modules/brace-expansion"' package-lock.json | grep '"version"' | cut -d'"' -f4)
-          echo "brace-expansion version: $BRACE_EXP_VERSION"
-          if [ "$BRACE_EXP_VERSION" != "2.0.2" ]; then
-            echo "⚠️  WARNING: brace-expansion version $BRACE_EXP_VERSION (expected 2.0.2)"
+          if grep -E "^  /brace-expansion@2\.0\.2" pnpm-lock.yaml > /dev/null; then
+            echo "✅ brace-expansion version is secure"
+          else
+            echo "⚠️  WARNING: brace-expansion version not 2.0.2"
           fi
-          echo "✅ Security patches verified in package-lock.json"
+          echo "✅ Security patches verified in pnpm-lock.yaml"
 
       - name: Build image for scanning
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
@@ -272,7 +272,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@v4
 
       - name: Download digests
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
