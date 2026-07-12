@@ -53,10 +53,11 @@ RUN apk add --no-cache \
     g++
 
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml .npmrc ./
 
 # Install ALL dependencies (including devDependencies for build)
-RUN npm ci --include=dev
+RUN npm install -g pnpm@9 && \
+    pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -123,11 +124,12 @@ RUN addgroup -g 1001 app && \
     adduser -D -u 1001 -G app app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml .npmrc ./
 
 # Install production dependencies only
-RUN npm ci --omit=dev && \
-    npm cache clean --force
+RUN npm install -g pnpm@9 && \
+    pnpm install --prod --frozen-lockfile && \
+    pnpm store prune
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
