@@ -26,7 +26,7 @@ export default defineConfig({
           if (id.includes("lucide-react")) {
             return "lucide";
           }
-          if (id.includes("sql-formatter") || id.includes("prismjs")) {
+          if (id.includes("sql-formatter")) {
             return "sql-tools";
           }
           if (id.includes("node_modules/fflate/")) {

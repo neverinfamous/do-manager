@@ -1,6 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import Prism from "../lib/prism-setup";
-import "prismjs/components/prism-sql";
 import { WrapText } from "lucide-react";
 import { getSqlDoc, type SqlDoc } from "../lib/sqlDocs";
 
@@ -64,6 +63,19 @@ export function SqlEditor({
   const highlightRef = useRef<HTMLPreElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [sqlLoaded, setSqlLoaded] = useState(false);
+
+  // Dynamically load prism-sql to guarantee Prism is on window first
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).Prism = Prism;
+      // @ts-ignore - no types available for prism-sql
+      import("prismjs/components/prism-sql").then(() => {
+        setSqlLoaded(true);
+      }).catch(err => console.error("Failed to load prism-sql", err));
+    }
+  }, []);
 
   // Word wrap state (default: on)
   const [wordWrap, setWordWrap] = useState(true);
@@ -243,7 +255,7 @@ export function SqlEditor({
       // Add a trailing newline to prevent layout shift
       highlightRef.current.innerHTML = highlighted + "\n";
     }
-  }, [value, getHighlightedCode, hasError, errorPosition, addErrorSquiggle]);
+  }, [value, getHighlightedCode, hasError, errorPosition, addErrorSquiggle, sqlLoaded]);
 
   // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
