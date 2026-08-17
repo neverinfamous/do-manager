@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import Prism from "prismjs";
+import Prism from "../lib/prism-setup";
 import "prismjs/components/prism-sql";
 import { WrapText } from "lucide-react";
 import { getSqlDoc, type SqlDoc } from "../lib/sqlDocs";
