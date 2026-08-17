@@ -177,13 +177,13 @@ jobs:
       - name: Verify pnpm-lock.yaml has security fixes
         run: |
           echo "🔍 Verifying security patches in pnpm-lock.yaml..."
-          if grep -E "^  /cross-spawn@(7\.0\.[5-9]|7\.[1-9]|8|9)" pnpm-lock.yaml > /dev/null; then
+          if grep -E "^  /?cross-spawn@(7\.0\.[5-9]|7\.[1-9]|8|9)" pnpm-lock.yaml > /dev/null; then
             echo "✅ cross-spawn version is secure"
           else
             echo "❌ ERROR: cross-spawn version is vulnerable (need >= 7.0.5)"
             exit 1
           fi
-          if grep -E "^  /brace-expansion@2\.0\.2" pnpm-lock.yaml > /dev/null; then
+          if grep -E "^  /?brace-expansion@2\.0\.2" pnpm-lock.yaml > /dev/null; then
             echo "✅ brace-expansion version is secure"
           else
             echo "⚠️  WARNING: brace-expansion version not 2.0.2"
