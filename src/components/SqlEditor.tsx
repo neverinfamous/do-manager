@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import Prism from "../lib/prism-setup";
+import Prism from "prismjs";
 import { WrapText } from "lucide-react";
 import { getSqlDoc, type SqlDoc } from "../lib/sqlDocs";
 
@@ -69,11 +69,14 @@ export function SqlEditor({
   // Dynamically load prism-sql to guarantee Prism is on window first
   useEffect(() => {
     if (typeof window !== "undefined") {
-      (window as any).Prism = Prism;
-      // @ts-ignore - no types available for prism-sql
+      (window as unknown as { Prism: typeof Prism }).Prism = Prism;
+      // @ts-expect-error - no types available for prism-sql
       import("prismjs/components/prism-sql").then(() => {
         setSqlLoaded(true);
-      }).catch(err => console.error("Failed to load prism-sql", err));
+      }).catch((err: unknown) => {
+        // eslint-disable-next-line no-console
+        console.error("Failed to load prism-sql", err);
+      });
     }
   }, []);
 
