@@ -63,7 +63,7 @@ RUN npm install -g pnpm@9 && \
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN pnpm run build
 
 # -----------------
 # Stage 2: Runtime

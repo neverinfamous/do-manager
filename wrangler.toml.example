@@ -13,7 +13,7 @@ compatibility_flags = ["nodejs_compat"]
 placement = { mode = "off" }
 
 [build]
-command = "npm run build"
+command = "pnpm run build"
 cwd = "."
 
 [assets]

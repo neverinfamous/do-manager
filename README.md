@@ -408,7 +408,7 @@ npx wrangler secret put POLICY_AUD
 ### 8. Deploy
 
 ```bash
-npm run build
+pnpm run build
 npx wrangler deploy
 ```
 
