@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   build: {
@@ -26,7 +26,7 @@ export default defineConfig({
           if (id.includes("lucide-react")) {
             return "lucide";
           }
-          if (id.includes("sql-formatter") || id.includes("prismjs")) {
+          if (id.includes("sql-formatter")) {
             return "sql-tools";
           }
           if (id.includes("node_modules/fflate/")) {

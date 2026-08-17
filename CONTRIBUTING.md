@@ -33,7 +33,7 @@ We actively welcome pull requests! Here's how to contribute code:
 2. **Make your changes** following our coding standards
 3. **Test your changes** thoroughly
 4. **Update documentation** if needed
-5. **Ensure the build passes** (`npm run build`)
+5. **Ensure the build passes** (`pnpm run build`)
 6. **Submit a pull request** using our template
 
 ## 🏗️ Development Setup
