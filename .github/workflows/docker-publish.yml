@@ -21,7 +21,7 @@ permissions:
 jobs:
   # Gate: Linting must pass before Docker build
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -45,7 +45,7 @@ jobs:
 
   # Gate: CodeQL security analysis must pass before Docker build
   codeql:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       actions: read
       contents: read
@@ -76,7 +76,7 @@ jobs:
       matrix:
         include:
           - platform: linux/amd64
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
 
@@ -118,7 +118,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
@@ -129,7 +129,7 @@ jobs:
 
       - name: Build and push platform image
         id: build
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           file: Dockerfile
@@ -151,7 +151,7 @@ jobs:
 
       - name: Upload digest
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: digests-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
           path: /tmp/digests/*
@@ -160,7 +160,7 @@ jobs:
 
   # Security scan on amd64 image with strict gates (blocks on critical/high)
   security-scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-platform
     if: github.event_name != 'pull_request'
     permissions:
@@ -191,7 +191,7 @@ jobs:
           echo "✅ Security patches verified in pnpm-lock.yaml"
 
       - name: Build image for scanning
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           file: Dockerfile
@@ -254,7 +254,7 @@ jobs:
 
   # Merge platform images into multi-arch manifest
   merge-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [build-platform, security-scan]
     if: github.event_name != 'pull_request'
     permissions:
@@ -273,7 +273,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Download digests
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: /tmp/digests
           pattern: digests-*
@@ -301,7 +301,7 @@ jobs:
 
       - name: Extract metadata for manifest
         id: meta
-        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
@@ -325,7 +325,7 @@ jobs:
       # Update Docker Hub description
       - name: Update Docker Hub Description
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: peter-evans/dockerhub-description@432a30c9e07499fd01da9f8a49f0faf9e0ca5b77
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5
         continue-on-error: true
         timeout-minutes: 5
         with:
