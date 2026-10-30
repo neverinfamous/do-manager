@@ -1,6 +1,7 @@
 # Cloudflare Durable Object Manager
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
+[![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/github/v/release/neverinfamous/do-manager?label=version&color=green)](https://github.com/neverinfamous/do-manager/releases)
 ![Status](https://img.shields.io/badge/status-Stable-brightgreen)
