@@ -3,6 +3,144 @@
 All notable changes to this project are documented in this file.
 This changelog is auto-generated from Git history using [lib-git-history](https://github.com/neverinfamous/adamic).
 
+## [Unreleased]
+
+### Fixed
+
+- patch npm bundled undici and ip-address to resolve Scout CVEs by **Chris** ([9285d24](https://github.com/neverinfamous/do-manager/commit/9285d24f1bb47cec4318933e58f5a8d47d0700df))
+
+## [v1.3.9-hotfix.1]
+
+### Changed
+
+- ---
+product: "DO Manager"
+version: "1.3.9"
+date: "2026-08-17"
+slug: "do-manager-v1-3-9"
+docker_image: "writenotenow/do-manager"
+github_repo: "neverinfamous/do-manager"
+description: "DO Manager v1.3.9 resolves UI crashes in the SQL Console, hardens build tooling with pnpm, and updates core dependencies."
+---
+
+# DO Manager v1.3.9
+
+## Highlights
+
+- **SQL Console Stability**: Resolved a recurring UI crash caused by bundle misordering. The SQL extension is now dynamically loaded, guaranteeing a stable editor environment.
+- **Build Infrastructure Hardening**: Standardized build pipelines on `pnpm` and updated GitHub Actions to eliminate Node 20 deprecation warnings and ensure supply-chain integrity.
+
+## Changed
+
+- **build**: Standardized internal scripts to use `pnpm` instead of `npm`, preventing `.npmrc` configuration warnings.
+- **build**: Replaced deprecated `__dirname` usage with `import.meta.dirname` in the Vite configuration.
+- **deps**: Removed obsolete `pnpm` config blocks and updated all core dependencies and security patches.
+- **actions**: Upgraded GitHub Actions workflows to v4 to resolve Node 20 deprecations and fix lockfile validation checks.
+
+## Fixed
+
+- **ui**: Fixed a `ReferenceError` crash in the SQL Console by dynamically importing `prism-sql` after the global Prism instance is fully initialized.
+- **ui**: Implemented robust type assertions for global dependencies to satisfy strict TypeScript and ESLint standards.
+
+## Install
+
+```bash
+docker pull writenotenow/do-manager:v1.3.9
+```
+
+[Full Changelog](https://github.com/neverinfamous/do-manager/compare/v1.3.8...v1.3.9) by **Chris LeRoux** ([7974a18](https://github.com/neverinfamous/do-manager/commit/7974a18ac53fced49a4d99fcf95d651a9c651060))
+- ---
+product: "DO Manager"
+version: "1.3.9"
+date: "2026-08-17"
+slug: "do-manager-v1-3-9"
+docker_image: "writenotenow/do-manager"
+github_repo: "neverinfamous/do-manager"
+description: "DO Manager v1.3.9 resolves UI crashes in the SQL Console, hardens build tooling with pnpm, and updates core dependencies."
+---
+
+# DO Manager v1.3.9
+
+## Highlights
+
+- **SQL Console Stability**: Resolved a recurring UI crash caused by bundle misordering. The SQL extension is now dynamically loaded, guaranteeing a stable editor environment.
+- **Build Infrastructure Hardening**: Standardized build pipelines on `pnpm` and updated GitHub Actions to eliminate Node 20 deprecation warnings and ensure supply-chain integrity.
+
+## Changed
+
+- **build**: Standardized internal scripts to use `pnpm` instead of `npm`, preventing `.npmrc` configuration warnings.
+- **build**: Replaced deprecated `__dirname` usage with `import.meta.dirname` in the Vite configuration.
+- **deps**: Removed obsolete `pnpm` config blocks and updated all core dependencies and security patches.
+- **actions**: Upgraded GitHub Actions workflows to v4 to resolve Node 20 deprecations and fix lockfile validation checks.
+
+## Fixed
+
+- **ui**: Fixed a `ReferenceError` crash in the SQL Console by dynamically importing `prism-sql` after the global Prism instance is fully initialized.
+- **ui**: Implemented robust type assertions for global dependencies to satisfy strict TypeScript and ESLint standards.
+
+## Install
+
+```bash
+docker pull writenotenow/do-manager:v1.3.9
+```
+
+[Full Changelog](https://github.com/neverinfamous/do-manager/compare/v1.3.8...v1.3.9) by **Chris** ([e3152e3](https://github.com/neverinfamous/do-manager/commit/e3152e3d412d01289552c8ad0452efe0d32ad0ef))
+
+### Fixed
+
+- add packages array to pnpm-workspace to fix pnpm install in cloudflare (#118) by **Chris LeRoux** ([9277d36](https://github.com/neverinfamous/do-manager/commit/9277d361f748474f320cab04650b0ac103ef0977))
+- add packages array to pnpm-workspace to fix pnpm install in cloudflare by **Chris** ([17435d5](https://github.com/neverinfamous/do-manager/commit/17435d5006b2960f69660d358c2adab1ce359c7a))
+- use dynamic imports for prism-sql to prevent Rollup from misordering execution and causing ReferenceError by **Chris** ([78f38f6](https://github.com/neverinfamous/do-manager/commit/78f38f6d9106d48a6637b76dfabe8a776e3e3ca3))
+- resolve ReferenceError Prism is not defined in SqlEditor by **Chris** ([6930509](https://github.com/neverinfamous/do-manager/commit/6930509027788909092d07399fc9605597df24c5))
+
+## [v1.3.8]
+
+### Changed
+
+- ---
+product: "DO Manager"
+version: "1.3.8"
+date: "2026-07-11"
+slug: "do-manager-v1-3-8"
+npm_package: "do-manager"
+docker_image: "writenotenow/do-manager"
+github_repo: "neverinfamous/do-manager"
+description: "Security enforcement, automated changelog generation, and dependency updates for DO Manager."
+---
+
+# DO Manager v1.3.8
+
+## Highlights
+
+- **Strict Security Gates**: The CI pipeline now enforces hard-fails on security checks, ensuring higher code integrity and peace of mind before deployments.
+- **Automated Changelogs**: `CHANGELOG.md` generation is now fully automated from the Git history, keeping project history precise and up to date without manual overhead.
+
+## Changed
+
+- **deps**: Bumped `@cloudflare/workers-types` and `@types/node` to their latest major versions to stay current with upstream ecosystem improvements.
+- **deps**: Updated project dependencies and patched security vulnerabilities, improving overall stability.
+- **core**: Standardized VS Code settings and `pnpm` build approvals to unify the developer experience.
+- **core**: Cleaned up the project by removing the deprecated `pnpm` field from `package.json` and updating `.gitignore`.
+
+## Security
+
+- **ci**: Enforced hard-fails on security gates, preventing vulnerable code from passing CI.
+
+## Install
+
+```bash
+docker pull writenotenow/do-manager:v1.3.8
+```
+
+[Full Changelog](https://github.com/neverinfamous/do-manager/compare/v1.3.7...v1.3.8) by **Chris** ([a27cb0d](https://github.com/neverinfamous/do-manager/commit/a27cb0d7a40af43f99594e0d2f348d76136f4d4b))
+
+### Fixed
+
+- migrate Dockerfile to use pnpm for dependency installation by **Chris** ([19ebc45](https://github.com/neverinfamous/do-manager/commit/19ebc45a93726a8b525099de55c77fd2662f3810))
+- remove invalid pnpm-workspace.yaml causing setup-node cache failures by **Chris** ([7ef2136](https://github.com/neverinfamous/do-manager/commit/7ef2136cb2a6b306f85f8cba2b4ac7e6dee68342))
+- update setup-node to v6.4.0 for Node 24 support and add GITHUB_TOKEN to gitleaks by **Chris** ([127941a](https://github.com/neverinfamous/do-manager/commit/127941a91141c20a88142f7696008e473f7e801e))
+- update actions/setup-node to support Node 24 and fix trufflehog base SHA by **Chris** ([db2f561](https://github.com/neverinfamous/do-manager/commit/db2f5619f48ddde2334e009b294c20e6cc5aeaae))
+
 ## [v1.3.4]
 
 ### Features
