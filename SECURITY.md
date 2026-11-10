@@ -75,7 +75,8 @@ When deploying Durable Objects Manager:
 
 - **Protect API tokens**: Never commit tokens to version control
 - Use Cloudflare Workers Secrets for sensitive data
-- Set proper CORS policies
+- **Strict CORS origin allowlist**: Credentialed CORS headers (`Access-Control-Allow-Origin` and `Access-Control-Allow-Credentials: true`) are only emitted for same-origin requests or origins explicitly listed in `ALLOWED_ORIGINS` (plus `localhost` / `127.0.0.1` strictly in unauthenticated local mock development)
+- **Cross-origin CSRF protection**: State-changing API requests (`POST`, `PUT`, `PATCH`, `DELETE`) from untrusted origins or cross-site contexts are rejected with `403 Forbidden`, and JSON endpoints require `Content-Type: application/json`
 - Implement rate limiting if needed
 - Validate all inputs, especially Object IDs and Namespaces
 
@@ -101,6 +102,9 @@ npx wrangler secret put ACCOUNT_ID
 npx wrangler secret put API_KEY
 npx wrangler secret put TEAM_DOMAIN
 npx wrangler secret put POLICY_AUD
+
+# Optional: comma-separated list of additional trusted CORS origins (same-origin is allowed by default)
+# npx wrangler secret put ALLOWED_ORIGINS
 ```
 
 ### Network Security
@@ -112,9 +116,14 @@ npx wrangler secret put POLICY_AUD
 
 ## Known Security Considerations
 
+### Cloudflare Access Dependency
+
+- This application requires Cloudflare Access (Zero Trust) for authentication in production
+- Keep `workers_dev = false` and `preview_urls = false` in `wrangler.toml` when deploying on a custom domain, or ensure your Cloudflare Access policy explicitly covers every reachable Worker hostname (including `*.workers.dev` and preview URLs if enabled)
+
 ### Local Development Mode
 
-- Mock data mode bypasses authentication for `localhost`
+- Mock data mode bypasses authentication strictly when the request URL hostname is `localhost` or `127.0.0.1` **and** neither production API credentials (`ACCOUNT_ID`, `API_KEY`) nor Cloudflare Access settings (`TEAM_DOMAIN`, `POLICY_AUD`) are configured (client-supplied headers such as `Origin` are never trusted for local development detection)
 - **Never deploy** with `VITE_WORKER_API=http://localhost:8787`
 - Ensure environment is properly configured for production
 
@@ -137,6 +146,7 @@ Durable Objects Manager implements several security features:
 
 - **Cloudflare Access Integration**: Enterprise-grade authentication
 - **JWT Validation**: Every API request and WebSocket connection validated
+- **Strict CORS & CSRF Protection**: Credentialed CORS and state-changing API requests restricted to same-origin or `ALLOWED_ORIGINS`
 - **Scoped Permissions**: Minimal required access
 - **Namespace Isolation**: Strict logical separation of data
 - **Audit Logging**: Operation history tracking

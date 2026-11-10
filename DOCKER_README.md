@@ -273,6 +273,7 @@ services:
       - API_KEY=${API_KEY}
       - TEAM_DOMAIN=${TEAM_DOMAIN}
       - POLICY_AUD=${POLICY_AUD}
+      # - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8787/health"]
@@ -288,6 +289,8 @@ ACCOUNT_ID=your_cloudflare_account_id
 API_KEY=your_cloudflare_api_token
 TEAM_DOMAIN=https://yourteam.cloudflareaccess.com
 POLICY_AUD=your_cloudflare_access_aud_tag
+# Optional: comma-separated list of additional trusted origins for credentialed CORS
+# ALLOWED_ORIGINS=https://do.yourdomain.com,https://admin.yourdomain.com
 ```
 
 Start:
@@ -306,14 +309,17 @@ docker compose pull && docker compose up -d
 
 ## 📋 Environment Variables
 
-| Variable      | Required | Description                                              |
-| ------------- | -------- | -------------------------------------------------------- |
-| `ACCOUNT_ID`  | ✅       | Cloudflare Account ID                                    |
-| `API_KEY`     | ✅       | API Token with Workers Scripts Read + D1 Edit permission |
-| `TEAM_DOMAIN` | ✅       | `https://yourteam.cloudflareaccess.com`                  |
-| `POLICY_AUD`  | ✅       | Cloudflare Access Application AUD tag                    |
-| `PORT`        | ❌       | Port (default: `8787`)                                   |
-| `NODE_ENV`    | ❌       | Environment (default: `production`)                      |
+| Variable          | Required | Description                                                                                             |
+| ----------------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| `ACCOUNT_ID`      | ✅       | Cloudflare Account ID                                                                                   |
+| `API_KEY`         | ✅       | API Token with Workers Scripts Read + D1 Edit permission                                                |
+| `TEAM_DOMAIN`     | ✅       | `https://yourteam.cloudflareaccess.com`                                                                 |
+| `POLICY_AUD`      | ✅       | Cloudflare Access Application AUD tag                                                                   |
+| `ALLOWED_ORIGINS` | ❌       | Comma-separated list of additional trusted origins for credentialed CORS (same-origin allowed default) |
+| `PORT`            | ❌       | Port (default: `8787`)                                                                                  |
+| `NODE_ENV`        | ❌       | Environment (default: `production`)                                                                     |
+
+> **Note:** Unauthenticated local mock mode is only active when the container runs without `ACCOUNT_ID`/`API_KEY` and `TEAM_DOMAIN`/`POLICY_AUD`. Whenever production credentials or Access settings are supplied, Cloudflare Access JWT validation and strict origin checks are enforced on `/api/*` endpoints.
 
 ---
 

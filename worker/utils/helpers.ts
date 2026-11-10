@@ -38,9 +38,13 @@ export function errorResponse(
 }
 
 /**
- * Parse JSON body from request, returning null on failure
+ * Parse JSON body from request, returning null on failure or non-JSON Content-Type
  */
 export async function parseJsonBody<T>(request: Request): Promise<T | null> {
+  const contentType = request.headers.get("Content-Type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return null;
+  }
   try {
     return (await request.json()) as T;
   } catch {
