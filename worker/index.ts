@@ -3,7 +3,8 @@ import { validateAccessJWT } from "./utils/auth";
 import {
   getCorsHeaders,
   handleCorsPreflightRequest,
-  isLocalDevelopment,
+  isLocalDevEnvironment,
+  validateCrossOriginRequest,
 } from "./utils/cors";
 import { logError, logInfo } from "./utils/error-logger";
 import { handleNamespaceRoutes } from "./routes/namespaces";
@@ -28,6 +29,8 @@ import { handleMigrateRoutes } from "./routes/migrate";
  */
 async function handleApiRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
+  // Detect if we're in local development (strictly via request hostname and absence of production secrets)
+  const isLocalDev = isLocalDevEnvironment(request, env);
 
   logInfo(`[Request] ${request.method} ${url.pathname}`, {
     module: "worker",
@@ -35,10 +38,10 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
     metadata: { method: request.method, pathname: url.pathname },
   });
 
-  // Handle CORS
-  const corsHeaders = getCorsHeaders(request);
+  // Handle CORS (only reflects explicitly trusted origins)
+  const corsHeaders = getCorsHeaders(request, isLocalDev, env.ALLOWED_ORIGINS);
   if (request.method === "OPTIONS") {
-    return handleCorsPreflightRequest(corsHeaders);
+    return handleCorsPreflightRequest(request, corsHeaders);
   }
 
   // If not an API request, serve static assets
@@ -46,12 +49,11 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
     return env.ASSETS.fetch(request);
   }
 
-  // Authentication
-  const isLocalhost = isLocalDevelopment(request);
+  // Authentication - skip only in local mock development without production secrets
   let userEmail: string | null;
 
-  if (isLocalhost) {
-    logInfo("Localhost detected, skipping JWT validation", {
+  if (isLocalDev) {
+    logInfo("Local development mode active, skipping JWT validation", {
       module: "worker",
       operation: "handleApiRequest",
     });
@@ -66,15 +68,15 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
     }
   }
 
-  // Check if we're in local dev mode (no credentials)
-  const isLocalDev = isLocalhost && (!env.ACCOUNT_ID || !env.API_KEY);
-
-  // Only log environment info in local development to avoid exposing sensitive configuration
-  if (isLocalDev) {
-    logInfo("Local development mode active", {
-      module: "worker",
-      operation: "handleApiRequest",
-    });
+  // Reject state-changing API requests from untrusted origins (CSRF / cross-origin protection)
+  const crossOriginBlock = validateCrossOriginRequest(
+    request,
+    url,
+    isLocalDev,
+    env.ALLOWED_ORIGINS,
+  );
+  if (crossOriginBlock !== null) {
+    return crossOriginBlock;
   }
 
   // Route API requests
@@ -325,6 +327,7 @@ export default {
     try {
       return await handleApiRequest(request, env);
     } catch (err) {
+      const isLocalDev = isLocalDevEnvironment(request, env);
       void logError(
         env,
         `Unhandled error: ${err instanceof Error ? err.message : String(err)}`,
@@ -333,9 +336,13 @@ export default {
           operation: "fetch",
           metadata: { method: request.method, pathname: request.url },
         },
-        isLocalDevelopment(request),
+        isLocalDev,
       );
-      const corsHeaders = getCorsHeaders(request);
+      const corsHeaders = getCorsHeaders(
+        request,
+        isLocalDev,
+        env.ALLOWED_ORIGINS,
+      );
       return new Response(
         JSON.stringify({
           error: "Internal Server Error",

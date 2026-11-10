@@ -1,6 +1,7 @@
 # Cloudflare Durable Object Manager
 
 [![GitHub](https://img.shields.io/badge/GitHub-neverinfamous/do--manager-blue?logo=github)](https://github.com/neverinfamous/do-manager)
+[![Docker Pulls](https://img.shields.io/docker/pulls/writenotenow/do-manager)](https://hub.docker.com/r/writenotenow/do-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/github/v/release/neverinfamous/do-manager?label=version&color=green)](https://github.com/neverinfamous/do-manager/releases)
 ![Status](https://img.shields.io/badge/status-Stable-brightgreen)
@@ -384,7 +385,7 @@ Edit `wrangler.toml` with your `database_id` from step 2.
 
 1. Go to [Cloudflare Zero Trust](https://one.dash.cloudflare.com/)
 2. Configure authentication (GitHub OAuth, etc.)
-3. Create an Access Application for your domain
+3. Create an Access Application covering **every** reachable Worker hostname (your custom domain, and `*.workers.dev` / preview URLs if enabled; keep `workers_dev = false` and `preview_urls = false` in `wrangler.toml` when using a custom domain)
 4. Copy the **Application Audience (AUD) tag**
 
 ### 6. Create API Token
@@ -403,6 +404,8 @@ npx wrangler secret put ACCOUNT_ID
 npx wrangler secret put API_KEY
 npx wrangler secret put TEAM_DOMAIN
 npx wrangler secret put POLICY_AUD
+# Optional: comma-separated list of additional trusted CORS origins (same-origin is allowed by default)
+# npx wrangler secret put ALLOWED_ORIGINS
 ```
 
 ### 8. Deploy
@@ -411,6 +414,15 @@ npx wrangler secret put POLICY_AUD
 pnpm run build
 npx wrangler deploy
 ```
+
+---
+
+## 🔐 Security
+
+- ✅ **Zero Trust Architecture** — All production API requests authenticated by Cloudflare Access
+- ✅ **JWT Validation** — Access tokens verified on every API call (local mock bypass is strictly disabled whenever production secrets are present)
+- ✅ **Strict CORS & CSRF Protection** — Credentialed CORS headers and state-changing API requests (`POST`, `PUT`, `PATCH`, `DELETE`) are restricted to same-origin or explicitly configured `ALLOWED_ORIGINS`
+- ✅ **Hostname Lockdown** — `workers_dev` and `preview_urls` disabled by default in `wrangler.toml.example` to prevent uncovered Worker routes
 
 ---
 

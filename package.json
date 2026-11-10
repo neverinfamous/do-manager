@@ -1,7 +1,8 @@
 {
   "name": "do-manager",
   "private": true,
-  "version": "1.3.10",
+  "version": "1.3.11",
+  "packageManager": "pnpm@11.9.0",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
@@ -25,47 +26,36 @@
     "@radix-ui/react-tabs": "^1.2.1",
     "class-variance-authority": "^0.7.1",
     "fflate": "^0.8.3",
-    "jose": "^6.2.14",
-    "lucide-react": "^1.64.0",
+    "jose": "^6.2.17",
+    "lucide-react": "^1.70.0",
     "prismjs": "^1.30.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "sql-formatter": "^15.9.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261029.1",
+    "@cloudflare/workers-types": "^5.20261109.1",
     "@eslint/js": "^10.0.1",
-    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.5",
     "@types/node": "^26.6.6",
     "@types/prismjs": "^1.26.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
+    "@vitejs/plugin-react": "^6.3.0",
     "clsx": "^2.1.1",
     "esbuild": "^0.28.2",
-    "eslint": "^10.13.0",
+    "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
-    "globals": "^17.13.0",
+    "globals": "^17.14.0",
     "postcss": "^8.5.32",
     "tailwind-merge": "^3.7.0",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^4.3.5",
     "ts-pattern": "^5.9.2",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.72.1",
-    "vite": "^8.3.5",
-    "wrangler": "^4.155.0",
+    "typescript-eslint": "^8.72.2",
+    "vite": "^8.3.7",
+    "wrangler": "^4.159.0",
     "zod": "^4.6.7"
-  },
-  "overrides": {
-    "esbuild": "^0.28.0",
-    "cross-spawn": "^7.0.5",
-    "glob": "13.0.6",
-    "tar": "7.5.22",
-    "minimatch": "10.2.6",
-    "picomatch": "4.0.7",
-    "eslint-plugin-react-hooks": {
-      "eslint": "$eslint"
-    }
   }
 }

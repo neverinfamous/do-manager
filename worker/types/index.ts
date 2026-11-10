@@ -18,6 +18,7 @@ export interface Env {
   POLICY_AUD: string;
 
   // Optional vars
+  ALLOWED_ORIGINS?: string;
   ENVIRONMENT?: string;
 }
 

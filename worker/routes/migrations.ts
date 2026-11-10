@@ -12,6 +12,7 @@ import {
   markMigrationsAsApplied,
 } from "../utils/migrations";
 import { logInfo, logWarning, logError } from "../utils/error-logger";
+import { parseJsonBody } from "../utils/helpers";
 
 /**
  * Helper to create JSON response headers
@@ -223,8 +224,8 @@ export async function handleMigrationRoutes(
     }
 
     try {
-      const body = (await request.json()) as { version?: number };
-      const targetVersion = body.version;
+      const body = await parseJsonBody<{ version?: number }>(request);
+      const targetVersion = body?.version;
 
       if (typeof targetVersion !== "number" || targetVersion < 1) {
         return new Response(

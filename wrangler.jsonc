@@ -4,6 +4,8 @@
   "main": "worker/index.ts",
   "compatibility_date": "2025-01-01",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
 
   // Smart Placement disabled for SPA - UI responsiveness priority
   "placement": { "mode": "off" },

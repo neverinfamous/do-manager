@@ -8,6 +8,10 @@ name = "do-manager"
 main = "worker/index.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
+# Security: Keep workers_dev and preview_urls disabled in production when using a custom domain.
+# If enabled, ensure your Cloudflare Access policy explicitly covers the *.workers.dev and preview hostnames.
+workers_dev = false  # Set to true only if deploying without a custom domain and protecting *.workers.dev with Access
+preview_urls = false # Keep disabled unless preview URLs are also covered by Cloudflare Access
 
 # Smart Placement disabled for SPA - UI responsiveness priority
 placement = { mode = "off" }
@@ -46,7 +50,7 @@ enabled = true
 # ============================================
 # CUSTOM DOMAIN ROUTING (OPTIONAL)
 # ============================================
-# Option 1: Use default Workers.dev subdomain (no configuration needed)
+# Option 1: Use default Workers.dev subdomain (set workers_dev = true above and protect with Cloudflare Access)
 #   Your worker will be available at: https://do-manager.<your-subdomain>.workers.dev
 #
 # Option 2: Use custom domain (uncomment and configure below)
@@ -69,11 +73,16 @@ enabled = true
 #   wrangler secret put TEAM_DOMAIN
 #   wrangler secret put POLICY_AUD
 #
+# Optional secrets:
+#   wrangler secret put ALLOWED_ORIGINS
+#
 # Secret details:
 # - ACCOUNT_ID: Your Cloudflare account ID (Dashboard > Overview)
 # - API_KEY: Cloudflare API token with Workers Scripts Read permission
-# - TEAM_DOMAIN: Cloudflare Zero Trust team domain (e.g., yourteam.cloudflareaccess.com)
+# - TEAM_DOMAIN: Cloudflare Zero Trust team domain (e.g., https://yourteam.cloudflareaccess.com)
 # - POLICY_AUD: Access Policy AUD tag from your Access application
+# - ALLOWED_ORIGINS: (Optional) Comma-separated list of additional trusted origins for credentialed CORS
+#   (same-origin is allowed by default; e.g., "https://do.yourdomain.com,https://admin.yourdomain.com")
 #
 # ============================================
 # LOCAL DEVELOPMENT

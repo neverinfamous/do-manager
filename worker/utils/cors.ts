@@ -1,43 +1,141 @@
-import type { CorsHeaders } from "../types";
+import type { CorsHeaders, Env } from "../types";
+import { logInfo, logWarning } from "./error-logger";
 
 /**
- * Allowed origins for CORS
+ * Parse a comma-separated list of allowed origins into a normalized Set of origins.
  */
-const ALLOWED_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:8787",
-  "http://127.0.0.1:5173",
-  "http://127.0.0.1:8787",
-];
+export function parseAllowedOrigins(allowedOriginsEnv?: string): Set<string> {
+  const allowed = new Set<string>();
+  if (!allowedOriginsEnv) {
+    return allowed;
+  }
+
+  for (const rawEntry of allowedOriginsEnv.split(",")) {
+    const trimmed = rawEntry.trim();
+    if (trimmed === "") {
+      continue;
+    }
+    try {
+      const parsed = new URL(trimmed);
+      allowed.add(parsed.origin);
+    } catch {
+      // Ignore malformed origin entries
+    }
+  }
+
+  return allowed;
+}
 
 /**
- * Get CORS headers for a request
+ * Validate whether an incoming request Origin header is trusted for credentialed CORS
+ * and state-changing API requests.
+ *
+ * Trusted origins:
+ * 1. Same-origin (`originUrl.origin === requestUrl.origin`)
+ * 2. Explicitly configured origins in `ALLOWED_ORIGINS`
+ * 3. Localhost origins (`http://localhost:*` or `http://127.0.0.1:*`) ONLY when `isLocalDev` is true
  */
-export function getCorsHeaders(request: Request): CorsHeaders {
-  const origin = request.headers.get("Origin");
+export function isAllowedOrigin(
+  origin: string,
+  requestUrl: URL,
+  isLocalDev: boolean,
+  allowedOriginsEnv?: string,
+): boolean {
+  if (origin === "" || origin === "null") {
+    return false;
+  }
 
-  // Check if origin is allowed or if it's a production deployment
-  const allowedOrigin =
-    origin &&
-    (ALLOWED_ORIGINS.includes(origin) ||
-      origin.endsWith(".workers.dev") ||
-      origin.endsWith(".pages.dev"))
-      ? origin
-      : ALLOWED_ORIGINS[0];
+  let originUrl: URL;
+  try {
+    originUrl = new URL(origin);
+  } catch {
+    return false;
+  }
+
+  // Only allow http/https origins
+  if (originUrl.protocol !== "http:" && originUrl.protocol !== "https:") {
+    return false;
+  }
+
+  // Ensure incoming origin string matches canonical origin (no path/query/userinfo)
+  if (origin !== originUrl.origin) {
+    return false;
+  }
+
+  // 1. Same-origin is always trusted
+  if (originUrl.origin === requestUrl.origin) {
+    return true;
+  }
+
+  // 2. Explicitly configured allowed origins
+  const configuredOrigins = parseAllowedOrigins(allowedOriginsEnv);
+  if (configuredOrigins.has(originUrl.origin)) {
+    return true;
+  }
+
+  // 3. In local development only, allow localhost/127.0.0.1 origins (e.g. Vite on port 5173)
+  if (
+    isLocalDev &&
+    (originUrl.hostname === "localhost" || originUrl.hostname === "127.0.0.1")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Get CORS headers for a request.
+ * Only emits credentialed CORS headers for explicitly trusted origins.
+ */
+export function getCorsHeaders(
+  request: Request,
+  isLocalDev = false,
+  allowedOriginsEnv?: string,
+): CorsHeaders {
+  const url = new URL(request.url);
+  const origin = request.headers.get("Origin") ?? "";
+
+  if (
+    origin !== "" &&
+    isAllowedOrigin(origin, url, isLocalDev, allowedOriginsEnv)
+  ) {
+    return {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+      "Access-Control-Allow-Headers":
+        "Content-Type, Authorization, CF-Access-Client-Id, CF-Access-Client-Secret, CF-Access-JWT-Assertion, cf-access-jwt-assertion",
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Max-Age": "86400",
+      Vary: "Origin",
+    };
+  }
 
   return {
-    "Access-Control-Allow-Origin": allowedOrigin ?? "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers":
-      "Content-Type, Authorization, CF-Access-Client-Id, CF-Access-Client-Secret",
-    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
   };
 }
 
 /**
  * Handle CORS preflight request
  */
-export function handleCorsPreflightRequest(corsHeaders: CorsHeaders): Response {
+export function handleCorsPreflightRequest(
+  request: Request,
+  corsHeaders: CorsHeaders,
+): Response {
+  logInfo("[CORS] Handling preflight request", {
+    module: "cors",
+    operation: "preflight",
+  });
+
+  const origin = request.headers.get("Origin") ?? "";
+  if (origin !== "" && !("Access-Control-Allow-Origin" in corsHeaders)) {
+    return new Response("Forbidden", {
+      status: 403,
+      headers: { Vary: "Origin" },
+    });
+  }
+
   return new Response(null, {
     status: 204,
     headers: corsHeaders,
@@ -45,51 +143,79 @@ export function handleCorsPreflightRequest(corsHeaders: CorsHeaders): Response {
 }
 
 /**
- * Check if request is from localhost (development)
- * Note: When running `wrangler dev` with custom routes, the hostname/origin
- * will show the production domain. We detect this by checking for the
- * production domain without CF-Access headers (which would be present in real production).
+ * Determine whether the request URL targets a local development hostname.
+ * Never trust client-controlled headers (such as Origin) for this check.
  */
 export function isLocalDevelopment(request: Request): boolean {
   const url = new URL(request.url);
-  const origin = request.headers.get("Origin");
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+}
 
-  // Check request URL hostname
-  if (
-    url.hostname === "localhost" ||
-    url.hostname === "127.0.0.1" ||
-    url.hostname.endsWith(".local")
-  ) {
-    return true;
+/**
+ * Determine whether the Worker is running in a local development environment
+ * without production credentials or Cloudflare Access configuration.
+ */
+export function isLocalDevEnvironment(request: Request, env: Env): boolean {
+  const isLocalhost = isLocalDevelopment(request);
+  const hasProductionCredentials = Boolean(env.ACCOUNT_ID && env.API_KEY);
+  const hasAccessConfig = Boolean(env.TEAM_DOMAIN && env.POLICY_AUD);
+  return isLocalhost && !hasProductionCredentials && !hasAccessConfig;
+}
+
+/**
+ * Validate state-changing API requests against untrusted cross-origin calls.
+ * Returns a 403 Forbidden Response if the request must be blocked, or null if permitted.
+ */
+export function validateCrossOriginRequest(
+  request: Request,
+  url: URL,
+  isLocalDev: boolean,
+  allowedOriginsEnv?: string,
+): Response | null {
+  const isStateChangingMethod =
+    request.method !== "GET" &&
+    request.method !== "HEAD" &&
+    request.method !== "OPTIONS";
+
+  if (!url.pathname.startsWith("/api/") || !isStateChangingMethod) {
+    return null;
   }
 
-  // Check Origin header (for proxied requests from Vite)
-  if (origin) {
-    try {
-      const originUrl = new URL(origin);
-      if (
-        originUrl.hostname === "localhost" ||
-        originUrl.hostname === "127.0.0.1"
-      ) {
-        return true;
-      }
-    } catch {
-      // Invalid origin URL, ignore
-    }
+  const origin = request.headers.get("Origin") ?? "";
+  const secFetchSite = request.headers.get("Sec-Fetch-Site") ?? "";
+  const hasUntrustedOrigin =
+    origin !== "" &&
+    !isAllowedOrigin(origin, url, isLocalDev, allowedOriginsEnv);
+  const isCrossSiteWithoutTrustedOrigin =
+    !isLocalDev &&
+    secFetchSite === "cross-site" &&
+    !isAllowedOrigin(origin, url, isLocalDev, allowedOriginsEnv);
+
+  if (hasUntrustedOrigin || isCrossSiteWithoutTrustedOrigin) {
+    logWarning("Blocked state-changing request from untrusted origin", {
+      module: "cors",
+      operation: "csrf_check",
+      metadata: {
+        origin,
+        secFetchSite,
+        method: request.method,
+        pathname: url.pathname,
+      },
+    });
+    return new Response(
+      JSON.stringify({
+        error: "Forbidden",
+        message: "Cross-origin state-changing requests are not permitted.",
+      }),
+      {
+        status: 403,
+        headers: {
+          "Content-Type": "application/json",
+          Vary: "Origin",
+        },
+      },
+    );
   }
 
-  // Special case: wrangler dev with custom routes uses production hostname
-  // but without CF-Access headers. Real production always has these headers.
-  const hasCfAccessToken =
-    request.headers.has("CF-Access-JWT-Assertion") ||
-    request.headers.has("Cf-Access-Jwt-Assertion");
-  const isProductionDomain =
-    url.hostname === "do.adamic.tech" ||
-    (origin?.includes("do.adamic.tech") ?? false);
-
-  if (isProductionDomain && !hasCfAccessToken) {
-    return true;
-  }
-
-  return false;
+  return null;
 }
